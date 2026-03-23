@@ -16,7 +16,10 @@ class Employee extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'legacy_id',
         'name',
+        'first_name',
+        'last_name',
         'email',
         'phone',
         'address',
@@ -26,6 +29,8 @@ class Employee extends Model
         'hire_date',
         'termination_date',
         'status',
+        'division',
+        'list_id',
         'hourly_rate',
         'emergency_contact_name',
         'emergency_contact_phone',

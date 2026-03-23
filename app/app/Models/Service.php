@@ -16,12 +16,15 @@ class Service extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'legacy_id',
         'name',
+        'full_name',
         'description',
         'category',
         'default_price',
         'unit',
         'is_active',
+        'list_id',
     ];
 
     /**

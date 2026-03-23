@@ -9,6 +9,7 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions;
 
 class CrewResource extends Resource
 {
@@ -23,6 +24,9 @@ class CrewResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+            Forms\Components\TextInput::make('code')
+                ->label('Crew Code')
+                ->maxLength(255),
             Forms\Components\TextInput::make('name')
                 ->required()
                 ->maxLength(255),
@@ -36,6 +40,12 @@ class CrewResource extends Resource
                     'inactive' => 'Inactive',
                 ])
                 ->required(),
+            Forms\Components\TextInput::make('division')
+                ->maxLength(255),
+            Forms\Components\TextInput::make('legacy_id')
+                ->label('Legacy ID')
+                ->disabled()
+                ->maxLength(255),
             Forms\Components\Textarea::make('notes')
                 ->columnSpanFull(),
         ]);
@@ -45,23 +55,33 @@ class CrewResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('code')
+                    ->label('Code')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Description')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('foreman.name')
                     ->label('Foreman'),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
+                Tables\Columns\TextColumn::make('division')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('members_count')
                     ->counts('members')
                     ->label('Members'),
+                Tables\Columns\TextColumn::make('legacy_id')
+                    ->label('Legacy ID')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

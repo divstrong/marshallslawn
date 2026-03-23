@@ -16,6 +16,8 @@ class Customer extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'legacy_id',
+        'company_name',
         'first_name',
         'last_name',
         'email',
@@ -25,6 +27,11 @@ class Customer extends Model
         'state',
         'zip',
         'status',
+        'customer_type',
+        'account_number',
+        'division',
+        'map_code',
+        'list_id',
         'source',
         'notes',
     ];

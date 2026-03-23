@@ -9,6 +9,7 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions;
 
 class ServiceResource extends Resource
 {
@@ -26,6 +27,8 @@ class ServiceResource extends Resource
             Forms\Components\TextInput::make('name')
                 ->required()
                 ->maxLength(255),
+            Forms\Components\TextInput::make('full_name')
+                ->maxLength(255),
             Forms\Components\Textarea::make('description')
                 ->columnSpanFull(),
             Forms\Components\TextInput::make('category')
@@ -37,6 +40,10 @@ class ServiceResource extends Resource
                 ->maxLength(255),
             Forms\Components\Toggle::make('is_active')
                 ->default(true),
+            Forms\Components\TextInput::make('legacy_id')
+                ->label('Legacy ID')
+                ->disabled()
+                ->maxLength(255),
         ]);
     }
 
@@ -46,6 +53,12 @@ class ServiceResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('full_name')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('description')
+                    ->limit(50)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('category')
                     ->badge(),
                 Tables\Columns\TextColumn::make('default_price')
@@ -54,14 +67,18 @@ class ServiceResource extends Resource
                 Tables\Columns\TextColumn::make('unit'),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
+                Tables\Columns\TextColumn::make('legacy_id')
+                    ->label('Legacy ID')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

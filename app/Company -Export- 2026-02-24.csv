@@ -1,0 +1,342 @@
+ScheduleID,ScheduleName,ScheduleType,PackageRoundID,StartDate,EndDate
+4e4e3b30-3166-4630-acf9-236c65ad119a,JSArcher Field,Recurring,,,
+ac0f27e0-fb05-45fd-a14a-24be5710ff61,Monthly R/U- Monday,Recurring,,,
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,1ff5ce99-3da8-4dea-98dd-89bb92a5211f,2/1/2021,5/1/2021
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,d502d9ee-ac05-4836-bba1-6ce96939d4f0,9/1/2021,11/30/2021
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,d12235cd-7552-4458-80b4-8c3a0d5cc170,2/1/2022,5/1/2022
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,46647b81-fca3-460e-98f9-f8870ce11906,9/1/2022,11/30/2022
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,044039e0-b141-45fe-85d1-579d60de19f2,2/1/2023,5/1/2023
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,4941c18d-2a53-46d2-a5fb-8825664d396c,9/1/2023,11/30/2023
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,3daf57ff-e3ef-407b-88a3-11eda30c6276,2/1/2024,5/1/2024
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,913cf2dd-fc49-41d6-b919-a2abdc5b21d5,9/1/2024,11/30/2024
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,a8378678-d33e-432f-9df6-d0749279b927,2/1/2025,5/1/2025
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,8e7a957e-db70-45b9-8c64-8c841badbf51,9/1/2025,11/30/2025
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,3243f5cc-d8f5-483d-a4b3-409209bf962a,2/1/2026,5/1/2026
+a6c698c0-c4db-45b1-9390-272d76dfca53,Flower Planting,Package,dead6c6f-6354-431d-92b2-5f6f185f3e65,9/1/2026,11/30/2026
+e9213ca2-f9bc-4852-9c02-27395cb69f74,Monthly Mowing - Thursday,Recurring,,,
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,9d3d4535-4efd-4071-8eb6-d8248a2f87a3,2/14/2022,4/2/2022
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,7a12c8f5-49c4-4b01-bbdb-094694169f37,4/4/2022,5/21/2022
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,ac19a21a-5cbb-4ac8-9dfd-845280e4bdc2,5/23/2022,7/9/2022
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,32c0ee7c-8a2d-40af-b834-5dfd8bdbbdcb,7/11/2022,8/27/2022
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,cd4f742a-65c3-41d0-9db2-822cf47c961c,8/29/2022,10/17/2022
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,194403b1-22b3-4901-98b2-269cd04e0f94,10/10/2022,11/12/2022
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,ab2ce37a-5e99-45d2-8753-6d9a64688fac,11/14/2022,12/24/2022
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,4d9dda7d-d006-4425-8f4b-f27f6483aa2f,2/14/2023,4/2/2023
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,39069fa5-ba11-4578-a9a9-8ecf9eaaae8f,4/4/2023,5/21/2023
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,5c7545a2-7b2a-4337-89fc-56e8084dead0,5/23/2023,7/9/2023
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,042ad546-049d-485a-94b2-cadee7c83318,7/11/2023,8/27/2023
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,8f6c1a8f-a6c1-4826-8437-7cf7a974ebbc,8/29/2023,10/17/2023
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,9c3030b8-ce08-46c7-9b49-531aa0668637,10/10/2023,11/12/2023
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,78a88dc6-2f85-42bf-bee5-a719b9c7c201,11/14/2023,12/24/2023
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,235fd35c-09f9-4fcc-92f9-c2313d3791b5,2/14/2024,4/2/2024
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,976c79e9-273e-46f1-82e4-f6535604ba1c,4/4/2024,5/21/2024
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,7617c272-cd4c-42e3-9224-e4028c8b5879,5/23/2024,7/9/2024
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,ed91d91b-b099-4ac5-b5e6-15b07c4765ec,7/11/2024,8/27/2024
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,94a4765c-3457-49b5-9cb4-cc3a7184fd11,8/29/2024,10/17/2024
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,c425b372-07b4-48c6-b7bf-4e7660e2cdeb,10/10/2024,11/12/2024
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,c83f8106-c70b-436c-a927-a81b3e0a4b08,11/14/2024,12/24/2024
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,0ced2031-d104-4f85-aae8-e7b95657a377,2/14/2025,4/2/2025
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,1632d95b-6a62-4e39-82e0-89543f737019,4/4/2025,5/21/2025
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,c21f34df-b90d-4f16-ad23-7ceac9d9e995,5/23/2025,7/9/2025
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,f9feb39f-2417-47c3-9314-403f73b5578b,7/11/2025,8/27/2025
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,dca61f6d-aec7-4aaf-8f61-0aebd600b785,8/29/2025,10/17/2025
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,825f9c34-d131-46a6-9730-0064c38e2829,10/10/2025,11/12/2025
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,865065cc-66e4-4fcb-ab39-d710a42b593e,11/14/2025,1/31/2026
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,7a822edc-021f-42aa-9d67-f712e5f75cb8,2/14/2026,4/2/2026
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,bc21b78f-1c0a-402c-afac-db0ac272e716,4/4/2026,5/21/2026
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,eadc0b29-fb51-4901-ae84-96179f232a4c,5/23/2026,7/9/2026
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,e78baa69-70db-4dde-a79a-54c2b5fd3b52,7/11/2026,8/27/2026
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,35cfd73c-aaa4-4e51-adc9-a422da9377bf,8/29/2026,10/17/2026
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,383f7f65-a78f-4c06-b7aa-21acc7982023,10/10/2026,11/12/2026
+cac4c98f-4813-4fb8-9d3a-08689ecd6908,Green Lawn Pkg F,Package,a5fec720-0460-48aa-b6fd-7547da5920aa,11/14/2026,1/31/2027
+41336dd0-ab1d-4db9-9741-0f2815fb74ab,Lorraine Alexander Custom,Recurring,,,
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,bbb518b3-580b-4cc3-8acc-55d460d58acc,1/3/2021,5/24/2021
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,5d9e0c32-532c-4279-9553-f0b4338bdea6,1/3/2021,5/24/2021
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,b16aa8f4-fdbd-4e39-be58-45a738a3d50f,1/3/2022,5/24/2022
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,4ad802fb-b95b-4089-ab24-30fd1ab6b0b7,1/3/2022,5/24/2022
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,80bfdb27-a521-433f-9211-42183784cddc,1/3/2023,5/24/2023
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,2bf4b4d1-8c3c-4d98-9b2a-ada20317c458,1/3/2023,5/24/2023
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,240dd08f-9942-4ae3-86cd-eae33b46648e,1/3/2023,5/24/2023
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,75078141-aeb4-41e8-ae6a-1218f33b1f52,1/3/2024,5/24/2024
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,613b78c1-2f99-4ef3-8fdc-ce9c1e2668c7,1/3/2024,5/24/2024
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,b1361f86-cd10-4389-bac4-e86df8f368cf,1/3/2024,5/24/2024
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,057fb2d0-0aac-49e3-8b7c-0b6dca7698ed,1/3/2025,5/24/2025
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,ded9e8c7-0dbe-438a-a2f2-6da9c0485459,1/3/2025,5/24/2025
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,313f8008-c0de-4916-ab85-8f9834e77513,1/3/2025,5/24/2025
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,a1c242e4-527a-4536-8b5a-985ad5ce61bd,1/3/2026,5/24/2026
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,be6c1684-1a0a-440b-8212-00ea9aff8906,1/3/2026,5/24/2026
+60513209-505e-4845-8b50-30f2015cb4ce,Mulch Included- Blower,Package,46b2822f-ca57-40c9-b32e-4fd8cdf25be2,1/3/2026,5/24/2026
+54233d1b-5fd1-4b13-909d-3c7210ad1f6b,Insecticide Application,Package,6b719f2b-bbc9-4bce-9cc9-ea1f84117135,4/4/2023,10/15/2023
+54233d1b-5fd1-4b13-909d-3c7210ad1f6b,Insecticide Application,Package,6df16ba5-cb27-4772-a491-8944d6e3a288,4/4/2024,10/15/2024
+54233d1b-5fd1-4b13-909d-3c7210ad1f6b,Insecticide Application,Package,435d8316-d193-484f-90b2-49b94b19b09a,4/4/2025,10/15/2025
+54233d1b-5fd1-4b13-909d-3c7210ad1f6b,Insecticide Application,Package,141745fa-1ccb-42f3-9a90-0ec72d88cac0,4/4/2026,10/15/2026
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,1ccec219-a6db-46ae-af00-11c4dd03ea75,5/8/2017,6/3/2017
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,2e598b52-958d-496c-9a60-6df87c469579,6/5/2017,7/1/2017
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,c0d100fa-a91d-40ca-acfb-3c9252a5efe3,7/3/2017,7/31/2017
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,04bd6798-ca70-4fb4-ba4a-2c36bfffe1dd,5/1/2018,6/3/2018
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,9b998b5b-ac91-4eb0-86fa-d9aa9a97c5ac,6/5/2018,7/1/2018
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,32417b6e-a75a-4d00-93f2-9fc6cebde128,7/3/2018,7/31/2018
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,5971dc4a-64d5-415e-ab6a-c94b81d8e64f,5/1/2019,6/1/2019
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,b493583a-a0bd-4044-813d-94bffeae9f4b,5/22/2019,6/11/2019
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,ac29dcde-2bd9-4e97-a3dd-8551a4792e37,6/12/2019,7/3/2019
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,edd76627-0617-4753-9197-455696ffb7db,5/4/2020,5/30/2020
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,8d8bb2b5-7159-405d-9033-8599b756e307,5/25/2020,6/20/2020
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,bc73d320-f0d6-44b7-9dfe-f99f7092ac5f,6/15/2020,7/11/2020
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,c8f55045-c2bd-4cc5-a384-7c113dc489f6,7/6/2020,8/1/2020
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,ad45bcfd-d739-4f71-9339-3e6eb3010c7f,4/26/2021,5/29/2021
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,998715d7-fc64-46e8-a5e4-177eec5e1df4,5/24/2021,6/19/2021
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,26fa92a2-60ef-4f8f-bef8-5738f6485c11,6/14/2021,7/10/2021
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,984c5d77-9885-4a23-a356-b569f9e63f01,7/5/2021,7/31/2021
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,52c9e711-514f-42b7-bad5-54889b01e2ad,4/26/2022,5/29/2022
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,a1843387-68e4-4d99-9e17-1a8127d22865,5/24/2022,6/19/2022
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,65ba5140-6699-47e7-b64b-acf8eddd5e96,6/14/2022,7/10/2022
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,f25529f7-5020-49cf-8ee0-e001ec24af4c,7/5/2022,7/31/2022
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,3a6d31ce-3b96-4d8c-8e3a-815cc8a3c5c7,4/26/2023,5/29/2023
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,14084755-9fbd-4165-bb16-f0d5456630cc,5/24/2023,6/19/2023
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,26c5e8dd-7cea-4c58-b024-50f0ae4ac857,6/14/2023,7/10/2023
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,063d2775-0a52-489c-a9d1-05bd60fa6b9d,7/5/2023,7/31/2023
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,936389bb-645f-41dd-a851-2d126f1540c8,4/29/2024,5/24/2024
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,3d83a477-f8a6-4650-ba67-899fc2eaad91,5/27/2024,6/14/2024
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,224bb263-492d-4131-92e1-9a45976b876e,6/17/2024,7/5/2024
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,cf690365-f0b8-412d-8229-68fcbdc32720,7/8/2024,7/31/2024
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,56c016f3-c295-4721-976d-0af839a84a3c,4/29/2025,5/24/2025
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,ef1323d7-10a7-47aa-a225-abdd580cd586,5/27/2025,6/14/2025
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,8ae44eab-bd0d-46a3-ac1f-c940ceeb5575,6/17/2025,7/5/2025
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,8841647a-a1be-4628-8ef5-d35b35aec2ea,7/8/2025,7/31/2025
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,6b70815a-ca7a-4dd8-8d4f-ddb9dede8a9b,4/29/2026,5/24/2026
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,0b92833a-525b-4cef-8400-cbb5e7364bcb,5/27/2026,6/14/2026
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,c0a8e3bb-27f5-40ae-9959-c2193aae99aa,6/17/2026,7/5/2026
+ca09f161-aab3-4b55-b9b0-4fb22bbe91be,Fungicide Pkg,Package,305da6f9-b438-42ee-a172-16d4e5f5806a,7/8/2026,7/31/2026
+5c0797b4-9227-4a87-9196-50b7353312b8,Organic Compost,Package,61f83523-e389-4f41-ac17-23068e353f56,9/1/2023,10/31/2023
+5c0797b4-9227-4a87-9196-50b7353312b8,Organic Compost,Package,09fb384e-256c-4751-8b54-c002eb545a93,9/1/2024,10/31/2024
+5c0797b4-9227-4a87-9196-50b7353312b8,Organic Compost,Package,93a28d0e-8caa-4684-b048-4b3b24a980a7,9/1/2025,10/31/2025
+5c0797b4-9227-4a87-9196-50b7353312b8,Organic Compost,Package,20ccc4c1-727d-4f50-8ff6-16fea32f1ec7,9/1/2026,10/31/2026
+d7a0d247-3696-4cf4-9dd9-55b352c811cd,Monthly Mowing - Monday,Recurring,,,
+26fd4f46-e823-4414-9fea-68439bf92d2d,Monthly R/U- Wednesday,Recurring,,,
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,9c67e210-22b6-454f-b8dd-31ec7b38f79d,5/23/2022,7/9/2022
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,8f311cfb-6777-41e5-b669-f5dcb5c86b73,7/11/2022,8/27/2022
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,c5e3b7c2-d973-4f49-bf39-1344545758bb,5/23/2023,7/9/2023
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,0e305055-2129-4e91-ba72-513bf170da0b,7/11/2023,8/27/2023
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,8a94e0f8-eacb-4ed2-ae43-55451f446a33,5/23/2024,7/9/2024
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,93c1bf2d-2a5d-4595-92b2-3d707edad534,7/11/2024,8/27/2024
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,82813f5c-5b82-4c5f-bd97-5ce4c85123fb,8/29/2024,10/15/2024
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,6e79d630-e941-4075-ae85-fa9bcd80f511,5/23/2025,7/9/2025
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,d1173f25-9239-4aa2-bffa-2a4460a61e73,7/11/2025,8/27/2025
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,25f3134f-57db-4b58-b341-3c4369a9e069,8/1/2025,8/31/2025
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,40441822-4bb2-42b2-9776-ceef6d61e05c,8/29/2025,10/15/2025
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,84d5b0a3-fdc6-46a8-84b2-7f7a29d4668f,8/29/2025,10/15/2025
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,f360d9c7-c02f-4756-8a2e-bdb8721ecd00,8/29/2025,10/15/2025
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,0e29f93f-fd7c-4d88-b53c-5fbdbc27340d,5/23/2026,7/9/2026
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,9e607183-e147-43ce-acd3-320a8df2f40c,7/11/2026,8/27/2026
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,49f5d710-6ee6-4ca2-847b-f7301198cd8f,8/1/2026,8/31/2026
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,30a849e8-6073-436f-af2e-a0ef335215d0,8/29/2026,10/15/2026
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,cdd35a16-b9ea-4f6e-819e-1195f0e57d03,8/29/2026,10/15/2026
+7c84b641-6223-4d3e-b041-688d41e91212,Green Lawn Pkg Add-on,Package,1e2db8a3-019e-4b2e-bff3-7a321f2e9c37,8/29/2026,10/15/2026
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,7111772d-321d-4c70-b40b-7149b5ef7c76,2/20/2017,3/18/2017
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,cd8937cc-1bdb-49e5-8ada-1ee1e166923e,4/3/2017,5/13/2017
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,549a4b6b-e725-4155-bca3-776aae6507fb,5/15/2017,6/24/2017
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,11f9eccf-8d9b-434e-aba8-79045cb5b1f0,6/26/2017,8/5/2017
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,4171f012-3bf4-4c44-8ca5-ff7e3a19e7fb,9/4/2017,10/15/2017
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,d16bb74c-bf62-483f-a759-973d4f1cddc3,10/5/2017,11/25/2017
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,64e65a66-f604-4dac-b128-d217d741c84d,11/27/2017,12/30/2017
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,2deebfd6-e340-4a7f-9911-e049aaf8c9da,2/19/2018,3/31/2018
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,d61384fc-419a-4f03-bfdf-b45169002481,4/2/2018,5/12/2018
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,54eb1de2-f0c1-42cc-86f9-71421d6dae5f,5/14/2018,6/23/2018
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,acb36f66-827c-4282-9080-8534911e8b36,6/25/2018,8/4/2018
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,6fd29065-1590-4d36-925e-f6855783d038,9/3/2018,10/15/2018
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,787de0bb-a276-4cc4-9e61-0fcecd4bcd5d,10/8/2018,11/17/2018
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,edf3f80d-58d6-4139-9231-a780fa2a10bf,11/19/2018,12/29/2018
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,a92719a7-b774-4c3d-a866-249e0864631f,2/18/2019,4/6/2019
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,22fafc0a-4cfb-404b-b95b-0eb2f0f00442,4/7/2019,5/25/2019
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,ba05a01c-0795-40bc-9330-14cdaca6d686,5/19/2019,6/29/2019
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,e13e85f5-bf6e-4532-ba5d-d987d0e7330e,7/15/2019,8/31/2019
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,2f024917-902b-4150-b9f6-c3b4376f612f,9/2/2019,10/19/2019
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,b5cb86a8-98dd-4e69-845b-0c051b87414b,10/21/2019,11/30/2019
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,d6035544-3267-49d9-8a45-05d7ab681b53,12/2/2019,1/11/2020
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,b8003420-f720-4a2c-9eb1-d5b7d373e87d,2/17/2020,4/4/2020
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,82b517b3-d83f-48e1-aafc-35f947728526,4/6/2020,5/23/2020
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,8cf5c982-1be9-4e22-97ea-79f9441db065,5/25/2020,7/4/2020
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,08eaddd6-090d-41d2-8389-576e6d19eac0,7/13/2020,8/29/2020
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,541204f6-3416-457f-a5b5-dc7243264e07,8/31/2020,10/17/2020
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,a3cfebab-6076-40a4-b9a3-d5b51fef9d4a,10/12/2020,11/14/2020
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,23f29b15-bab8-4e0a-85db-8baf1ee261e7,11/16/2020,12/26/2020
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,dd07b245-d26e-4960-baaf-d5244cb63bff,2/15/2021,4/3/2021
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,0f1b83c3-af23-4a7d-aa12-3b986882302e,4/5/2021,5/22/2021
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,84f75a4d-267f-40e5-9248-3f4c001631a6,5/24/2021,7/3/2021
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,9d7bad47-a67e-4f93-b2f7-eec18cb20fcc,7/12/2021,8/28/2021
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,edeb8ba7-0da5-4a02-bfd3-5934189b36b1,8/30/2021,10/16/2021
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,a76293b5-e081-4a01-a959-e2deb8ef2cbe,10/11/2021,11/13/2021
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,b714185a-9e9b-4bad-b2fc-87e08d0ecbc5,11/15/2021,12/24/2021
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,1808a4cb-7c16-4b6d-ac6d-ea4828322ab6,2/14/2022,4/2/2022
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,849a294c-4787-4656-bace-8033939f64bd,4/4/2022,5/21/2022
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,04cd5beb-e14d-4118-a396-90feedfc8a97,5/23/2022,7/9/2022
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,94ed484d-2a39-4b4e-af68-0ac91bb3497c,7/11/2022,8/27/2022
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,f734bbe3-f5c3-4033-8edd-b448268ae87f,8/29/2022,10/15/2022
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,41ec7baa-27bd-4997-a66f-59df98c1c07c,10/10/2022,11/12/2022
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,b9d9c595-e82f-4f57-b777-0e694e5ad1c1,11/14/2022,12/24/2022
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,a111feec-2c18-4c9b-bf94-202e6f2148a1,2/14/2023,4/2/2023
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,a90d12bf-8e07-482d-a525-6ff4155026d1,4/4/2023,5/21/2023
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,ac58507e-a3d0-4978-bb6e-d8a0e850807a,5/23/2023,7/9/2023
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,fcbc68c3-907e-419e-a3fd-2bb53327e6b0,7/11/2023,8/27/2023
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,a3a04795-5ef0-47f8-b447-cfa335e45e8e,8/29/2023,10/15/2023
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,5753475e-7a6c-4c49-a89a-83a976ceb91b,10/10/2023,11/12/2023
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,fe5294da-d608-484e-8cdf-ec3982647f85,11/14/2023,12/24/2023
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,609b17f9-e905-4692-9403-244dbdee4d62,2/14/2024,4/2/2024
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,361e66a4-275b-4517-b8ff-2feba78543cc,4/4/2024,5/21/2024
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,f38fa57b-c5dc-47a3-8390-48230915f006,5/6/2024,7/9/2024
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,71e1f59a-34a3-48fd-96fc-ff251a2de391,7/11/2024,8/27/2024
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,1877391b-8156-4f05-86a4-23e0a1a5bc3a,8/29/2024,10/15/2024
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,bf2f7b88-283a-4488-a585-3b0ddb878361,8/29/2024,10/15/2024
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,64d804f7-91a7-4756-b05b-d0bfbcc552ea,10/10/2024,11/12/2024
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,3ee1aefb-5b28-4556-924e-9c483bd7d320,11/14/2024,12/24/2024
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,53dbead8-8dcd-4ecc-9a9f-5a7ae6d05997,2/14/2025,4/2/2025
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,0990f2ca-3cfd-4f43-8f9c-dc1da4cf3ff3,4/3/2025,5/21/2025
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,1f1a9d57-acb2-4cc1-8387-638055746cdb,5/6/2025,7/9/2025
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,aebcde4f-d478-44a2-a6bc-fe40aab5c993,7/11/2025,8/27/2025
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,be2755f3-0287-4a36-a423-b602103d93b4,8/29/2025,10/15/2025
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,6edcc0f9-f817-4361-ac09-60f49448155d,8/29/2025,10/15/2025
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,031351b7-0613-4cfb-917a-6f8fcb1f7746,10/10/2025,11/12/2025
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,96c95a08-115e-433b-b17e-61929a721e2d,11/14/2025,1/31/2026
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,1a109ed8-d597-40b3-b506-f10e239ba2ff,2/14/2026,4/2/2026
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,e3f0b67b-59de-42a8-a85a-3684ffd19a57,4/3/2026,5/21/2026
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,83d2bc30-37ab-45ff-afc0-7d4d29cb39f3,5/6/2026,7/9/2026
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,e547bca6-5c03-45bb-bb49-d35f6431bdda,7/11/2026,8/27/2026
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,2fc191dd-f808-42e9-b3fe-d04fdde4f3a3,8/29/2026,10/15/2026
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,9e3640b1-9c88-4442-8747-257ab156227c,8/29/2026,10/15/2026
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,b26ec8ce-5dfa-4eba-9eb7-e0c2ed0654e0,10/10/2026,11/12/2026
+04171468-6712-4f88-9a38-6bcc02505bdc,Green Lawn Pkg,Package,f559ad20-c9c3-4e2a-ba34-5f4539244a32,11/14/2026,1/31/2027
+b8e0bd59-6d29-452e-b839-70e7e5f46cd5,Weekly - Monday Leaves,Recurring,,,
+95b833d3-a350-48f0-a657-71a2453c12de,Mulch Bed Maintenance & Weed Control (B/W),Recurring,,,
+587e0461-54e6-4548-94d6-44a67c269534,Spring Cleanup,Package,e49033a3-8b61-496c-ba13-8fa69272ffaf,3/1/2026,5/31/2026
+e1f027c8-89cb-4a7d-9263-47ede268981b,Weekly - Tuesday Leaves,Recurring,,,
+fd469c38-082c-4b69-b3aa-8f63171ebebc,Lexington Farms Sch,Recurring,,,
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,471eadb1-c494-4ce7-a82d-f0e6636c730a,1/3/2021,5/24/2021
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,260655c5-84ca-49fa-99fd-fa879eed138f,1/3/2021,5/24/2021
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,956a7792-f3f3-4113-b2dc-32992084cbfd,1/3/2021,5/24/2021
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,1485380e-ea43-4e3e-9151-7945a15a1aee,1/3/2021,5/24/2021
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,7f0335c4-6bac-45b4-8b3b-7de4fbeb31cc,1/3/2022,5/24/2022
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,6553f44f-138d-44f3-8e2a-baf9bb337f7d,1/3/2022,5/24/2022
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,cb94055d-8eb8-47b8-896a-ec03b157620b,1/3/2022,5/24/2022
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,f0beeaf8-962b-4942-8826-cedfe29f7375,1/3/2022,5/24/2022
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,c8b7accc-6267-4292-b12a-d2a09007d4f2,1/3/2023,5/31/2023
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,d99f6523-dfbd-4067-8207-8a12356af4d2,1/3/2023,5/31/2023
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,efcccfef-c766-4caf-a46f-3b6da53a6b7d,1/3/2023,5/31/2023
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,bcd2445c-1bf0-4bca-8b00-28da12b87c92,1/3/2023,5/31/2023
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,2a423f84-e577-4f58-ba7a-7b2b79489c8f,1/3/2023,5/31/2023
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,90846ac9-7f6c-40f6-b750-2af0854e4472,1/3/2024,5/31/2024
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,52504b5b-42d1-4531-aa39-512f6f36ea21,1/3/2024,5/31/2024
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,baa633ef-5933-4613-9f85-572a9f86820c,1/3/2024,5/31/2024
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,ff13dfab-d326-4541-a2ff-7250d833cd49,1/3/2024,5/31/2024
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,616085d0-dfe1-4a57-8017-d0a5fa6ba0d8,1/3/2024,5/31/2024
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,f434ecc6-afb0-4027-8735-d37c34be2112,1/3/2025,5/31/2025
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,80df76f1-8a04-4ff2-afd5-edec7c7713d1,1/3/2025,5/31/2025
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,a0c32ccb-6012-460b-9a7c-6522b2ac86b4,1/3/2025,5/31/2025
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,19be8352-8d43-46b9-829a-aa818b1c3078,1/3/2025,5/31/2025
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,f9c2abaa-a884-452e-beb9-7afc348ed3ee,1/3/2025,5/31/2025
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,876f97b4-052b-4347-81c1-8ee97adb689e,1/3/2026,5/31/2026
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,4141ed2d-ebda-4bc4-9b25-c0fafcf554f5,1/3/2026,5/31/2026
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,faea09aa-ff7e-4fa6-9e86-206206b6aa38,1/3/2026,5/31/2026
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,554f844f-a903-4e22-8cd3-3c6a55fc70c6,1/3/2026,5/31/2026
+6ae40edf-a227-4608-bbe7-8ff5e45ae8cd,Mulch Included- Hand,Package,c367eb62-0782-4eb0-b168-f52012506e9a,1/3/2026,5/31/2026
+fb37592b-d2f3-4198-b915-910ad8c253be,Shady Ridge HOA R/U Bi-Weekly,Recurring,,,
+364f98bd-d21f-4939-bb60-ba3893c13562,Monthly R/U- Thursday,Recurring,,,
+d2c8c44a-40a2-471f-82b7-c45e3f7959c0,Monthly Mulch Bed Maintenance,Recurring,,,
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,83a16e1c-9b09-4011-a061-1bcbd13303e1,3/15/2020,4/30/2020
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,2ca885cc-6678-4fb9-82b0-0340fc48facf,3/15/2020,11/30/2020
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,249af4fd-f279-4e10-b45d-1e097d929b7c,3/15/2020,11/30/2020
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,92c52975-afe1-43e2-be2f-154ad2e73924,3/15/2020,11/30/2020
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,66ff063f-74ec-484a-b439-a20b0f78b5b2,10/15/2020,11/30/2020
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,24a66581-a166-4e53-b53b-63f38f237bbb,3/15/2021,4/30/2021
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,c44b411a-7629-4d97-ba0c-68903b8950c1,3/15/2021,11/30/2021
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,878155ab-96f9-4409-9f41-450ffe5fead6,3/15/2021,11/30/2021
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,c2d37c46-b8e5-4f7f-8b55-d8b210f32335,3/15/2021,11/30/2021
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,cf3cb8fb-af8a-4d53-beaa-a352d57cebb3,10/15/2021,11/30/2021
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,c023a56e-8a6d-4bc3-b5c6-f469b6b3328a,3/15/2022,4/30/2022
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,5ca6b1c0-5879-403e-b92c-d27bf8e56ed3,3/15/2022,11/30/2022
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,17cf1d08-84c0-43a6-9085-9d3190178a77,3/15/2022,11/30/2022
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,398bc4f8-3235-4bd5-988c-286f544f8a27,3/15/2022,11/30/2022
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,7fde04c3-cd6e-4f5e-94bc-3849f05d4350,10/15/2022,11/30/2022
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,7d8e3e0a-b6c5-4951-b1d8-2f75893f5473,2/1/2023,4/30/2023
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,c8feb6dd-775b-4542-acac-e98392c401b5,10/1/2023,11/30/2023
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,805057d0-3277-4d03-a93c-327d8c522e84,2/1/2024,4/30/2024
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,b0bc836a-519c-4743-a96c-fb5140f5d69b,5/1/2024,6/30/2024
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,3736ca84-8b5d-4e99-be3e-fbd2e8dab5f1,7/1/2024,9/30/2024
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,61eede15-dfb9-4744-996f-145e9f1901e3,10/1/2024,11/30/2024
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,49b9b276-fdb2-4755-869b-20cf8810b595,2/1/2025,4/30/2025
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,6cc320a3-ab95-4f3a-928b-eda75d30afa0,5/1/2025,6/30/2025
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,f9feb399-a9a0-459b-89e4-0dfcbc329466,7/1/2025,9/30/2025
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,20f1eea0-c86b-4501-a5da-462ae3f48358,10/1/2025,11/30/2025
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,2209de75-184d-4a82-b65e-3918c185c275,2/1/2026,4/30/2026
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,c165dc75-f1a8-4525-9329-fe117e17562a,5/1/2026,6/30/2026
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,bc9b6196-db31-49b0-be28-bf95dc185b6f,7/1/2026,9/30/2026
+d574221c-cd89-47c1-87ec-c546245f8369,Irrigation Package,Package,93888e2f-2e28-40c7-a6a5-0b603d397e62,10/1/2026,11/30/2026
+b33609c9-fc61-4ad4-94bb-c70a886144a8,Monthly R/U- Tuesday,Recurring,,,
+5e96cd3b-a90b-42e7-89b9-cd0799fe5b04,Route Inspection,Recurring,,,
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,c7d6bc2f-8168-4855-ba11-9fccaa34d5e6,3/1/2020,5/31/2020
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,41738c37-ba96-4b60-9dbb-166e3221c340,6/1/2020,8/31/2020
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,d9127b92-0975-4518-a40b-05703b9efbc9,9/1/2020,11/30/2020
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,6ac71b4a-146c-470b-b7fd-7e465b526bbf,9/1/2020,11/30/2020
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,0fc92f96-d894-4fd0-890e-75bea4177c73,1/4/2021,2/28/2021
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,4082ad6d-e07b-4be8-a802-361d8aba5515,3/1/2021,5/31/2021
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,c6c5e57a-a7da-420c-a5b7-e4fa624c1bae,6/1/2021,8/31/2021
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,bd77c305-5657-450a-b73c-3ba9c32936a0,9/1/2021,11/30/2021
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,5d5a015f-f790-4c9b-9d04-81ebb5b118e2,1/4/2022,2/28/2022
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,309a71d6-d363-4c10-8a65-d6d494aa54d4,3/1/2022,5/31/2022
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,f25ffa89-4fdf-4092-a2a5-548b1a674319,6/1/2022,8/31/2022
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,9e82f96a-7b5c-4023-9aa1-6e681e27baca,9/1/2022,11/30/2022
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,cff93ca8-e2ae-4c73-bf7e-e5baf0ba6875,1/4/2023,2/28/2023
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,857de601-3737-4f5a-9c2b-4a7ce289b588,3/1/2023,5/31/2023
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,e992f2df-81d4-4fba-b7b9-0a7c10307993,6/1/2023,8/31/2023
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,2471c327-5883-4930-a972-a1419025077a,9/1/2023,11/30/2023
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,22f46de3-1703-421c-8193-379f3bef01d5,1/4/2024,2/28/2024
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,16771f9d-8a1b-4552-924a-fc95b3395f2c,3/1/2024,5/31/2024
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,031e1679-c434-4da7-85de-6885aabac7d8,6/1/2024,8/31/2024
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,2b29b0df-4eaa-4e14-8369-9e470b8cb65e,9/1/2024,11/30/2024
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,13e033b2-d041-4cfb-9ccb-b3baab164194,1/4/2025,2/28/2025
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,675d6082-40bf-4767-a7a6-25f2bcc87cd6,3/1/2025,5/31/2025
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,d1d11ce8-d99b-493b-ad41-8e6b10255a2d,6/1/2025,8/31/2025
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,ca77cb95-d4d5-47af-bf65-f48607de1015,9/1/2025,11/30/2025
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,bcae3442-3d8e-4ce9-876e-b375eac8487a,1/4/2026,2/28/2026
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,dfbdd41c-91d2-4702-8bfe-aad8ff04522f,3/1/2026,5/31/2026
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,6224388b-81ad-4127-9ccf-a45032b231da,6/1/2026,8/31/2026
+32dabd19-8019-4685-a58e-ce5c215d717e,Hedges -Pruning Package,Package,6b49ad9c-1647-478a-8d15-80674be268ec,9/1/2026,11/30/2026
+f2c41672-0a64-4666-9296-963e9e1dfb4c,Weekly - Wednesday Leaves,Recurring,,,
+3ad90016-fd85-480a-9772-9911ba06c5d3,Monthly R/U- Tuesday Even,Recurring,,,
+7f76a2ed-2616-44d0-9a68-a279f4f38e2b,Weekly - Thursday Leaves,Recurring,,,
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,b63cc70f-eed0-4ede-9fb4-03c0c30332fe,11/1/2021,11/24/2021
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,f7efffa4-6bf2-40f5-b7a2-bc4ae578b05a,11/29/2021,12/22/2021
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,481b839b-17eb-46f8-aeb1-d226a52560b8,1/3/2022,1/28/2022
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,0d3bdf65-06ad-4dce-9c45-bdfb484f0939,11/1/2022,11/24/2022
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,b165dbda-b17d-4fb6-8bcd-a7ce48d3e60d,11/29/2022,12/22/2022
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,20fa54f8-0a58-4b17-927c-8dc79160633f,1/3/2023,1/28/2023
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,9bcecaa0-0f44-4247-a466-d676308b0a7b,11/1/2023,11/24/2023
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,0020e6f8-c777-44d8-86df-d2f7f0179466,11/29/2023,12/22/2023
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,79f9248f-4ede-449f-ad6a-29882095b94b,1/3/2024,1/28/2024
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,e64321fc-d117-465a-9173-2410a3decf57,11/1/2024,11/24/2024
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,9b8a29ec-1c3d-46ac-a449-4b1792ba3a54,11/25/2024,12/23/2024
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,2b137680-950b-40a7-9816-30045c74b479,1/2/2025,1/31/2025
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,d4404326-5aa3-455a-a02a-dc170bf3c6be,11/1/2025,11/24/2025
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,f2d80c32-d239-4ba7-aa0d-6512a90ed7b5,11/25/2025,12/23/2025
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,1f591b49-7335-426d-839c-8013cb8a5b4a,1/2/2026,1/31/2026
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,a8e89fd4-1330-4e79-be8e-67d68663aad0,11/1/2026,11/24/2026
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,da7108d4-3d10-45af-853b-4376c14cf4b2,11/25/2026,12/23/2026
+205e06fd-32df-432a-b752-aaa135bedd5d,3 Leaf & Vac Pkg Included in Contract,Package,c9b06056-81a5-47ae-ac91-235822b06e93,1/2/2027,1/31/2027
+e7236bf9-6c1e-42e8-8153-abdfe854c9f3,Monthly Mowing - Tuesday,Recurring,,,
+379e7774-1d13-40cb-95a9-e71f381ce558,Weekly - Friday Leaves,Recurring,,,
+2e7d0d34-ea50-45cf-94dd-e8f0e9e66ffe,Monthly R/U - Friday,Recurring,,,
+de212c70-6cb2-446c-8151-f1126d176aef,Monthly Mowing - Wednesday,Recurring,,,
+2ce3fbc6-a6ad-4684-8ee6-f79b3771e1b9,Bi-weekly - Friday - Even Weeks,Recurring,,,
+245fc649-eaa6-4c34-a92c-9198b9dc497e,Weekly - Monday,Recurring,,,
+527c2f20-296e-4304-a29b-4977c3988ee5,Weekly - Tuesday,Recurring,,,
+02f6d0a6-01e5-4a6f-85eb-41a54771741a,Weekly - Wednesday,Recurring,,,
+c8d6cc7d-a43c-4733-a5d7-7b5830a3d5e3,Weekly - Thursday,Recurring,,,
+66ff19f1-157b-405a-9f16-47232a75c398,Weekly - Friday,Recurring,,,
+dc26e766-2e04-4897-9ab6-dbee0c22e616,Bi-weekly - Monday- Odd Weeks,Recurring,,,
+0510cc71-526b-4615-b8b0-11474037bbb5,Bi-weekly - Tuesday- Odd Weeks,Recurring,,,
+9a3bfa73-9fd0-438a-a4b5-dda9fabc6698,Bi-weekly - Wednesday- Even Weeks,Recurring,,,
+7e83ae6d-dfb7-4d75-82f8-f275a72f1722,Bi-weekly - Thursday- Odd Weeks,Recurring,,,
+36c14179-26ca-4868-994f-27782ea756e0,Bi-weekly - Monday- Even Weeks,Recurring,,,
+14aad957-8ae5-4d3f-b892-480cf215dc79,Bi-weekly - Tuesday- Even Weeks,Recurring,,,
+b58f8a72-8571-47b9-9124-b02f1e72d10d,Bi-weekly - Wednesday- Odd Weeks,Recurring,,,
+e1da9385-ba00-43ac-92e0-f8d9067d7029,Bi-weekly - Thursday- Even Weeks,Recurring,,,
+bf20629e-0650-4282-bd64-eadb9efa156b,Bi-weekly - Friday- Odd Weeks,Recurring,,,

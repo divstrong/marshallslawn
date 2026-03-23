@@ -9,6 +9,7 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions;
 
 class CustomerResource extends Resource
 {
@@ -23,6 +24,8 @@ class CustomerResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+            Forms\Components\TextInput::make('company_name')
+                ->maxLength(255),
             Forms\Components\TextInput::make('first_name')
                 ->required()
                 ->maxLength(255),
@@ -50,7 +53,17 @@ class CustomerResource extends Resource
                     'lead' => 'Lead',
                 ])
                 ->required(),
+            Forms\Components\TextInput::make('customer_type')
+                ->maxLength(255),
+            Forms\Components\TextInput::make('account_number')
+                ->maxLength(255),
+            Forms\Components\TextInput::make('division')
+                ->maxLength(255),
             Forms\Components\TextInput::make('source')
+                ->maxLength(255),
+            Forms\Components\TextInput::make('legacy_id')
+                ->label('Legacy ID')
+                ->disabled()
                 ->maxLength(255),
             Forms\Components\Textarea::make('notes')
                 ->columnSpanFull(),
@@ -61,25 +74,43 @@ class CustomerResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('full_name')
-                    ->label('Name')
-                    ->searchable(['first_name', 'last_name']),
-                Tables\Columns\TextColumn::make('email')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('phone'),
+                Tables\Columns\TextColumn::make('company_name')
+                    ->label('Company')
+                    ->searchable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('first_name')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('last_name')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('address')
+                    ->searchable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('city')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('customer_type')
+                    ->label('Type')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('account_number')
+                    ->label('Account #')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('legacy_id')
+                    ->label('Legacy ID')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

@@ -17,9 +17,12 @@ class Crew extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'legacy_id',
+        'code',
         'name',
         'foreman_id',
         'status',
+        'division',
         'notes',
     ];
 

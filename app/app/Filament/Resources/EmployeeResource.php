@@ -9,6 +9,7 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions;
 
 class EmployeeResource extends Resource
 {
@@ -23,12 +24,15 @@ class EmployeeResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+            Forms\Components\TextInput::make('first_name')
+                ->maxLength(255),
+            Forms\Components\TextInput::make('last_name')
+                ->maxLength(255),
             Forms\Components\TextInput::make('name')
                 ->required()
                 ->maxLength(255),
             Forms\Components\TextInput::make('email')
                 ->email()
-                ->required()
                 ->maxLength(255),
             Forms\Components\TextInput::make('phone')
                 ->tel()
@@ -57,6 +61,12 @@ class EmployeeResource extends Resource
             Forms\Components\TextInput::make('emergency_contact_phone')
                 ->tel()
                 ->maxLength(255),
+            Forms\Components\TextInput::make('division')
+                ->maxLength(255),
+            Forms\Components\TextInput::make('legacy_id')
+                ->label('Legacy ID')
+                ->disabled()
+                ->maxLength(255),
             Forms\Components\Textarea::make('notes')
                 ->columnSpanFull(),
         ]);
@@ -66,24 +76,38 @@ class EmployeeResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('first_name')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('last_name')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
+                    ->label('Display Name')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('phone'),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
+                Tables\Columns\TextColumn::make('division')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('hire_date')
                     ->date()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('legacy_id')
+                    ->label('Legacy ID')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
