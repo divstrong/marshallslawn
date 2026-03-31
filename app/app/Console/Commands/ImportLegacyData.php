@@ -43,6 +43,7 @@ class ImportLegacyData extends Command
 
         if (isset($sheets['Crews'])) {
             $this->importCrews($sheets['Crews']);
+            $this->assignForemen($sheets['Crews']);
         }
 
         if (isset($sheets['Clients'])) {
@@ -57,6 +58,84 @@ class ImportLegacyData extends Command
         $this->info('Legacy data import complete!');
 
         return self::SUCCESS;
+    }
+
+    private function assignForemen(array $rows): void
+    {
+        $this->info('Assigning crew foremen from crew descriptions...');
+
+        // Map of crew code/description keywords to employee first names
+        $foremanMap = [
+            'Dave' => 'David',
+            'Moises' => 'Moises',
+            'Julio' => 'Julio',
+            'Valentin' => 'Valentin',
+            'Ventura' => 'Nelson',    // Nelson Ventura
+            'Antonio' => 'Antonio',
+            'Jonathan' => 'Jonathan',  // Jonathan Rodas Ventura
+            'Pablo' => 'Pablo',
+            'Henry' => 'Henry',        // Henry Titsa Titsa
+            'Trey' => 'Trey',
+            'Michael' => 'Michael',
+            'Harner' => 'David',       // David Harner (match by last name)
+            'Will' => 'Will',
+        ];
+
+        $assigned = 0;
+        foreach ($rows as $row) {
+            $crewCode = $row['CrewCode'] ?? '';
+            $description = $row['Description'] ?? '';
+            $legacyId = $row['CrewID'] ?? null;
+
+            if (! $legacyId) {
+                continue;
+            }
+
+            $crew = Crew::where('legacy_id', $legacyId)->first();
+            if (! $crew || $crew->foreman_id) {
+                continue;
+            }
+
+            // Try matching by crew code first, then description
+            $foreman = null;
+            foreach ($foremanMap as $keyword => $firstName) {
+                if (stripos($crewCode, $keyword) !== false || stripos($description, $keyword) !== false) {
+                    // Special case: "Harner" matches last name
+                    if ($keyword === 'Harner') {
+                        $foreman = Employee::where('last_name', 'like', '%Harner%')->first();
+                    } elseif ($keyword === 'Dave') {
+                        // Match "David Marshall" (not SA version)
+                        $foreman = Employee::where('first_name', 'David')
+                            ->where('last_name', 'Marshall')
+                            ->whereNot('last_name', 'like', '%(SA)%')
+                            ->first();
+                    } elseif ($keyword === 'Ventura') {
+                        $foreman = Employee::where('last_name', 'Ventura')
+                            ->where('first_name', 'Nelson')
+                            ->first();
+                    } elseif ($keyword === 'Jonathan') {
+                        $foreman = Employee::where('first_name', 'Jonathan')
+                            ->where('last_name', 'like', 'Rodas%')
+                            ->first();
+                    } elseif ($keyword === 'Henry') {
+                        $foreman = Employee::where('first_name', 'Henry')
+                            ->where('last_name', 'like', 'Titsa%')
+                            ->first();
+                    } else {
+                        $foreman = Employee::where('first_name', $firstName)->first();
+                    }
+                    break;
+                }
+            }
+
+            if ($foreman) {
+                $crew->update(['foreman_id' => $foreman->id]);
+                $this->line("  Assigned {$foreman->name} as foreman of {$crewCode}");
+                $assigned++;
+            }
+        }
+
+        $this->info("Assigned {$assigned} foremen.");
     }
 
     private function importClients(array $rows): void
@@ -170,6 +249,7 @@ class ImportLegacyData extends Command
                     'name' => $row['Name'] ?? 'Unknown',
                     'full_name' => $row['FullName'] ?? null,
                     'description' => $row['Description'] ?? null,
+                    'category' => $row['Category'] ?? 'general',
                     'is_active' => true,
                     'list_id' => $row['ListID'] ?? null,
                 ]

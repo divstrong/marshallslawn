@@ -83,6 +83,12 @@ class EstimateResource extends Resource
             ])
             ->filters([])
             ->actions([
+                Actions\Action::make('view_public')
+                    ->label('View')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (Estimate $record) => $record->share_token ? $record->getPublicUrl() : null)
+                    ->openUrlInNewTab()
+                    ->visible(fn (Estimate $record) => (bool) $record->share_token),
                 Actions\EditAction::make(),
             ])
             ->bulkActions([
