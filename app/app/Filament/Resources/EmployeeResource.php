@@ -102,6 +102,7 @@ class EmployeeResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
+            ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),
             ])

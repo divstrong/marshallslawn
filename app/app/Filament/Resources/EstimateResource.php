@@ -82,6 +82,7 @@ class EstimateResource extends Resource
                     ->sortable(),
             ])
             ->filters([])
+            ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\Action::make('view_public')
                     ->label('View')

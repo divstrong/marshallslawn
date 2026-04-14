@@ -52,6 +52,7 @@ class UserResource extends Resource
                     ->sortable(),
             ])
             ->filters([])
+            ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),
             ])

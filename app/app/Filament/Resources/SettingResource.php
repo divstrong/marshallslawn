@@ -46,6 +46,7 @@ class SettingResource extends Resource
                     ->searchable(),
             ])
             ->filters([])
+            ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),
             ])

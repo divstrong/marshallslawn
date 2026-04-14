@@ -80,6 +80,7 @@ class ChemicalLogResource extends Resource
                 Tables\Columns\TextColumn::make('area_treated'),
             ])
             ->filters([])
+            ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),
             ])

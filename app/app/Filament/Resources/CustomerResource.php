@@ -105,6 +105,7 @@ class CustomerResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([])
+            ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),
             ])
@@ -117,7 +118,9 @@ class CustomerResource extends Resource
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            CustomerResource\RelationManagers\PropertiesRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

@@ -42,6 +42,7 @@ class EstimateBuilder extends Component
 
     // Totals
     public string $subtotal = '0.00';
+    public string $discountTotal = '0.00';
     public string $tax = '0.00';
     public string $total = '0.00';
     public float $taxRate = 0;
@@ -56,6 +57,17 @@ class EstimateBuilder extends Component
     public string $serviceSearch = '';
     public bool $showServiceDropdown = false;
 
+    // Discount
+    public bool $showDiscountModal = false;
+    public string $discountType = 'percent'; // 'percent' or 'dollar'
+    public string $discountAmount = '';
+
+    // Pricing guide (optional lot-size based rate lookup)
+    public bool $showPricingGuide = false;
+    public string $selectedLotSize = '';
+    public ?array $matchedTier = null;
+    public ?string $customLotSqft = null;
+
     public function mount(?Estimate $estimate = null): void
     {
         if ($estimate && $estimate->exists) {
@@ -69,6 +81,7 @@ class EstimateBuilder extends Component
             $this->tax = number_format((float) $estimate->tax, 2, '.', '');
 
             foreach ($estimate->lineItems()->orderBy('sort_order')->get() as $item) {
+                $isDiscount = (float) $item->total < 0;
                 $this->lineItems[] = [
                     'id' => $item->id,
                     'service_id' => $item->service_id,
@@ -76,6 +89,7 @@ class EstimateBuilder extends Component
                     'quantity' => number_format((float) $item->quantity, 2, '.', ''),
                     'unit_price' => number_format((float) $item->unit_price, 2, '.', ''),
                     'total' => number_format((float) $item->total, 2, '.', ''),
+                    'is_discount' => $isDiscount,
                 ];
             }
 
@@ -211,6 +225,7 @@ class EstimateBuilder extends Component
             'quantity' => '1.00',
             'unit_price' => number_format($price, 2, '.', ''),
             'total' => number_format($price, 2, '.', ''),
+            'is_discount' => false,
         ];
 
         $this->serviceSearch = '';
@@ -227,6 +242,7 @@ class EstimateBuilder extends Component
             'quantity' => '1.00',
             'unit_price' => '0.00',
             'total' => '0.00',
+            'is_discount' => false,
         ];
     }
 
@@ -261,12 +277,169 @@ class EstimateBuilder extends Component
     private function recalculate(): void
     {
         $sub = 0;
+        $disc = 0;
         foreach ($this->lineItems as $item) {
-            $sub += (float) ($item['total'] ?? 0);
+            $t = (float) ($item['total'] ?? 0);
+            if ($item['is_discount'] ?? false) {
+                $disc += $t; // negative value
+            } else {
+                $sub += $t;
+            }
         }
         $this->subtotal = number_format($sub, 2, '.', '');
+        $this->discountTotal = number_format($disc, 2, '.', '');
         $tax = (float) ($this->tax ?? 0);
-        $this->total = number_format($sub + $tax, 2, '.', '');
+        $this->total = number_format($sub + $disc + $tax, 2, '.', '');
+    }
+
+    // -- Discount --
+
+    public function openDiscountModal(): void
+    {
+        $this->discountType = 'percent';
+        $this->discountAmount = '';
+        $this->showDiscountModal = true;
+    }
+
+    public function closeDiscountModal(): void
+    {
+        $this->showDiscountModal = false;
+    }
+
+    public function applyDiscount(): void
+    {
+        $amount = (float) $this->discountAmount;
+        if ($amount <= 0) {
+            return;
+        }
+
+        // Calculate the subtotal of non-discount lines
+        $sub = 0;
+        foreach ($this->lineItems as $item) {
+            if (!($item['is_discount'] ?? false)) {
+                $sub += (float) ($item['total'] ?? 0);
+            }
+        }
+
+        if ($this->discountType === 'percent') {
+            $discountValue = round($sub * ($amount / 100), 2);
+            $label = "Discount ({$amount}%)";
+        } else {
+            $discountValue = $amount;
+            $label = "Discount";
+        }
+
+        $this->lineItems[] = [
+            'id'          => null,
+            'service_id'  => null,
+            'description' => $label,
+            'quantity'    => '1.00',
+            'unit_price'  => number_format(-$discountValue, 2, '.', ''),
+            'total'       => number_format(-$discountValue, 2, '.', ''),
+            'is_discount' => true,
+        ];
+
+        $this->showDiscountModal = false;
+        $this->recalculate();
+    }
+
+    public function removeDiscount(int $index): void
+    {
+        $this->removeLine($index);
+    }
+
+    public function updatedDiscountType(): void
+    {
+        // reset amount when switching type
+        $this->discountAmount = '';
+    }
+
+    // -- Pricing Guide --
+
+    public function togglePricingGuide(): void
+    {
+        $this->showPricingGuide = !$this->showPricingGuide;
+    }
+
+    public function updatedSelectedLotSize(): void
+    {
+        $this->matchedTier = null;
+        $this->customLotSqft = null;
+
+        if ($this->selectedLotSize === '' ) {
+            return;
+        }
+
+        if ($this->selectedLotSize === '55+') {
+            // needs custom sqft input
+            return;
+        }
+
+        [$from, $to] = explode('-', $this->selectedLotSize);
+        $midpoint = ((float) $from + (float) $to) / 2;
+
+        $this->matchedTier = $this->lookupTier($midpoint);
+    }
+
+    public function updatedCustomLotSqft(): void
+    {
+        if ($this->selectedLotSize !== '55+' || !$this->customLotSqft) {
+            $this->matchedTier = null;
+            return;
+        }
+
+        $sqftThousands = (float) $this->customLotSqft;
+        $this->matchedTier = $this->lookupTier($sqftThousands);
+    }
+
+    private function lookupTier(float $sqftThousands): array
+    {
+        $tiers = config('rate-matrix.tiers');
+        $overflow = config('rate-matrix.overflow');
+
+        foreach ($tiers as $tier) {
+            if ($sqftThousands >= $tier['from'] && $sqftThousands <= $tier['to']) {
+                return $tier;
+            }
+        }
+
+        // Overflow calculation for lots above the max tier
+        if ($sqftThousands > $overflow['above']) {
+            $lastTier = end($tiers);
+            $excess = $sqftThousands - $overflow['above'];
+            $increments = ceil($excess / $overflow['every']);
+
+            return [
+                'from'  => $overflow['above'],
+                'to'    => $sqftThousands,
+                'rate'  => round($lastTier['rate'] + ($increments * $overflow['rate_add']), 2),
+                'hours' => round($lastTier['hours'] + ($increments * $overflow['hours_add']), 2),
+                'cost'  => round($lastTier['cost'] + ($increments * $overflow['cost_add']), 2),
+            ];
+        }
+
+        return end($tiers);
+    }
+
+    public function applyRateAsLine(): void
+    {
+        if (!$this->matchedTier) {
+            return;
+        }
+
+        $rate = $this->matchedTier['rate'];
+
+        $this->lineItems[] = [
+            'id'         => null,
+            'service_id' => null,
+            'description' => 'Lawn Service (Rate Matrix)',
+            'quantity'   => '1.00',
+            'unit_price' => number_format($rate, 2, '.', ''),
+            'total'      => number_format($rate, 2, '.', ''),
+            'is_discount' => false,
+        ];
+
+        $this->recalculate();
     }
 
     // -- Save --

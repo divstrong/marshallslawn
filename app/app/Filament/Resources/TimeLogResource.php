@@ -71,6 +71,7 @@ class TimeLogResource extends Resource
                     ->badge(),
             ])
             ->filters([])
+            ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),
             ])

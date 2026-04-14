@@ -32,6 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->brandLogo(asset('img/logo.png'))
             ->brandLogoHeight('4rem')
+            ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => [
                     50 => '#fef1f3',

@@ -69,6 +69,7 @@ class NotificationResource extends Resource
                     ->sortable(),
             ])
             ->filters([])
+            ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),
             ])
