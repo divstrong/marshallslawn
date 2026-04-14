@@ -4,7 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\EstimateResource\Pages;
 use App\Models\Estimate;
+use App\Models\EstimateLineItem;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -91,6 +93,32 @@ class EstimateResource extends Resource
                     ->openUrlInNewTab()
                     ->visible(fn (Estimate $record) => (bool) $record->share_token),
                 Actions\EditAction::make(),
+                Actions\Action::make('copy')
+                    ->label('Copy')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->requiresConfirmation()
+                    ->modalHeading('Duplicate Estimate')
+                    ->modalDescription('This will create a new draft estimate with the same customer, property, line items, and notes.')
+                    ->action(function (Estimate $record) {
+                        $newEstimate = $record->replicate(['estimate_number', 'share_token', 'sent_at', 'accepted_at']);
+                        $newEstimate->status = 'draft';
+                        $newEstimate->valid_until = now()->addDays(30);
+                        $newEstimate->save();
+
+                        foreach ($record->lineItems as $line) {
+                            $newLine = $line->replicate();
+                            $newLine->estimate_id = $newEstimate->id;
+                            $newLine->save();
+                        }
+
+                        Notification::make()
+                            ->title('Estimate duplicated')
+                            ->body("Created {$newEstimate->estimate_number}")
+                            ->success()
+                            ->send();
+
+                        return redirect(EstimateResource::getUrl('edit', ['record' => $newEstimate]));
+                    }),
             ])
             ->bulkActions([
                 Actions\BulkActionGroup::make([

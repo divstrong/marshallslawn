@@ -2,33 +2,55 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\HasDashboardDateRange;
+use App\Models\Customer;
+use App\Models\Estimate;
+use App\Models\Job;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class StatsOverview extends StatsOverviewWidget
 {
+    use HasDashboardDateRange;
+
     protected static ?int $sort = 1;
 
     protected function getStats(): array
     {
+        [$start, $end] = $this->getDateRange();
+
+        $totalCustomers = Customer::whereBetween('created_at', [$start, $end])->count();
+        $newThisMonth = Customer::where('created_at', '>=', now()->startOfMonth())->count();
+
+        $activeJobs = Job::where('status', 'active')
+            ->whereBetween('created_at', [$start, $end])
+            ->count();
+        $completedInRange = Job::where('status', 'completed')
+            ->whereBetween('updated_at', [$start, $end])
+            ->count();
+
+        $openEstimates = Estimate::whereIn('status', ['draft', 'sent'])
+            ->whereBetween('created_at', [$start, $end])
+            ->count();
+        $pendingValue = Estimate::whereIn('status', ['draft', 'sent'])
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('total');
+
         return [
-            Stat::make('Total Customers', '248')
-                ->description('12 new this month')
+            Stat::make('Customers', number_format($totalCustomers))
+                ->description($newThisMonth . ' new this month')
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
-                ->color('success')
-                ->chart([7, 3, 4, 5, 6, 3, 5]),
+                ->color('success'),
 
-            Stat::make('Active Jobs', '64')
-                ->description('8 completed this week')
+            Stat::make('Active Jobs', number_format($activeJobs))
+                ->description($completedInRange . ' completed in range')
                 ->descriptionIcon('heroicon-m-check-circle')
-                ->color('primary')
-                ->chart([3, 5, 7, 6, 8, 4, 6]),
+                ->color('primary'),
 
-            Stat::make('Open Estimates', '18')
-                ->description('$24,500 pending value')
+            Stat::make('Open Estimates', number_format($openEstimates))
+                ->description('$' . number_format($pendingValue, 2) . ' pending value')
                 ->descriptionIcon('heroicon-m-currency-dollar')
-                ->color('warning')
-                ->chart([4, 6, 2, 5, 3, 7, 4]),
+                ->color('warning'),
         ];
     }
 }

@@ -44,6 +44,29 @@
                             </select>
                         </div>
                     @endif
+
+                    {{-- Lot Size --}}
+                    <div style="margin-top: 12px;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Lot Size (optional)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select wire:model.live="selectedLotSize" style="flex: 1; padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff;">
+                                <option value="">-- Select lot size --</option>
+                                @foreach(config('rate-matrix.lot_size_options') as $key => $label)
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @if($selectedLotSize === '55+')
+                                <input
+                                    wire:model.live.debounce.500ms="customLotSqft"
+                                    type="number"
+                                    step="0.1"
+                                    min="55"
+                                    placeholder="Thousands sqft"
+                                    style="width: 140px; padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box;"
+                                />
+                            @endif
+                        </div>
+                    </div>
                 @else
                     <div style="display: flex; gap: 8px;">
                         <div style="position: relative; flex: 1;">
@@ -134,44 +157,82 @@
                     </div>
                 @endforeach
 
-                {{-- Add line buttons --}}
-                <div style="display: flex; gap: 8px; margin-top: 12px; position: relative;">
-                    <div style="flex: 1; position: relative;">
-                        <input
-                            wire:model.live.debounce.300ms="serviceSearch"
-                            wire:focus="$set('showServiceDropdown', true)"
-                            type="text"
-                            placeholder="Search services to add..."
-                            style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; box-sizing: border-box;"
-                        />
-                        @if($showServiceDropdown && $this->serviceResults->count() > 0)
-                            <div style="position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto;">
-                                @foreach($this->serviceResults as $svc)
-                                    <button
-                                        wire:click="addService({{ $svc->id }})"
-                                        type="button"
-                                        style="width: 100%; text-align: left; padding: 10px 14px; border: none; background: none; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between;"
-                                        onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'"
-                                    >
-                                        <span style="font-weight: 500; color: #111827;">{{ $svc->name }}</span>
-                                        @if($svc->default_price)
-                                            <span style="color: #6b7280;">${{ number_format($svc->default_price, 2) }}</span>
-                                        @endif
-                                    </button>
-                                @endforeach
-                            </div>
-                        @endif
+                {{-- Add line: Services & Packages --}}
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                    <div style="display: flex; gap: 8px;">
+                        {{-- Service search --}}
+                        <div style="flex: 1; position: relative;">
+                            <input
+                                wire:model.live.debounce.300ms="serviceSearch"
+                                wire:focus="$set('showServiceDropdown', true)"
+                                type="text"
+                                placeholder="Search services..."
+                                style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; box-sizing: border-box;"
+                            />
+                            @if($showServiceDropdown && $this->serviceResults->count() > 0)
+                                <div style="position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto;">
+                                    @foreach($this->serviceResults as $svc)
+                                        <button
+                                            wire:click="addService({{ $svc->id }})"
+                                            type="button"
+                                            style="width: 100%; text-align: left; padding: 10px 14px; border: none; background: none; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between;"
+                                            onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'"
+                                        >
+                                            <span style="font-weight: 500; color: #111827;">{{ $svc->name }}</span>
+                                            @if($svc->default_price)
+                                                <span style="color: #6b7280;">${{ number_format($svc->default_price, 2) }}</span>
+                                            @endif
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                        {{-- Package search --}}
+                        <div style="flex: 1; position: relative;">
+                            <input
+                                wire:model.live.debounce.300ms="packageSearch"
+                                wire:focus="$set('showPackageDropdown', true)"
+                                type="text"
+                                placeholder="Search packages..."
+                                style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; box-sizing: border-box;"
+                            />
+                            @if($showPackageDropdown && $this->packageResults->count() > 0)
+                                <div style="position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto;">
+                                    @foreach($this->packageResults as $pkg)
+                                        <button
+                                            wire:click="addPackage({{ $pkg->id }})"
+                                            type="button"
+                                            style="width: 100%; text-align: left; padding: 10px 14px; border: none; background: none; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between;"
+                                            onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'"
+                                        >
+                                            <div>
+                                                <span style="font-weight: 500; color: #111827;">{{ $pkg->name }}</span>
+                                                <span style="font-size: 11px; color: #9ca3af; margin-left: 4px;">({{ $pkg->services_count ?? $pkg->services()->count() }} services)</span>
+                                            </div>
+                                            <span style="color: #6b7280; font-weight: 500;">${{ number_format($pkg->price, 2) }}</span>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
-                    <button
-                        wire:click="addCustomLine"
-                        type="button"
-                        style="padding: 8px 14px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; cursor: pointer; color: #374151; white-space: nowrap;"
-                    >+ Custom Line</button>
-                    <button
-                        wire:click="openDiscountModal"
-                        type="button"
-                        style="padding: 8px 14px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; cursor: pointer; color: #c9092f; white-space: nowrap;"
-                    >+ Discount</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button
+                            wire:click="addCustomLine"
+                            type="button"
+                            style="padding: 8px 14px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; cursor: pointer; color: #374151; white-space: nowrap;"
+                        >+ Custom Line</button>
+                        <button
+                            wire:click="openDiscountModal"
+                            type="button"
+                            style="padding: 8px 14px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; cursor: pointer; color: #c9092f; white-space: nowrap;"
+                        >+ Discount</button>
+                        <button
+                            wire:click="openPricingCalc"
+                            type="button"
+                            style="padding: 8px 14px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; cursor: pointer; color: #166534; white-space: nowrap;"
+                        >Pricing Calculator</button>
+                    </div>
                 </div>
             </div>
 
@@ -211,77 +272,6 @@
                     <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
                         <span style="font-size: 12px; color: #6b7280;">Estimate #</span>
                         <span style="font-size: 14px; font-weight: 600; color: #111827; margin-left: 4px;">{{ $estimate->estimate_number }}</span>
-                    </div>
-                @endif
-            </div>
-
-            {{-- Pricing Guide (optional) --}}
-            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
-                <button
-                    wire:click="togglePricingGuide"
-                    type="button"
-                    style="width: 100%; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border: none; background: none; cursor: pointer;"
-                >
-                    <span style="font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Pricing Guide</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; color: #9ca3af; transition: transform 0.2s; {{ $showPricingGuide ? 'transform: rotate(180deg);' : '' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-
-                @if($showPricingGuide)
-                    <div style="padding: 0 20px 20px; border-top: 1px solid #f3f4f6;">
-                        <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin: 12px 0 6px;">Lot Size</label>
-                        <select
-                            wire:model.live="selectedLotSize"
-                            style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff;"
-                        >
-                            <option value="">-- Select lot size --</option>
-                            @foreach(config('rate-matrix.lot_size_options') as $key => $label)
-                                <option value="{{ $key }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-
-                        {{-- Custom sqft input for 55k+ --}}
-                        @if($selectedLotSize === '55+')
-                            <div style="margin-top: 8px;">
-                                <label style="display: block; font-size: 11px; color: #6b7280; margin-bottom: 4px;">Enter lot size (thousands sq ft)</label>
-                                <input
-                                    wire:model.live.debounce.500ms="customLotSqft"
-                                    type="number"
-                                    step="0.1"
-                                    min="55"
-                                    placeholder="e.g. 60"
-                                    style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box;"
-                                />
-                            </div>
-                        @endif
-
-                        {{-- Matched tier display --}}
-                        @if($matchedTier)
-                            <div style="margin-top: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                                    <span style="font-size: 12px; color: #6b7280;">Rate</span>
-                                    <span style="font-size: 14px; font-weight: 600; color: #166534;">${{ number_format($matchedTier['rate'], 2) }}</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                                    <span style="font-size: 12px; color: #6b7280;">B. Hours</span>
-                                    <span style="font-size: 13px; color: #374151;">{{ $matchedTier['hours'] }} hrs</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                    <span style="font-size: 12px; color: #6b7280;">B. Cost</span>
-                                    <span style="font-size: 13px; color: #374151;">${{ number_format($matchedTier['cost'], 2) }}</span>
-                                </div>
-                                <button
-                                    wire:click="applyRateAsLine"
-                                    type="button"
-                                    style="width: 100%; padding: 8px; font-size: 12px; font-weight: 600; color: #fff; background: #166534; border: none; border-radius: 6px; cursor: pointer;"
-                                >
-                                    Add as Line Item
-                                </button>
-                            </div>
-                        @elseif($selectedLotSize && $selectedLotSize !== '55+')
-                            <p style="margin-top: 8px; font-size: 12px; color: #9ca3af;">No matching tier found.</p>
-                        @endif
                     </div>
                 @endif
             </div>
@@ -411,6 +401,104 @@
                 <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 8px;">
                     <button wire:click="closeNewCustomerModal" type="button" style="padding: 9px 18px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; cursor: pointer; color: #374151;">Cancel</button>
                     <button wire:click="createAndSelectCustomer" type="button" style="padding: 9px 18px; font-size: 14px; font-weight: 600; color: #fff; background: #c9092f; border: none; border-radius: 8px; cursor: pointer;">Create & Select</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Pricing Calculator Modal --}}
+    @if($showPricingCalc)
+        <div
+            wire:click.self="closePricingCalc"
+            style="position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);"
+        >
+            <div style="width: 100%; max-width: 780px; margin: 0 16px; background: #fff; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; max-height: 85vh; display: flex; flex-direction: column;" @keydown.escape.window="$wire.closePricingCalc()">
+                <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                    <div>
+                        <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">Pricing Calculator</h3>
+                        <p style="font-size: 12px; color: #6b7280; margin: 2px 0 0;">
+                            @if($selectedLotSize)
+                                Lot: {{ config('rate-matrix.lot_size_options')[$selectedLotSize] ?? $selectedLotSize }}
+                                — Rate from matrix applied
+                            @else
+                                No lot size set — using default service prices
+                            @endif
+                        </p>
+                    </div>
+                    <button wire:click="closePricingCalc" type="button" style="color: #9ca3af; font-size: 20px; border: none; background: none; cursor: pointer;">&times;</button>
+                </div>
+
+                <div style="flex: 1; overflow-y: auto; padding: 0;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="background: #f9fafb; position: sticky; top: 0;">
+                                <th style="text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Service</th>
+                                <th style="text-align: right; padding: 10px 12px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; width: 90px;">Rate</th>
+                                <th style="text-align: center; padding: 10px 8px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; width: 70px;">Qty</th>
+                                <th style="text-align: center; padding: 10px 8px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; width: 70px;">Visits</th>
+                                <th style="text-align: right; padding: 10px 16px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; width: 100px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($pricingRows as $i => $row)
+                                <tr style="border-bottom: 1px solid #f3f4f6; {{ (float) $row['total'] > 0 ? 'background: #f0fdf4;' : '' }}">
+                                    <td style="padding: 8px 16px; color: #111827;">{{ $row['name'] }}</td>
+                                    <td style="padding: 8px 12px; text-align: right;">
+                                        <input
+                                            wire:model.blur="pricingRows.{{ $i }}.rate"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            style="width: 80px; padding: 5px 6px; font-size: 13px; border: 1px solid #e5e7eb; border-radius: 4px; text-align: right; box-sizing: border-box;"
+                                        />
+                                    </td>
+                                    <td style="padding: 8px 8px; text-align: center;">
+                                        <input
+                                            wire:model.live.debounce.300ms="pricingRows.{{ $i }}.qty"
+                                            type="number"
+                                            step="1"
+                                            min="0"
+                                            placeholder="0"
+                                            style="width: 60px; padding: 5px 4px; font-size: 13px; border: 1px solid #e5e7eb; border-radius: 4px; text-align: center; box-sizing: border-box;"
+                                        />
+                                    </td>
+                                    <td style="padding: 8px 8px; text-align: center;">
+                                        <input
+                                            wire:model.live.debounce.300ms="pricingRows.{{ $i }}.visits"
+                                            type="number"
+                                            step="1"
+                                            min="0"
+                                            placeholder="0"
+                                            style="width: 60px; padding: 5px 4px; font-size: 13px; border: 1px solid #e5e7eb; border-radius: 4px; text-align: center; box-sizing: border-box;"
+                                        />
+                                    </td>
+                                    <td style="padding: 8px 16px; text-align: right; font-weight: {{ (float) $row['total'] > 0 ? '600' : '400' }}; color: {{ (float) $row['total'] > 0 ? '#166534' : '#9ca3af' }};">
+                                        ${{ $row['total'] }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="padding: 14px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; background: #f9fafb;">
+                    <div>
+                        @php
+                            $calcTotal = 0;
+                            $calcCount = 0;
+                            foreach ($pricingRows as $r) {
+                                if ((float) $r['total'] > 0) { $calcTotal += (float) $r['total']; $calcCount++; }
+                            }
+                        @endphp
+                        <span style="font-size: 14px; font-weight: 600; color: #111827;">
+                            {{ $calcCount }} service{{ $calcCount !== 1 ? 's' : '' }} — ${{ number_format($calcTotal, 2) }}
+                        </span>
+                        <span style="font-size: 12px; color: #6b7280; margin-left: 4px;">(Qty &times; Rate &times; Visits)</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button wire:click="closePricingCalc" type="button" style="padding: 9px 18px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; cursor: pointer; color: #374151;">Cancel</button>
+                        <button wire:click="addPricingRowsAsLines" type="button" style="padding: 9px 18px; font-size: 14px; font-weight: 600; color: #fff; background: #166534; border: none; border-radius: 8px; cursor: pointer;">Add to Estimate</button>
+                    </div>
                 </div>
             </div>
         </div>

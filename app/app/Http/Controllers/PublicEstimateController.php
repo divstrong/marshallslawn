@@ -21,9 +21,15 @@ class PublicEstimateController extends Controller
         $estimate = Estimate::where('share_token', $token)->firstOrFail();
 
         if (in_array($estimate->status, ['draft', 'sent'])) {
+            $acceptedIds = $request->input('accepted_items', []);
+
             $estimate->update([
                 'status' => 'accepted',
                 'accepted_at' => now(),
+                'notes' => trim(
+                    ($estimate->notes ?? '') . "\n\n--- Customer accepted line items: " .
+                    implode(', ', $acceptedIds) . ' on ' . now()->format('M j, Y g:i A')
+                ),
             ]);
         }
 

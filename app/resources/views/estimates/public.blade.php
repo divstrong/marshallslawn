@@ -104,6 +104,9 @@
                     <table>
                         <thead>
                             <tr>
+                                @if(in_array($estimate->status, ['draft', 'sent']))
+                                    <th style="width: 36px;"></th>
+                                @endif
                                 <th>Service</th>
                                 <th>Qty</th>
                                 <th>Rate</th>
@@ -113,10 +116,24 @@
                         <tbody>
                             @foreach($estimate->lineItems as $item)
                                 <tr>
+                                    @if(in_array($estimate->status, ['draft', 'sent']))
+                                        <td style="text-align: center;">
+                                            @if((float) $item->total >= 0)
+                                                <input
+                                                    type="checkbox"
+                                                    class="line-item-check"
+                                                    name="accepted_items[]"
+                                                    value="{{ $item->id }}"
+                                                    form="accept-form"
+                                                    style="width: 18px; height: 18px; accent-color: #059669; cursor: pointer;"
+                                                />
+                                            @endif
+                                        </td>
+                                    @endif
                                     <td style="font-weight: 500;">{{ $item->description ?: ($item->service?->name ?? 'Service') }}</td>
                                     <td>{{ rtrim(rtrim(number_format($item->quantity, 2), '0'), '.') }}</td>
                                     <td>${{ number_format($item->unit_price, 2) }}</td>
-                                    <td style="font-weight: 600;">${{ number_format($item->total, 2) }}</td>
+                                    <td style="font-weight: 600; {{ (float) $item->total < 0 ? 'color: #dc2626;' : '' }}">${{ number_format($item->total, 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -148,18 +165,58 @@
                     </div>
                 @endif
 
-                {{-- Accept / Decline buttons --}}
+                {{-- Accept / Decline --}}
                 @if(in_array($estimate->status, ['draft', 'sent']))
+                    {{-- Terms & Conditions --}}
+                    <div style="margin-top: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
+                        <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Terms & Conditions</div>
+                        <div style="font-size: 13px; color: #374151; line-height: 1.5; max-height: 120px; overflow-y: auto; margin-bottom: 12px;">
+                            By accepting this estimate, you authorize Marshall's Lawn & Landscape to perform the selected services at the prices listed above. Payment is due upon completion unless other arrangements have been made. Pricing is valid through the date shown above. Marshall's Lawn & Landscape reserves the right to adjust scheduling based on weather conditions. Cancellations must be made at least 24 hours in advance. The customer is responsible for ensuring access to the property on scheduled service dates.
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: #111827;">
+                            <input type="checkbox" id="terms-check" style="width: 18px; height: 18px; accent-color: #059669;" />
+                            <span>I agree to the Terms & Conditions</span>
+                        </label>
+                    </div>
+
+                    <div style="margin-top: 8px; font-size: 13px; color: #6b7280; text-align: center;" id="accept-hint">
+                        Please select at least one service and accept the terms to continue.
+                    </div>
+
                     <div class="actions">
-                        <form method="POST" action="{{ route('estimate.accept', $estimate->share_token) }}" style="flex: 1;">
+                        <form id="accept-form" method="POST" action="{{ route('estimate.accept', $estimate->share_token) }}" style="flex: 1;">
                             @csrf
-                            <button type="submit" class="btn btn-accept" style="width: 100%;">Accept Estimate</button>
+                            {{-- accepted_items[] checkboxes are in the table via form="accept-form" --}}
+                            <button type="submit" id="accept-btn" class="btn btn-accept" style="width: 100%; opacity: 0.4; cursor: not-allowed;" disabled>Accept Estimate</button>
                         </form>
                         <form method="POST" action="{{ route('estimate.decline', $estimate->share_token) }}" style="flex: 1;">
                             @csrf
                             <button type="submit" class="btn btn-decline" style="width: 100%;">Decline</button>
                         </form>
                     </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const checks = document.querySelectorAll('.line-item-check');
+                            const termsCheck = document.getElementById('terms-check');
+                            const acceptBtn = document.getElementById('accept-btn');
+                            const hint = document.getElementById('accept-hint');
+
+                            function updateState() {
+                                const anyChecked = [...checks].some(c => c.checked);
+                                const termsAccepted = termsCheck.checked;
+                                const enabled = anyChecked && termsAccepted;
+
+                                acceptBtn.disabled = !enabled;
+                                acceptBtn.style.opacity = enabled ? '1' : '0.4';
+                                acceptBtn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+                                hint.style.display = enabled ? 'none' : 'block';
+                            }
+
+                            checks.forEach(c => c.addEventListener('change', updateState));
+                            termsCheck.addEventListener('change', updateState);
+                        });
+                    </script>
                 @elseif($estimate->status === 'accepted')
                     <div style="margin-top: 24px; text-align: center; padding: 16px; background: #d1fae5; border-radius: 10px; color: #065f46; font-weight: 600;">
                         Estimate Accepted — {{ $estimate->accepted_at?->format('F j, Y') }}

@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\EstimateLineItem;
 use App\Models\Property;
+use App\Models\Package;
 use App\Models\Service;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Component;
@@ -57,16 +58,22 @@ class EstimateBuilder extends Component
     public string $serviceSearch = '';
     public bool $showServiceDropdown = false;
 
+    // Package search
+    public string $packageSearch = '';
+    public bool $showPackageDropdown = false;
+
     // Discount
     public bool $showDiscountModal = false;
     public string $discountType = 'percent'; // 'percent' or 'dollar'
     public string $discountAmount = '';
 
-    // Pricing guide (optional lot-size based rate lookup)
-    public bool $showPricingGuide = false;
+    // Lot size (set in customer section, used by pricing calculator)
     public string $selectedLotSize = '';
-    public ?array $matchedTier = null;
     public ?string $customLotSqft = null;
+
+    // Pricing calculator modal
+    public bool $showPricingCalc = false;
+    public array $pricingRows = [];
 
     public function mount(?Estimate $estimate = null): void
     {
@@ -233,6 +240,47 @@ class EstimateBuilder extends Component
         $this->recalculate();
     }
 
+    // -- Package search --
+
+    public function updatedPackageSearch(): void
+    {
+        $this->showPackageDropdown = strlen($this->packageSearch) >= 1;
+    }
+
+    public function getPackageResultsProperty()
+    {
+        if (strlen($this->packageSearch) < 1) {
+            return collect();
+        }
+
+        return Package::withCount('services')
+            ->where('is_active', true)
+            ->where('name', 'like', "%{$this->packageSearch}%")
+            ->limit(8)->get();
+    }
+
+    public function addPackage(int $packageId): void
+    {
+        $package = Package::with('services')->find($packageId);
+        if (! $package) {
+            return;
+        }
+
+        $this->lineItems[] = [
+            'id' => null,
+            'service_id' => null,
+            'description' => $package->name,
+            'quantity' => '1.00',
+            'unit_price' => number_format((float) $package->price, 2, '.', ''),
+            'total' => number_format((float) $package->price, 2, '.', ''),
+            'is_discount' => false,
+        ];
+
+        $this->packageSearch = '';
+        $this->showPackageDropdown = false;
+        $this->recalculate();
+    }
+
     public function addCustomLine(): void
     {
         $this->lineItems[] = [
@@ -354,42 +402,18 @@ class EstimateBuilder extends Component
         $this->discountAmount = '';
     }
 
-    // -- Pricing Guide --
+    // -- Pricing Calculator --
 
-    public function togglePricingGuide(): void
+    private function getLotSizeThousands(): ?float
     {
-        $this->showPricingGuide = !$this->showPricingGuide;
-    }
-
-    public function updatedSelectedLotSize(): void
-    {
-        $this->matchedTier = null;
-        $this->customLotSqft = null;
-
         if ($this->selectedLotSize === '' ) {
-            return;
+            return null;
         }
-
         if ($this->selectedLotSize === '55+') {
-            // needs custom sqft input
-            return;
+            return $this->customLotSqft ? (float) $this->customLotSqft : null;
         }
-
         [$from, $to] = explode('-', $this->selectedLotSize);
-        $midpoint = ((float) $from + (float) $to) / 2;
-
-        $this->matchedTier = $this->lookupTier($midpoint);
-    }
-
-    public function updatedCustomLotSqft(): void
-    {
-        if ($this->selectedLotSize !== '55+' || !$this->customLotSqft) {
-            $this->matchedTier = null;
-            return;
-        }
-
-        $sqftThousands = (float) $this->customLotSqft;
-        $this->matchedTier = $this->lookupTier($sqftThousands);
+        return ((float) $from + (float) $to) / 2;
     }
 
     private function lookupTier(float $sqftThousands): array
@@ -403,7 +427,6 @@ class EstimateBuilder extends Component
             }
         }
 
-        // Overflow calculation for lots above the max tier
         if ($sqftThousands > $overflow['above']) {
             $lastTier = end($tiers);
             $excess = $sqftThousands - $overflow['above'];
@@ -421,24 +444,77 @@ class EstimateBuilder extends Component
         return end($tiers);
     }
 
-    public function applyRateAsLine(): void
+    public function openPricingCalc(): void
     {
-        if (!$this->matchedTier) {
-            return;
+        $lotSize = $this->getLotSizeThousands();
+        $tier = $lotSize ? $this->lookupTier($lotSize) : null;
+        $matrixRate = $tier ? $tier['rate'] : null;
+
+        // Build rows from active services, each with rate, qty, visits
+        $this->pricingRows = [];
+        $services = Service::where('is_active', true)->orderBy('name')->get();
+
+        foreach ($services as $svc) {
+            $rate = $matrixRate ?? (float) $svc->default_price;
+            $this->pricingRows[] = [
+                'service_id'   => $svc->id,
+                'name'         => $svc->name,
+                'rate'         => number_format($rate, 2, '.', ''),
+                'qty'          => '',
+                'visits'       => '',
+                'total'        => '0.00',
+                'use_matrix'   => $matrixRate !== null,
+                'default_price' => number_format((float) $svc->default_price, 2, '.', ''),
+            ];
         }
 
-        $rate = $this->matchedTier['rate'];
+        $this->showPricingCalc = true;
+    }
 
-        $this->lineItems[] = [
-            'id'         => null,
-            'service_id' => null,
-            'description' => 'Lawn Service (Rate Matrix)',
-            'quantity'   => '1.00',
-            'unit_price' => number_format($rate, 2, '.', ''),
-            'total'      => number_format($rate, 2, '.', ''),
-            'is_discount' => false,
-        ];
+    public function closePricingCalc(): void
+    {
+        $this->showPricingCalc = false;
+    }
 
+    public function updatedPricingRows(): void
+    {
+        foreach ($this->pricingRows as $i => &$row) {
+            $qty = (float) ($row['qty'] ?? 0);
+            $visits = (float) ($row['visits'] ?? 0);
+            $rate = (float) ($row['rate'] ?? 0);
+            $row['total'] = number_format($qty * $rate * $visits, 2, '.', '');
+        }
+        unset($row);
+    }
+
+    public function addPricingRowsAsLines(): void
+    {
+        $added = 0;
+        foreach ($this->pricingRows as $row) {
+            $total = (float) $row['total'];
+            if ($total <= 0) {
+                continue;
+            }
+
+            $qty = (float) ($row['qty'] ?? 1);
+            $visits = (float) ($row['visits'] ?? 1);
+            $rate = (float) $row['rate'];
+            // unit_price = rate × visits (so qty × unit_price = total)
+            $unitPrice = $rate * $visits;
+
+            $this->lineItems[] = [
+                'id'          => null,
+                'service_id'  => $row['service_id'],
+                'description' => $row['name'] . ' (' . (int) $visits . ' visits)',
+                'quantity'    => number_format($qty, 2, '.', ''),
+                'unit_price'  => number_format($unitPrice, 2, '.', ''),
+                'total'       => number_format($total, 2, '.', ''),
+                'is_discount' => false,
+            ];
+            $added++;
+        }
+
+        $this->showPricingCalc = false;
         $this->recalculate();
     }
 
