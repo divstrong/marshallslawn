@@ -6,6 +6,7 @@ use App\Filament\Resources\PropertyResource\Pages;
 use App\Models\Property;
 use Filament\Forms;
 use Filament\Schemas\Schema;
+use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -13,6 +14,7 @@ use Filament\Actions;
 
 class PropertyResource extends Resource
 {
+    use ChecksResourceAccess;
     protected static ?string $model = Property::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-home';

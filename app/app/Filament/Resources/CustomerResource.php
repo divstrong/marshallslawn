@@ -6,6 +6,7 @@ use App\Filament\Resources\CustomerResource\Pages;
 use App\Models\Customer;
 use Filament\Forms;
 use Filament\Schemas\Schema;
+use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -13,6 +14,7 @@ use Filament\Actions;
 
 class CustomerResource extends Resource
 {
+    use ChecksResourceAccess;
     protected static ?string $model = Customer::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-users';

@@ -9,10 +9,13 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Actions;
 
 class JobResource extends Resource
 {
+    use ChecksResourceAccess;
+
     protected static ?string $model = Job::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clipboard-document-list';

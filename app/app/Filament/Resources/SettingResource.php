@@ -9,10 +9,13 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Actions;
 
 class SettingResource extends Resource
 {
+    use ChecksResourceAccess;
+
     protected static ?string $model = Setting::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
@@ -20,6 +23,10 @@ class SettingResource extends Resource
     protected static string | \UnitEnum | null $navigationGroup = 'Administration';
 
     protected static ?int $navigationSort = 2;
+
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected static ?string $slug = 'settings-data';
 
     public static function form(Schema $schema): Schema
     {

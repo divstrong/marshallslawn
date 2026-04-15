@@ -9,10 +9,13 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Actions;
 
 class UserResource extends Resource
 {
+    use ChecksResourceAccess;
+
     protected static ?string $model = User::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shield-check';
@@ -36,6 +39,10 @@ class UserResource extends Resource
                 ->dehydrated(fn (?string $state): bool => filled($state))
                 ->required(fn (string $operation): bool => $operation === 'create')
                 ->maxLength(255),
+            Forms\Components\Select::make('role_id')
+                ->relationship('role', 'label')
+                ->preload()
+                ->required(),
         ]);
     }
 
@@ -47,6 +54,9 @@ class UserResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('role.label')
+                    ->label('Role')
+                    ->badge(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),

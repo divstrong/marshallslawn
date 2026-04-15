@@ -8,6 +8,7 @@ use App\Models\EstimateLineItem;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Schema;
+use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -15,6 +16,7 @@ use Filament\Actions;
 
 class EstimateResource extends Resource
 {
+    use ChecksResourceAccess;
     protected static ?string $model = Estimate::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';

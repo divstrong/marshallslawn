@@ -1,0 +1,1 @@
+@livewire('permission-manager')
