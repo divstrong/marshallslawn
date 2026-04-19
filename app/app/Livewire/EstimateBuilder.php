@@ -32,6 +32,7 @@ class EstimateBuilder extends Component
 
     // Property
     public ?int $propertyId = null;
+    public ?string $squareFootage = null;
 
     // Estimate fields
     public string $status = 'draft';
@@ -82,6 +83,7 @@ class EstimateBuilder extends Component
             $this->isNew = false;
             $this->customerId = $estimate->customer_id;
             $this->propertyId = $estimate->property_id;
+            $this->squareFootage = $estimate->square_footage ? number_format((float) $estimate->square_footage, 2, '.', '') : null;
             $this->status = $estimate->status;
             $this->validUntil = $estimate->valid_until?->format('Y-m-d');
             $this->notes = $estimate->notes ?? '';
@@ -145,6 +147,17 @@ class EstimateBuilder extends Component
         $primary = Property::where('customer_id', $id)->where('is_primary', true)->first();
         if ($primary) {
             $this->propertyId = $primary->id;
+            $this->squareFootage = $primary->square_footage ? number_format((float) $primary->square_footage, 2, '.', '') : null;
+        }
+    }
+
+    public function updatedPropertyId($value): void
+    {
+        if ($value) {
+            $property = Property::find($value);
+            $this->squareFootage = $property?->square_footage ? number_format((float) $property->square_footage, 2, '.', '') : null;
+        } else {
+            $this->squareFootage = null;
         }
     }
 
@@ -152,6 +165,7 @@ class EstimateBuilder extends Component
     {
         $this->customerId = null;
         $this->propertyId = null;
+        $this->squareFootage = null;
         $this->shareEmail = '';
     }
 
@@ -530,6 +544,7 @@ class EstimateBuilder extends Component
         $data = [
             'customer_id' => $this->customerId,
             'property_id' => $this->propertyId,
+            'square_footage' => $this->squareFootage ? (float) $this->squareFootage : null,
             'status' => $this->status,
             'subtotal' => (float) $this->subtotal,
             'tax' => (float) $this->tax,

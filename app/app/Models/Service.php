@@ -18,12 +18,20 @@ class Service extends Model
     protected $fillable = [
         'legacy_id',
         'name',
+        'code',
+        'parent_service',
         'full_name',
         'description',
+        'estimate_description',
+        'invoice_description',
         'category',
         'default_price',
+        'minimum_amount',
         'unit',
+        'service_mode',
         'is_active',
+        'track_chemicals',
+        'show_in_snow',
         'list_id',
     ];
 
@@ -36,7 +44,10 @@ class Service extends Model
     {
         return [
             'default_price' => 'decimal:2',
+            'minimum_amount' => 'decimal:2',
             'is_active' => 'boolean',
+            'track_chemicals' => 'boolean',
+            'show_in_snow' => 'boolean',
         ];
     }
 

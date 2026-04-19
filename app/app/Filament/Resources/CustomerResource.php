@@ -5,6 +5,9 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CustomerResource\Pages;
 use App\Models\Customer;
 use Filament\Forms;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Resources\Resource;
@@ -26,49 +29,71 @@ class CustomerResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\TextInput::make('company_name')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('first_name')
-                ->required()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('last_name')
-                ->required()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('email')
-                ->email()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('phone')
-                ->tel()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('address')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('city')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('state')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('zip')
-                ->maxLength(255),
-            Forms\Components\Select::make('status')
-                ->options([
-                    'active' => 'Active',
-                    'inactive' => 'Inactive',
-                    'lead' => 'Lead',
-                ])
-                ->required(),
-            Forms\Components\TextInput::make('customer_type')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('account_number')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('division')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('source')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('legacy_id')
-                ->label('Legacy ID')
-                ->disabled()
-                ->maxLength(255),
-            Forms\Components\Textarea::make('notes')
-                ->columnSpanFull(),
+            Tabs::make('Customer')
+                ->columnSpanFull()
+                ->tabs([
+                    Tab::make('General')
+                        ->icon('heroicon-o-information-circle')
+                        ->schema([
+                            Forms\Components\TextInput::make('company_name')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('first_name')
+                                ->required()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('last_name')
+                                ->required()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('email')
+                                ->email()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('phone')
+                                ->tel()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('address')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('city')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('state')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('zip')
+                                ->maxLength(255),
+                            Forms\Components\Select::make('status')
+                                ->options([
+                                    'active' => 'Active',
+                                    'inactive' => 'Inactive',
+                                    'lead' => 'Lead',
+                                ])
+                                ->required(),
+                            Forms\Components\TextInput::make('customer_type')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('account_number')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('division')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('source')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('legacy_id')
+                                ->label('Legacy ID')
+                                ->disabled()
+                                ->maxLength(255),
+                            Forms\Components\Textarea::make('notes')
+                                ->columnSpanFull(),
+                        ]),
+                    Tab::make('Properties')
+                        ->icon('heroicon-o-home-modern')
+                        ->badge(fn (?Customer $record): ?string => $record?->properties()->count() ?: null)
+                        ->hidden(fn (?Customer $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.customer.properties-tab'),
+                        ]),
+                    Tab::make('Invoices')
+                        ->icon('heroicon-o-document-text')
+                        ->badge(fn (?Customer $record): ?string => $record?->invoices()->count() ?: null)
+                        ->hidden(fn (?Customer $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.customer.invoices-tab'),
+                        ]),
+                ]),
         ]);
     }
 
@@ -120,9 +145,7 @@ class CustomerResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            CustomerResource\RelationManagers\PropertiesRelationManager::class,
-        ];
+        return [];
     }
 
     public static function getPages(): array

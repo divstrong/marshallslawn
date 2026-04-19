@@ -45,6 +45,22 @@
                         </div>
                     @endif
 
+                    {{-- Square Footage --}}
+                    <div style="margin-top: 12px;">
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Square Footage</label>
+                        <input
+                            wire:model.live.debounce.500ms="squareFootage"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="e.g. 5000"
+                            style="width: 100%; padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; box-sizing: border-box;"
+                        />
+                        @if($squareFootage && $propertyId)
+                            <p style="font-size: 11px; color: #6b7280; margin-top: 4px;">Pre-filled from property. Edit to override for this estimate.</p>
+                        @endif
+                    </div>
+
                     {{-- Lot Size --}}
                     <div style="margin-top: 12px;">
                         <label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Lot Size (optional)</label>

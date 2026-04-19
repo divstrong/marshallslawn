@@ -22,13 +22,17 @@ class Employee extends Model
         'last_name',
         'email',
         'phone',
+        'mobile_phone',
+        'alt_phone',
         'address',
         'city',
         'state',
         'zip',
         'hire_date',
+        'date_of_birth',
         'termination_date',
         'status',
+        'role',
         'division',
         'list_id',
         'hourly_rate',
@@ -46,6 +50,7 @@ class Employee extends Model
     {
         return [
             'hire_date' => 'date',
+            'date_of_birth' => 'date',
             'termination_date' => 'date',
             'hourly_rate' => 'decimal:2',
         ];

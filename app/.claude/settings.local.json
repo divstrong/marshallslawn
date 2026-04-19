@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"hasAccessTo\\\\|ChecksResourceAccess\" /c/Users/info/Desktop/www/marshallslawn/app/app/Filament/Resources/*.php)"
+    ]
+  }
+}

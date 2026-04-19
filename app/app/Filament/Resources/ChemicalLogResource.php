@@ -18,6 +18,8 @@ class ChemicalLogResource extends Resource
 
     protected static ?string $model = ChemicalLog::class;
 
+    protected static ?string $navigationLabel = 'Chemicals';
+
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-beaker';
 
     protected static string | \UnitEnum | null $navigationGroup = 'Operations';

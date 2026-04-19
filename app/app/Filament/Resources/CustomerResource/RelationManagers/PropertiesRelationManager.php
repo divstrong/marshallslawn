@@ -13,6 +13,8 @@ class PropertiesRelationManager extends RelationManager
 {
     protected static string $relationship = 'properties';
 
+    protected static string | \BackedEnum | null $icon = 'heroicon-o-home-modern';
+
     public function form(Schema $schema): Schema
     {
         return $schema->schema([
@@ -29,6 +31,10 @@ class PropertiesRelationManager extends RelationManager
                 ->numeric(),
             Forms\Components\TextInput::make('lawn_size')
                 ->numeric(),
+            Forms\Components\TextInput::make('square_footage')
+                ->label('Square Footage')
+                ->numeric()
+                ->suffix('sq ft'),
             Forms\Components\Toggle::make('is_primary')
                 ->default(false),
             Forms\Components\Textarea::make('notes')
@@ -47,6 +53,9 @@ class PropertiesRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('state'),
                 Tables\Columns\TextColumn::make('zip'),
                 Tables\Columns\TextColumn::make('lot_size'),
+                Tables\Columns\TextColumn::make('square_footage')
+                    ->label('Sq Ft')
+                    ->suffix(' sq ft'),
                 Tables\Columns\IconColumn::make('is_primary')
                     ->boolean(),
             ])

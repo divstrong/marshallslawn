@@ -24,6 +24,7 @@ class Property extends Model
         'zip',
         'lot_size',
         'lawn_size',
+        'square_footage',
         'notes',
         'is_primary',
     ];
@@ -36,6 +37,7 @@ class Property extends Model
     protected function casts(): array
     {
         return [
+            'square_footage' => 'decimal:2',
             'is_primary' => 'boolean',
         ];
     }
@@ -58,5 +60,10 @@ class Property extends Model
     public function chemicalLogs(): HasMany
     {
         return $this->hasMany(ChemicalLog::class);
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(PropertyMedia::class);
     }
 }

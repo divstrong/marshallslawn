@@ -40,6 +40,14 @@ class EmployeeResource extends Resource
             Forms\Components\TextInput::make('phone')
                 ->tel()
                 ->maxLength(255),
+            Forms\Components\TextInput::make('mobile_phone')
+                ->label('Mobile Phone')
+                ->tel()
+                ->maxLength(255),
+            Forms\Components\TextInput::make('alt_phone')
+                ->label('Alt. Phone')
+                ->tel()
+                ->maxLength(255),
             Forms\Components\TextInput::make('address')
                 ->maxLength(255),
             Forms\Components\TextInput::make('city')
@@ -49,6 +57,17 @@ class EmployeeResource extends Resource
             Forms\Components\TextInput::make('zip')
                 ->maxLength(255),
             Forms\Components\DatePicker::make('hire_date'),
+            Forms\Components\DatePicker::make('date_of_birth')
+                ->label('Date of Birth'),
+            Forms\Components\Select::make('role')
+                ->options([
+                    'field' => 'Field',
+                    'office' => 'Office',
+                    'manager' => 'Manager',
+                    'admin' => 'Admin',
+                ])
+                ->default('field')
+                ->required(),
             Forms\Components\Select::make('status')
                 ->options([
                     'active' => 'Active',
@@ -92,6 +111,11 @@ class EmployeeResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('phone'),
+                Tables\Columns\TextColumn::make('mobile_phone')
+                    ->label('Mobile')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('role')
+                    ->badge(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
                 Tables\Columns\TextColumn::make('division')

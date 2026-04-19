@@ -30,19 +30,37 @@ class ServiceResource extends Resource
             Forms\Components\TextInput::make('name')
                 ->required()
                 ->maxLength(255),
+            Forms\Components\TextInput::make('code')
+                ->maxLength(255),
+            Forms\Components\TextInput::make('parent_service')
+                ->maxLength(255),
             Forms\Components\TextInput::make('full_name')
                 ->maxLength(255),
-            Forms\Components\Textarea::make('description')
-                ->columnSpanFull(),
             Forms\Components\TextInput::make('category')
                 ->maxLength(255),
             Forms\Components\TextInput::make('default_price')
+                ->label('Default Rate')
+                ->numeric()
+                ->prefix('$'),
+            Forms\Components\TextInput::make('minimum_amount')
                 ->numeric()
                 ->prefix('$'),
             Forms\Components\TextInput::make('unit')
                 ->maxLength(255),
+            Forms\Components\TextInput::make('service_mode')
+                ->maxLength(255),
             Forms\Components\Toggle::make('is_active')
                 ->default(true),
+            Forms\Components\Toggle::make('track_chemicals')
+                ->default(false),
+            Forms\Components\Toggle::make('show_in_snow')
+                ->default(false),
+            Forms\Components\Textarea::make('invoice_description')
+                ->columnSpanFull(),
+            Forms\Components\Textarea::make('estimate_description')
+                ->columnSpanFull(),
+            Forms\Components\Textarea::make('description')
+                ->columnSpanFull(),
             Forms\Components\TextInput::make('legacy_id')
                 ->label('Legacy ID')
                 ->disabled()
@@ -55,21 +73,27 @@ class ServiceResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('full_name')
                     ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('description')
-                    ->limit(50)
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('code')
+                    ->searchable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('default_price')
+                    ->label('Default Rate')
+                    ->money('usd')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('service_mode')
+                    ->label('Mode')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('category')
-                    ->badge(),
-                Tables\Columns\TextColumn::make('default_price')
-                    ->money()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('unit'),
+                    ->badge()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
+                Tables\Columns\IconColumn::make('track_chemicals')
+                    ->label('Chemicals')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('legacy_id')
                     ->label('Legacy ID')
                     ->searchable()

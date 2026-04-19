@@ -72,6 +72,8 @@ class EstimateResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('customer.last_name')
                     ->label('Customer')
+                    ->formatStateUsing(fn ($record) => $record->customer->first_name . ' ' . $record->customer->last_name)
+                    ->description(fn ($record) => $record->customer->company_name ?: null)
                     ->searchable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
@@ -80,9 +82,6 @@ class EstimateResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('valid_until')
                     ->date()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
                     ->sortable(),
             ])
             ->filters([])

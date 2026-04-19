@@ -20,6 +20,7 @@ class Estimate extends Model
     protected $fillable = [
         'customer_id',
         'property_id',
+        'square_footage',
         'estimate_number',
         'share_token',
         'status',
@@ -58,6 +59,7 @@ class Estimate extends Model
     protected function casts(): array
     {
         return [
+            'square_footage' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'tax' => 'decimal:2',
             'total' => 'decimal:2',
