@@ -34,6 +34,7 @@ class PropertyResource extends Resource
                 ->tabs([
                     Tab::make('General')
                         ->icon('heroicon-o-information-circle')
+                        ->columns(2)
                         ->schema([
                             Forms\Components\Select::make('customer_id')
                                 ->relationship('customer', 'last_name')

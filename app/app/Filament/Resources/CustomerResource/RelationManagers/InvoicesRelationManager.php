@@ -82,26 +82,26 @@ class InvoicesRelationManager extends RelationManager
             ])
             ->filters([])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                Actions\CreateAction::make()
                     ->mutateFormDataUsing(function (array $data): array {
                         $data['total'] = ($data['subtotal'] ?? 0) + ($data['tax'] ?? 0);
                         return $data;
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                Actions\EditAction::make()
                     ->mutateFormDataUsing(function (array $data): array {
                         $data['total'] = ($data['subtotal'] ?? 0) + ($data['tax'] ?? 0) - ($data['credits_total'] ?? 0);
                         return $data;
                     }),
-                Tables\Actions\Action::make('view')
+                Actions\Action::make('view')
                     ->label('Details')
                     ->icon('heroicon-o-eye')
                     ->url(fn ($record) => route('filament.admin.resources.invoices.edit', $record)),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

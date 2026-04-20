@@ -34,8 +34,10 @@ class CustomerResource extends Resource
                 ->tabs([
                     Tab::make('General')
                         ->icon('heroicon-o-information-circle')
+                        ->columns(2)
                         ->schema([
                             Forms\Components\TextInput::make('company_name')
+                                ->columnSpanFull()
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('first_name')
                                 ->required()
@@ -102,18 +104,11 @@ class CustomerResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('company_name')
-                    ->label('Company')
-                    ->searchable()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('first_name')
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('last_name')
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('address')
-                    ->searchable()
-                    ->toggleable(),
+                    ->label('Customer')
+                    ->formatStateUsing(fn ($state, $record) => $state ?: trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')))
+                    ->description(fn ($record) => $record->company_name ? trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) : null)
+                    ->searchable(['company_name', 'first_name', 'last_name'])
+                    ->sortable(['last_name']),
                 Tables\Columns\TextColumn::make('city')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),

@@ -94,6 +94,38 @@ class AdminPanelProvider extends PanelProvider
                             --c-600: 0 0 0 !important;
                             background-color: #000 !important;
                         }
+                        .fi-fo-file-upload .filepond--root {
+                            cursor: pointer;
+                            border: 2px dashed rgb(209 213 219);
+                            border-radius: 0.5rem;
+                            background-color: rgb(249 250 251);
+                            transition: border-color 150ms ease, background-color 150ms ease;
+                        }
+                        .fi-fo-file-upload .filepond--root:hover {
+                            border-color: #e00a35;
+                            background-color: #fef1f3;
+                        }
+                        .dark .fi-fo-file-upload .filepond--root {
+                            border-color: rgb(75 85 99);
+                            background-color: rgba(255, 255, 255, 0.02);
+                        }
+                        .dark .fi-fo-file-upload .filepond--root:hover {
+                            border-color: #f4657f;
+                            background-color: rgba(224, 10, 53, 0.08);
+                        }
+                        .fi-fo-file-upload .filepond--label-action {
+                            text-decoration: underline;
+                            text-decoration-thickness: 1px;
+                            text-underline-offset: 2px;
+                            color: #e00a35;
+                            font-weight: 500;
+                        }
+                        .fi-fo-file-upload .filepond--root:hover .filepond--label-action {
+                            color: #a80828;
+                        }
+                        .dark .fi-fo-file-upload .filepond--label-action {
+                            color: #f4657f;
+                        }
                     </style>
                 '),
             );

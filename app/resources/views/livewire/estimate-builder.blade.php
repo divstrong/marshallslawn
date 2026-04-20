@@ -1,4 +1,60 @@
-<div>
+<div class="estimate-builder">
+    <style>
+        .dark .estimate-builder [style*="background: #fff"],
+        .dark .estimate-builder [style*="background:#fff"] {
+            background: #1f2937 !important;
+        }
+        .dark .estimate-builder [style*="background: #f9fafb"] {
+            background: #111827 !important;
+        }
+        .dark .estimate-builder [style*="background: #f0fdf4"] {
+            background: rgba(22, 101, 52, 0.15) !important;
+        }
+        .dark .estimate-builder [style*="color: #111827"],
+        .dark .estimate-builder [style*="color:#111827"] {
+            color: #f9fafb !important;
+        }
+        .dark .estimate-builder [style*="color: #374151"] {
+            color: #d1d5db !important;
+        }
+        .dark .estimate-builder [style*="color: #6b7280"],
+        .dark .estimate-builder [style*="color: #9ca3af"] {
+            color: #9ca3af !important;
+        }
+        .dark .estimate-builder [style*="border: 1px solid #e5e7eb"],
+        .dark .estimate-builder [style*="border: 1px solid #d1d5db"],
+        .dark .estimate-builder [style*="border: 1px solid #f3f4f6"],
+        .dark .estimate-builder [style*="border-bottom: 1px solid #e5e7eb"],
+        .dark .estimate-builder [style*="border-bottom: 1px solid #f3f4f6"],
+        .dark .estimate-builder [style*="border-top: 1px solid #e5e7eb"] {
+            border-color: #374151 !important;
+        }
+        .dark .estimate-builder [style*="border-top: 2px solid #111827"] {
+            border-top-color: #f9fafb !important;
+        }
+        .dark .estimate-builder input,
+        .dark .estimate-builder select,
+        .dark .estimate-builder textarea {
+            color: #f9fafb !important;
+            background: #111827 !important;
+            border-color: #374151 !important;
+        }
+        .dark .estimate-builder input::placeholder,
+        .dark .estimate-builder textarea::placeholder {
+            color: #6b7280 !important;
+        }
+        .dark .estimate-builder select option {
+            background: #1f2937;
+            color: #f9fafb;
+        }
+        .dark .estimate-builder [style*="background: rgba(0,0,0,0.5)"] {
+            background: rgba(0, 0, 0, 0.75) !important;
+        }
+        .dark .estimate-builder thead tr[style*="background: #f9fafb"] {
+            background: #111827 !important;
+        }
+    </style>
+
     {{-- Flash messages --}}
     @if(session('success'))
         <div style="background: #d1fae5; color: #065f46; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;">
