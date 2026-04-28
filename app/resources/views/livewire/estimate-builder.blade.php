@@ -101,9 +101,9 @@
                         </div>
                     @endif
 
-                    {{-- Square Footage --}}
+                    {{-- Service Area --}}
                     <div style="margin-top: 12px;">
-                        <label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Square Footage</label>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Service Area Size (Ft&sup2;)</label>
                         <input
                             wire:model.live.debounce.500ms="squareFootage"
                             type="number"
@@ -115,29 +115,6 @@
                         @if($squareFootage && $propertyId)
                             <p style="font-size: 11px; color: #6b7280; margin-top: 4px;">Pre-filled from property. Edit to override for this estimate.</p>
                         @endif
-                    </div>
-
-                    {{-- Lot Size --}}
-                    <div style="margin-top: 12px;">
-                        <label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Lot Size (optional)</label>
-                        <div style="display: flex; gap: 8px;">
-                            <select wire:model.live="selectedLotSize" style="flex: 1; padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff;">
-                                <option value="">-- Select lot size --</option>
-                                @foreach(config('rate-matrix.lot_size_options') as $key => $label)
-                                    <option value="{{ $key }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            @if($selectedLotSize === '55+')
-                                <input
-                                    wire:model.live.debounce.500ms="customLotSqft"
-                                    type="number"
-                                    step="0.1"
-                                    min="55"
-                                    placeholder="Thousands sqft"
-                                    style="width: 140px; padding: 8px 12px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; box-sizing: border-box;"
-                                />
-                            @endif
-                        </div>
                     </div>
                 @else
                     <div style="display: flex; gap: 8px;">
@@ -392,18 +369,18 @@
             </div>
 
             {{-- Actions --}}
-            <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 0 16px;">
                 <button
                     wire:click="save"
                     type="button"
-                    style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; color: #fff; background: #c9092f; border: none; border-radius: 10px; cursor: pointer;"
+                    style="width: 100%; padding: 10px 12px; font-size: 14px; font-weight: 600; color: #fff; background: #c9092f; border: none; border-radius: 10px; cursor: pointer;"
                 >
                     {{ $isNew ? 'Create Estimate' : 'Save Changes' }}
                 </button>
                 <button
                     wire:click="openShareModal"
                     type="button"
-                    style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; color: #c9092f; background: #fff; border: 2px solid #c9092f; border-radius: 10px; cursor: pointer;"
+                    style="width: 100%; padding: 10px 12px; font-size: 14px; font-weight: 600; color: #c9092f; background: #fff; border: 2px solid #c9092f; border-radius: 10px; cursor: pointer;"
                 >
                     Share Estimate
                 </button>
@@ -411,7 +388,7 @@
                     <a
                         href="{{ $estimate->getPublicUrl() }}"
                         target="_blank"
-                        style="display: block; width: 100%; padding: 12px; font-size: 14px; font-weight: 600; color: #374151; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 10px; cursor: pointer; text-align: center; text-decoration: none; box-sizing: border-box;"
+                        style="display: block; width: 100%; padding: 10px 12px; font-size: 14px; font-weight: 600; color: #374151; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 10px; cursor: pointer; text-align: center; text-decoration: none; box-sizing: border-box;"
                     >
                         View Estimate
                     </a>

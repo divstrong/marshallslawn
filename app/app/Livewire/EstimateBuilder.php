@@ -554,6 +554,10 @@ class EstimateBuilder extends Component
         ];
 
         if ($this->isNew) {
+            // If created from the mobile app by an employee (estimator), record the creator.
+            if (session('mobile_app_user_type') === 'employee') {
+                $data['created_by'] = session('mobile_app_user_id');
+            }
             $this->estimate = Estimate::create($data);
             $this->isNew = false;
         } else {
@@ -591,6 +595,8 @@ class EstimateBuilder extends Component
         $this->estimate->refresh();
 
         session()->flash('success', 'Estimate saved successfully.');
+
+        $this->dispatch('estimate-saved', estimateId: $this->estimate->id);
     }
 
     // -- Share --

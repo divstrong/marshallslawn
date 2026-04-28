@@ -8,25 +8,19 @@ use Livewire\Component;
 
 class MobileLogin extends Component
 {
-    public string $loginType = 'employee'; // 'employee' or 'customer'
     public string $searchQuery = '';
     public string $password = '';
     public ?int $selectedUserId = null;
+    public ?string $selectedUserType = null; // 'employee' or 'customer'
     public bool $showDropdown = false;
-
-    public function updatedLoginType()
-    {
-        $this->reset('searchQuery', 'password', 'selectedUserId', 'showDropdown');
-    }
 
     public function updatedSearchQuery()
     {
-        if (!$this->selectedUserId) {
-            $this->showDropdown = strlen($this->searchQuery) >= 2;
-        } else {
+        if ($this->selectedUserId) {
             $this->selectedUserId = null;
-            $this->showDropdown = strlen($this->searchQuery) >= 2;
+            $this->selectedUserType = null;
         }
+        $this->showDropdown = strlen($this->searchQuery) >= 2;
     }
 
     public function getSearchResultsProperty()
@@ -35,22 +29,29 @@ class MobileLogin extends Component
             return collect();
         }
 
-        if ($this->loginType === 'employee') {
-            return Employee::query()
-                ->where(function ($query) {
-                    $query->where('email', 'like', '%' . $this->searchQuery . '%')
-                        ->orWhere('first_name', 'like', '%' . $this->searchQuery . '%')
-                        ->orWhere('last_name', 'like', '%' . $this->searchQuery . '%')
-                        ->orWhere('name', 'like', '%' . $this->searchQuery . '%');
-                })
-                ->where('status', 'active')
-                ->orderBy('last_name')
-                ->orderBy('first_name')
-                ->limit(10)
-                ->get();
-        }
+        $employees = Employee::query()
+            ->where(function ($query) {
+                $query->where('email', 'like', '%' . $this->searchQuery . '%')
+                    ->orWhere('first_name', 'like', '%' . $this->searchQuery . '%')
+                    ->orWhere('last_name', 'like', '%' . $this->searchQuery . '%')
+                    ->orWhere('name', 'like', '%' . $this->searchQuery . '%');
+            })
+            ->where('status', 'active')
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->limit(10)
+            ->get()
+            ->map(fn ($e) => [
+                'id' => $e->id,
+                'type' => 'employee',
+                'first_name' => $e->first_name,
+                'last_name' => $e->last_name,
+                'name' => $e->name,
+                'email' => $e->email,
+                'company_name' => null,
+            ]);
 
-        return Customer::query()
+        $customers = Customer::query()
             ->where(function ($query) {
                 $query->where('email', 'like', '%' . $this->searchQuery . '%')
                     ->orWhere('first_name', 'like', '%' . $this->searchQuery . '%')
@@ -61,15 +62,27 @@ class MobileLogin extends Component
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->limit(10)
-            ->get();
+            ->get()
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'type' => 'customer',
+                'first_name' => $c->first_name,
+                'last_name' => $c->last_name,
+                'name' => null,
+                'email' => $c->email,
+                'company_name' => $c->company_name,
+            ]);
+
+        return $employees->concat($customers)->values();
     }
 
-    public function selectUser(int $userId)
+    public function selectUser(int $userId, string $userType)
     {
-        if ($this->loginType === 'employee') {
+        if ($userType === 'employee') {
             $user = Employee::find($userId);
             if ($user) {
                 $this->selectedUserId = $userId;
+                $this->selectedUserType = 'employee';
                 $this->showDropdown = false;
                 $this->searchQuery = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: $user->name;
             }
@@ -77,6 +90,7 @@ class MobileLogin extends Component
             $user = Customer::find($userId);
             if ($user) {
                 $this->selectedUserId = $userId;
+                $this->selectedUserType = 'customer';
                 $this->showDropdown = false;
                 $this->searchQuery = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
             }
@@ -85,7 +99,7 @@ class MobileLogin extends Component
 
     public function login()
     {
-        if (!$this->selectedUserId) {
+        if (!$this->selectedUserId || !$this->selectedUserType) {
             session()->flash('error', 'Please select a user from the list.');
             return;
         }
@@ -95,24 +109,28 @@ class MobileLogin extends Component
             return;
         }
 
-        if ($this->loginType === 'employee') {
+        if ($this->selectedUserType === 'employee') {
             $employee = Employee::find($this->selectedUserId);
             if (!$employee) {
                 session()->flash('error', 'Employee not found.');
                 return;
             }
 
-            // Determine employee role based on division or default
+            // Determine employee role based on role/division or default
             $role = 'field';
             $division = strtolower($employee->division ?? '');
-            if (str_contains($division, 'spray') || str_contains($division, 'chemical') || str_contains($division, 'tech')) {
+            $empRole = strtolower($employee->role ?? '');
+            if ($empRole === 'estimator' || str_contains($division, 'estim') || str_contains($division, 'sales')) {
+                $role = 'estimator';
+            } elseif (str_contains($division, 'spray') || str_contains($division, 'chemical') || str_contains($division, 'tech')) {
                 $role = 'spray_tech';
             } elseif (str_contains($division, 'super') || str_contains($division, 'manage') || str_contains($division, 'admin')) {
                 $role = 'supervisor';
             }
 
             // Check if employee is a foreman (has crews) - treat as supervisor
-            if ($employee->crews()->exists()) {
+            // (overrides estimator/field, but not spray_tech since foreman+spray_tech is unusual)
+            if ($role !== 'estimator' && $employee->crews()->exists()) {
                 $role = 'supervisor';
             }
 

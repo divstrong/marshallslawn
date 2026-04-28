@@ -20,6 +20,7 @@ class Estimate extends Model
     protected $fillable = [
         'customer_id',
         'property_id',
+        'created_by',
         'square_footage',
         'estimate_number',
         'share_token',
@@ -87,5 +88,10 @@ class Estimate extends Model
     public function jobs(): HasMany
     {
         return $this->hasMany(Job::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'created_by');
     }
 }

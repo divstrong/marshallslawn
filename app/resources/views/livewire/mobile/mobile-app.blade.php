@@ -101,10 +101,16 @@
                                 'customer_profile' => ['icon' => 'user', 'labelKey' => 'profile'],
                             ];
                         } else {
-                            $menuItems = [
-                                'employee_jobs' => ['icon' => 'briefcase', 'labelKey' => 'jobs'],
-                                'employee_schedule' => ['icon' => 'calendar', 'labelKey' => 'schedule'],
-                            ];
+                            $menuItems = [];
+                            if ($this->isEstimator) {
+                                $menuItems['employee_estimates'] = ['icon' => 'document-text', 'labelKey' => 'estimates'];
+                            }
+                            $menuItems['employee_jobs'] = ['icon' => 'briefcase', 'labelKey' => 'jobs'];
+                            $menuItems['employee_schedule'] = ['icon' => 'calendar', 'labelKey' => 'schedule'];
+                            if ($this->isSupervisor) {
+                                $menuItems['employee_routes'] = ['icon' => 'location', 'labelKey' => 'routes'];
+                                $menuItems['employee_estimates'] = ['icon' => 'document-text', 'labelKey' => 'estimates'];
+                            }
                             if ($this->isSprayTech || $this->isSupervisor) {
                                 $menuItems['employee_chemicals'] = ['icon' => 'beaker', 'labelKey' => 'chemicals'];
                             }
@@ -150,6 +156,12 @@
                     @case('employee_schedule')
                         <livewire:mobile.views.employee-schedule-view :device-mode="$deviceMode" wire:key="view-employee-schedule" />
                         @break
+                    @case('employee_routes')
+                        <livewire:mobile.views.employee-routes-view :device-mode="$deviceMode" wire:key="view-employee-routes" />
+                        @break
+                    @case('employee_estimates')
+                        <livewire:mobile.views.employee-estimates-view :device-mode="$deviceMode" wire:key="view-employee-estimates" />
+                        @break
                     @case('employee_chemicals')
                         <livewire:mobile.views.employee-chemicals-view :device-mode="$deviceMode" wire:key="view-employee-chemicals" />
                         @break
@@ -176,10 +188,16 @@
                                     'customer_profile' => ['icon' => 'user', 'labelKey' => 'profile'],
                                 ];
                             } else {
-                                $navItems = [
-                                    'employee_jobs' => ['icon' => 'briefcase', 'labelKey' => 'jobs'],
-                                    'employee_schedule' => ['icon' => 'calendar', 'labelKey' => 'schedule'],
-                                ];
+                                $navItems = [];
+                                if ($this->isEstimator) {
+                                    $navItems['employee_estimates'] = ['icon' => 'document-text', 'labelKey' => 'estimates'];
+                                }
+                                $navItems['employee_jobs'] = ['icon' => 'briefcase', 'labelKey' => 'jobs'];
+                                $navItems['employee_schedule'] = ['icon' => 'calendar', 'labelKey' => 'schedule'];
+                                if ($this->isSupervisor) {
+                                    $navItems['employee_routes'] = ['icon' => 'location', 'labelKey' => 'routes'];
+                                    $navItems['employee_estimates'] = ['icon' => 'document-text', 'labelKey' => 'estimates'];
+                                }
                                 if ($this->isSprayTech || $this->isSupervisor) {
                                     $navItems['employee_chemicals'] = ['icon' => 'beaker', 'labelKey' => 'chemicals'];
                                 }

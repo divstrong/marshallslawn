@@ -40,4 +40,9 @@ class Crew extends Model
     {
         return $this->hasMany(Job::class);
     }
+
+    public function routes(): HasMany
+    {
+        return $this->hasMany(Route::class);
+    }
 }

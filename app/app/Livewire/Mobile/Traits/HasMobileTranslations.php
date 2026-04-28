@@ -115,6 +115,7 @@ trait HasMobileTranslations
                 // Employee - Schedule
                 'todays_schedule' => "Today's Schedule",
                 'route' => 'Route',
+                'routes' => 'Routes',
                 'no_jobs_today' => 'No jobs scheduled for today',
                 'start_route' => 'Start Route',
                 'navigate' => 'Navigate',
@@ -272,6 +273,7 @@ trait HasMobileTranslations
                 // Employee - Schedule
                 'todays_schedule' => 'Horario de Hoy',
                 'route' => 'Ruta',
+                'routes' => 'Rutas',
                 'no_jobs_today' => 'No hay trabajos programados para hoy',
                 'start_route' => 'Iniciar Ruta',
                 'navigate' => 'Navegar',

@@ -29,9 +29,9 @@ class MobileApp extends Component
             return;
         }
 
-        // Set default view based on user type
+        // Set default view based on user type / role
         if ($this->currentView === 'login') {
-            $this->currentView = $this->userType === 'customer' ? 'customer_home' : 'employee_jobs';
+            $this->currentView = $this->homeView;
         }
     }
 
@@ -55,9 +55,20 @@ class MobileApp extends Component
         return $this->employeeRole === 'spray_tech';
     }
 
+    public function getIsEstimatorProperty(): bool
+    {
+        return $this->employeeRole === 'estimator';
+    }
+
     public function getHomeViewProperty(): string
     {
-        return $this->userType === 'customer' ? 'customer_home' : 'employee_jobs';
+        if ($this->userType === 'customer') {
+            return 'customer_home';
+        }
+        if ($this->employeeRole === 'estimator') {
+            return 'employee_estimates';
+        }
+        return 'employee_jobs';
     }
 
     #[On('language-changed')]
@@ -84,6 +95,16 @@ class MobileApp extends Component
 
         // Chemicals only for spray tech + supervisors
         if ($view === 'employee_chemicals' && !$this->isSprayTech && !$this->isSupervisor) {
+            $view = 'employee_jobs';
+        }
+
+        // Routes only for supervisors (foremen)
+        if ($view === 'employee_routes' && !$this->isSupervisor) {
+            $view = 'employee_jobs';
+        }
+
+        // Estimates only for estimators (and supervisors who oversee them)
+        if ($view === 'employee_estimates' && !$this->isEstimator && !$this->isSupervisor) {
             $view = 'employee_jobs';
         }
 
