@@ -91,15 +91,6 @@ class EmployeeTimeView extends Component
         ]);
     }
 
-    public function addBreak(int $minutes)
-    {
-        if (!$this->activeShift) return;
-
-        $this->activeShift->update([
-            'break_minutes' => ($this->activeShift->break_minutes ?? 0) + $minutes,
-        ]);
-    }
-
     public function render()
     {
         return view('livewire.mobile.views.employee-time', [

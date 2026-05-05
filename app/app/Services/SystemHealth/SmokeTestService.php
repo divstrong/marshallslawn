@@ -243,6 +243,7 @@ class SmokeTestService
         $service = Service::create([
             'name' => '_smoke service ' . uniqid(),
             'code' => 'SMK' . uniqid(),
+            'category' => 'smoke',
             'default_price' => 99.99,
             'unit' => 'each',
             'is_active' => true,
@@ -285,6 +286,7 @@ class SmokeTestService
     {
         $steps = [];
         $employee = Employee::create([
+            'name' => '_smoke emp',
             'first_name' => '_smoke',
             'last_name' => 'emp',
             'email' => 'smoke_' . uniqid() . '@healthcheck.local',

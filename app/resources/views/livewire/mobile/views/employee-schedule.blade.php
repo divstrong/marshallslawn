@@ -1,8 +1,18 @@
-<div class="p-4 space-y-4" x-data="{ lat: null, lon: null }" x-init="
+<div class="p-4 space-y-4" x-data="{ locationLabel: null }" x-init="
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-            lat = pos.coords.latitude;
-            lon = pos.coords.longitude;
+        navigator.geolocation.getCurrentPosition(async pos => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            try {
+                const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+                const data = await res.json();
+                const city = data.city || data.locality || data.localityInfo?.administrative?.find(a => a.order === 6)?.name;
+                const state = (data.principalSubdivisionCode || '').replace(/^US-/, '') || data.principalSubdivision;
+                const zip = data.postcode;
+                locationLabel = [city, state, zip].filter(Boolean).join(', ').replace(/, ([A-Z]{2}), /, ', $1 ');
+            } catch (e) {
+                locationLabel = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            }
         });
     }
 ">
@@ -39,7 +49,7 @@
             @include('livewire.mobile.partials.nav-icon', ['icon' => 'location', 'class' => 'w-5 h-5 text-brand-500'])
             <div>
                 <p class="text-sm font-medium text-gray-800">{{ $t['gps_tracking'] }}</p>
-                <p class="text-xs text-gray-500" x-text="lat ? lat.toFixed(4) + ', ' + lon.toFixed(4) : 'Requesting location...'">Requesting location...</p>
+                <p class="text-xs text-gray-500" x-text="locationLabel || 'Requesting location...'">Requesting location...</p>
             </div>
             <div class="ml-auto w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
         </div>

@@ -27,22 +27,9 @@
                 @endif
             </div>
 
-            <div class="space-y-2">
-                <button wire:click="clockOut" class="w-full bg-red-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-red-600 transition-colors">
-                    {{ $t['clock_out'] }}
-                </button>
-                <div class="grid grid-cols-3 gap-2">
-                    <button wire:click="addBreak(15)" class="bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
-                        +15 min
-                    </button>
-                    <button wire:click="addBreak(30)" class="bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
-                        +30 min
-                    </button>
-                    <button wire:click="addBreak(60)" class="bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
-                        +60 min
-                    </button>
-                </div>
-            </div>
+            <button wire:click="clockOut" class="w-full bg-red-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-red-600 transition-colors">
+                {{ $t['clock_out'] }}
+            </button>
         @else
             <!-- No Active Shift -->
             <div class="text-center mb-4">
