@@ -3,6 +3,7 @@
 namespace App\Livewire\Mobile;
 
 use App\Livewire\Mobile\Traits\HasMobileTranslations;
+use App\Models\Role;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -14,7 +15,9 @@ class MobileApp extends Component
     public string $deviceMode = 'phone'; // 'phone' or 'tablet'
     public bool $menuOpen = false;
     public ?string $userType = null; // 'customer' or 'employee'
-    public ?string $employeeRole = null; // 'supervisor', 'field', 'spray_tech'
+    public ?string $employeeRole = null; // role name slug from roles table
+
+    protected ?Role $cachedRole = null;
 
     protected $queryString = ['currentView', 'deviceMode'];
 
@@ -45,28 +48,41 @@ class MobileApp extends Component
         return $this->userType === 'employee';
     }
 
-    public function getIsSupervisorProperty(): bool
+    protected function role(): ?Role
     {
-        return $this->employeeRole === 'supervisor';
+        if ($this->employeeRole === null) {
+            return null;
+        }
+        if ($this->cachedRole === null || $this->cachedRole->name !== $this->employeeRole) {
+            $this->cachedRole = Role::where('name', $this->employeeRole)->first();
+        }
+        return $this->cachedRole;
     }
 
-    public function getIsSprayTechProperty(): bool
+    public function getCanSeeRoutesProperty(): bool
     {
-        return $this->employeeRole === 'spray_tech';
+        return (bool) $this->role()?->can_see_routes;
     }
 
-    public function getIsEstimatorProperty(): bool
+    public function getCanSeeChemicalsProperty(): bool
     {
-        return $this->employeeRole === 'estimator';
+        return (bool) $this->role()?->can_see_chemicals;
+    }
+
+    public function getCanSeeEstimatesProperty(): bool
+    {
+        return (bool) $this->role()?->can_see_estimates;
+    }
+
+    public function getRoleLabelProperty(): ?string
+    {
+        return $this->role()?->label ?? ($this->employeeRole ? ucfirst($this->employeeRole) : null);
     }
 
     public function getHomeViewProperty(): string
     {
         if ($this->userType === 'customer') {
             return 'customer_home';
-        }
-        if ($this->employeeRole === 'estimator') {
-            return 'employee_estimates';
         }
         return 'employee_jobs';
     }
@@ -93,18 +109,15 @@ class MobileApp extends Component
             $view = 'employee_jobs';
         }
 
-        // Chemicals only for spray tech + supervisors
-        if ($view === 'employee_chemicals' && !$this->isSprayTech && !$this->isSupervisor) {
+        if ($view === 'employee_chemicals' && !$this->canSeeChemicals) {
             $view = 'employee_jobs';
         }
 
-        // Routes only for supervisors (foremen)
-        if ($view === 'employee_routes' && !$this->isSupervisor) {
+        if ($view === 'employee_routes' && !$this->canSeeRoutes) {
             $view = 'employee_jobs';
         }
 
-        // Estimates only for estimators (and supervisors who oversee them)
-        if ($view === 'employee_estimates' && !$this->isEstimator && !$this->isSupervisor) {
+        if ($view === 'employee_estimates' && !$this->canSeeEstimates) {
             $view = 'employee_jobs';
         }
 

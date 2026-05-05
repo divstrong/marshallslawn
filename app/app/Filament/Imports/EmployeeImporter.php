@@ -3,9 +3,11 @@
 namespace App\Filament\Imports;
 
 use App\Models\Employee;
+use Filament\Actions\Imports\Exceptions\RowImportFailedException;
 use Filament\Actions\Imports\ImportColumn;
 use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
+use Throwable;
 
 class EmployeeImporter extends Importer
 {
@@ -81,6 +83,15 @@ class EmployeeImporter extends Importer
         }
 
         return Employee::firstOrNew($criteria);
+    }
+
+    public function saveRecord(): void
+    {
+        try {
+            $this->record->save();
+        } catch (Throwable $e) {
+            throw new RowImportFailedException(get_class($e) . ': ' . $e->getMessage());
+        }
     }
 
     protected function beforeSave(): void

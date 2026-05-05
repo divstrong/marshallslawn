@@ -61,8 +61,7 @@
                             $nameParts = explode(' ', $userName);
                             $initials = strtoupper(substr($nameParts[0] ?? '', 0, 1) . substr($nameParts[1] ?? '', 0, 1));
                             $userType = session('mobile_app_user_type');
-                            $empRole = session('mobile_app_employee_role');
-                            $roleLabel = $userType === 'customer' ? 'Customer' : ucfirst($empRole ?? 'Field');
+                            $roleLabel = $userType === 'customer' ? 'Customer' : ($this->roleLabel ?? 'Field');
                         @endphp
                         <div class="text-right">
                             <p class="text-sm font-semibold text-gray-800">{{ $userName }}</p>
@@ -102,16 +101,15 @@
                             ];
                         } else {
                             $menuItems = [];
-                            if ($this->isEstimator) {
-                                $menuItems['employee_estimates'] = ['icon' => 'document-text', 'labelKey' => 'estimates'];
-                            }
                             $menuItems['employee_jobs'] = ['icon' => 'briefcase', 'labelKey' => 'jobs'];
                             $menuItems['employee_schedule'] = ['icon' => 'calendar', 'labelKey' => 'schedule'];
-                            if ($this->isSupervisor) {
+                            if ($this->canSeeRoutes) {
                                 $menuItems['employee_routes'] = ['icon' => 'location', 'labelKey' => 'routes'];
+                            }
+                            if ($this->canSeeEstimates) {
                                 $menuItems['employee_estimates'] = ['icon' => 'document-text', 'labelKey' => 'estimates'];
                             }
-                            if ($this->isSprayTech || $this->isSupervisor) {
+                            if ($this->canSeeChemicals) {
                                 $menuItems['employee_chemicals'] = ['icon' => 'beaker', 'labelKey' => 'chemicals'];
                             }
                             $menuItems['employee_time'] = ['icon' => 'clock', 'labelKey' => 'time'];
@@ -189,16 +187,15 @@
                                 ];
                             } else {
                                 $navItems = [];
-                                if ($this->isEstimator) {
-                                    $navItems['employee_estimates'] = ['icon' => 'document-text', 'labelKey' => 'estimates'];
-                                }
                                 $navItems['employee_jobs'] = ['icon' => 'briefcase', 'labelKey' => 'jobs'];
                                 $navItems['employee_schedule'] = ['icon' => 'calendar', 'labelKey' => 'schedule'];
-                                if ($this->isSupervisor) {
+                                if ($this->canSeeRoutes) {
                                     $navItems['employee_routes'] = ['icon' => 'location', 'labelKey' => 'routes'];
+                                }
+                                if ($this->canSeeEstimates) {
                                     $navItems['employee_estimates'] = ['icon' => 'document-text', 'labelKey' => 'estimates'];
                                 }
-                                if ($this->isSprayTech || $this->isSupervisor) {
+                                if ($this->canSeeChemicals) {
                                     $navItems['employee_chemicals'] = ['icon' => 'beaker', 'labelKey' => 'chemicals'];
                                 }
                                 $navItems['employee_time'] = ['icon' => 'clock', 'labelKey' => 'time'];

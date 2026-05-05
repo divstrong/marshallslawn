@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\EmployeeResource\Pages;
 use App\Models\Employee;
+use App\Models\Role;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
@@ -60,13 +61,7 @@ class EmployeeResource extends Resource
             Forms\Components\DatePicker::make('date_of_birth')
                 ->label('Date of Birth'),
             Forms\Components\Select::make('role')
-                ->options([
-                    'field' => 'Field',
-                    'office' => 'Office',
-                    'manager' => 'Manager',
-                    'admin' => 'Admin',
-                ])
-                ->default('field')
+                ->options(fn () => Role::orderBy('label')->pluck('label', 'name')->all())
                 ->required(),
             Forms\Components\Select::make('status')
                 ->options([
@@ -115,7 +110,10 @@ class EmployeeResource extends Resource
                     ->label('Mobile')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('role')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): ?string => $state
+                        ? (Role::where('name', $state)->value('label') ?? $state)
+                        : null),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
                 Tables\Columns\TextColumn::make('division')

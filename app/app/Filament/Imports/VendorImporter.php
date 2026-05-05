@@ -3,9 +3,11 @@
 namespace App\Filament\Imports;
 
 use App\Models\Vendor;
+use Filament\Actions\Imports\Exceptions\RowImportFailedException;
 use Filament\Actions\Imports\ImportColumn;
 use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
+use Throwable;
 
 class VendorImporter extends Importer
 {
@@ -84,6 +86,15 @@ class VendorImporter extends Importer
             $this->record->status = strtolower($this->data['status']) === 'active' ? 'active' : 'inactive';
         } elseif (! $this->record->exists) {
             $this->record->status = 'active';
+        }
+    }
+
+    public function saveRecord(): void
+    {
+        try {
+            $this->record->save();
+        } catch (Throwable $e) {
+            throw new RowImportFailedException(get_class($e) . ': ' . $e->getMessage());
         }
     }
 

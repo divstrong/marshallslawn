@@ -116,23 +116,7 @@ class MobileLogin extends Component
                 return;
             }
 
-            // Determine employee role based on role/division or default
-            $role = 'field';
-            $division = strtolower($employee->division ?? '');
-            $empRole = strtolower($employee->role ?? '');
-            if ($empRole === 'estimator' || str_contains($division, 'estim') || str_contains($division, 'sales')) {
-                $role = 'estimator';
-            } elseif (str_contains($division, 'spray') || str_contains($division, 'chemical') || str_contains($division, 'tech')) {
-                $role = 'spray_tech';
-            } elseif (str_contains($division, 'super') || str_contains($division, 'manage') || str_contains($division, 'admin')) {
-                $role = 'supervisor';
-            }
-
-            // Check if employee is a foreman (has crews) - treat as supervisor
-            // (overrides estimator/field, but not spray_tech since foreman+spray_tech is unusual)
-            if ($role !== 'estimator' && $employee->crews()->exists()) {
-                $role = 'supervisor';
-            }
+            $role = $employee->role ?: 'field';
 
             session([
                 'mobile_app_user_id' => $employee->id,

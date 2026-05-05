@@ -12,8 +12,12 @@
             <h2 class="text-lg font-bold text-gray-800 mt-3">{{ $name }}</h2>
             <p class="text-sm text-gray-500">{{ $this->employee->email }}</p>
             <div class="flex justify-center gap-2 mt-2">
+                @php
+                    $empRoleSlug = session('mobile_app_employee_role', 'field');
+                    $empRoleLabel = \App\Models\Role::where('name', $empRoleSlug)->value('label') ?? ucfirst($empRoleSlug);
+                @endphp
                 <span class="px-3 py-1 bg-brand-50 text-brand-700 rounded-full text-xs font-medium">
-                    {{ ucfirst(session('mobile_app_employee_role', 'field')) }}
+                    {{ $empRoleLabel }}
                 </span>
                 @if($this->employee->division)
                     <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">

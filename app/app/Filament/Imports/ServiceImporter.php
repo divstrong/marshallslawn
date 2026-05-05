@@ -3,9 +3,11 @@
 namespace App\Filament\Imports;
 
 use App\Models\Service;
+use Filament\Actions\Imports\Exceptions\RowImportFailedException;
 use Filament\Actions\Imports\ImportColumn;
 use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
+use Throwable;
 
 class ServiceImporter extends Importer
 {
@@ -91,6 +93,15 @@ class ServiceImporter extends Importer
                 'Hourly' => 'hourly',
             ];
             $this->record->unit = $modeMap[$this->data['service_mode']] ?? 'per_service';
+        }
+    }
+
+    public function saveRecord(): void
+    {
+        try {
+            $this->record->save();
+        } catch (Throwable $e) {
+            throw new RowImportFailedException(get_class($e) . ': ' . $e->getMessage());
         }
     }
 

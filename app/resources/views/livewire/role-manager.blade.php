@@ -19,6 +19,7 @@
                     <th style="text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Name</th>
                     <th style="text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Label</th>
                     <th style="text-align: center; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Admin</th>
+                    <th style="text-align: center; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Mobile Tabs</th>
                     <th style="text-align: center; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Users</th>
                     <th style="text-align: right; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">Actions</th>
                 </tr>
@@ -35,6 +36,16 @@
                                 <span style="color: #9ca3af;">No</span>
                             @endif
                         </td>
+                        <td style="padding: 12px 16px; text-align: center; font-size: 12px; color: #6b7280;">
+                            @php
+                                $tabs = array_filter([
+                                    $role['can_see_routes'] ? 'Routes' : null,
+                                    $role['can_see_chemicals'] ? 'Chemicals' : null,
+                                    $role['can_see_estimates'] ? 'Estimates' : null,
+                                ]);
+                            @endphp
+                            {{ $tabs ? implode(', ', $tabs) : '—' }}
+                        </td>
                         <td style="padding: 12px 16px; text-align: center; color: #6b7280;">{{ $role['users_count'] }}</td>
                         <td style="padding: 12px 16px; text-align: right;">
                             <button wire:click="openEdit({{ $role['id'] }})" type="button" style="padding: 4px 10px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; cursor: pointer; color: #374151; margin-right: 4px;">Edit</button>
@@ -45,7 +56,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" style="padding: 24px; text-align: center; color: #9ca3af;">No roles defined.</td>
+                        <td colspan="6" style="padding: 24px; text-align: center; color: #9ca3af;">No roles defined.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -69,6 +80,21 @@
                         <input wire:model="formIsAdmin" type="checkbox" style="width: 18px; height: 18px; accent-color: #c9092f;" />
                         <span style="font-size: 14px; color: #374151;">Full admin access (bypasses all permissions)</span>
                     </label>
+                    <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 4px;">
+                        <p style="font-size: 12px; font-weight: 600; color: #374151; margin: 0 0 8px 0;">Mobile App Tabs</p>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 0;">
+                            <input wire:model="formCanSeeRoutes" type="checkbox" style="width: 18px; height: 18px; accent-color: #c9092f;" />
+                            <span style="font-size: 14px; color: #374151;">Routes</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 0;">
+                            <input wire:model="formCanSeeChemicals" type="checkbox" style="width: 18px; height: 18px; accent-color: #c9092f;" />
+                            <span style="font-size: 14px; color: #374151;">Chemicals</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 0;">
+                            <input wire:model="formCanSeeEstimates" type="checkbox" style="width: 18px; height: 18px; accent-color: #c9092f;" />
+                            <span style="font-size: 14px; color: #374151;">Estimates</span>
+                        </label>
+                    </div>
                 </div>
                 <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 8px;">
                     <button wire:click="closeForm" type="button" style="padding: 9px 18px; font-size: 14px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; cursor: pointer; color: #374151;">Cancel</button>

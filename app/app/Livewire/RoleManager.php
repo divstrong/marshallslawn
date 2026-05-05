@@ -15,6 +15,9 @@ class RoleManager extends Component
     public ?int $editingId = null;
     public string $formLabel = '';
     public bool $formIsAdmin = false;
+    public bool $formCanSeeRoutes = false;
+    public bool $formCanSeeChemicals = false;
+    public bool $formCanSeeEstimates = false;
 
     public function mount(): void
     {
@@ -31,6 +34,9 @@ class RoleManager extends Component
         $this->editingId = null;
         $this->formLabel = '';
         $this->formIsAdmin = false;
+        $this->formCanSeeRoutes = false;
+        $this->formCanSeeChemicals = false;
+        $this->formCanSeeEstimates = false;
         $this->showForm = true;
     }
 
@@ -42,6 +48,9 @@ class RoleManager extends Component
         $this->editingId = $role->id;
         $this->formLabel = $role->label ?? $role->name;
         $this->formIsAdmin = $role->is_admin;
+        $this->formCanSeeRoutes = $role->can_see_routes;
+        $this->formCanSeeChemicals = $role->can_see_chemicals;
+        $this->formCanSeeEstimates = $role->can_see_estimates;
         $this->showForm = true;
     }
 
@@ -58,6 +67,9 @@ class RoleManager extends Component
             'name' => Str::slug($this->formLabel, '_'),
             'label' => $this->formLabel,
             'is_admin' => $this->formIsAdmin,
+            'can_see_routes' => $this->formCanSeeRoutes,
+            'can_see_chemicals' => $this->formCanSeeChemicals,
+            'can_see_estimates' => $this->formCanSeeEstimates,
         ];
 
         if ($this->editingId) {

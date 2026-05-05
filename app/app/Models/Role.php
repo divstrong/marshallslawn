@@ -14,12 +14,18 @@ class Role extends Model
         'name',
         'label',
         'is_admin',
+        'can_see_routes',
+        'can_see_chemicals',
+        'can_see_estimates',
     ];
 
     protected function casts(): array
     {
         return [
             'is_admin' => 'boolean',
+            'can_see_routes' => 'boolean',
+            'can_see_chemicals' => 'boolean',
+            'can_see_estimates' => 'boolean',
         ];
     }
 
