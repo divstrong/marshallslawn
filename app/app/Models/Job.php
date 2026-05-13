@@ -27,6 +27,7 @@ class Job extends Model
         'customer_id',
         'property_id',
         'estimate_id',
+        'recurring_job_template_id',
         'crew_id',
         'title',
         'description',
@@ -68,6 +69,21 @@ class Job extends Model
     public function crew(): BelongsTo
     {
         return $this->belongsTo(Crew::class);
+    }
+
+    public function recurringTemplate(): BelongsTo
+    {
+        return $this->belongsTo(RecurringJobTemplate::class, 'recurring_job_template_id');
+    }
+
+    public function routeStops(): HasMany
+    {
+        return $this->hasMany(RouteStop::class);
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(JobMedia::class);
     }
 
     public function timeLogs(): HasMany

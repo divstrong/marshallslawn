@@ -5,13 +5,17 @@ namespace App\Filament\Resources;
 use App\Filament\Concerns\ChecksResourceAccess;
 use App\Filament\Resources\RouteResource\Pages;
 use App\Filament\Resources\RouteResource\RelationManagers\StopsRelationManager;
+use App\Models\Crew;
 use App\Models\Route;
+use Carbon\Carbon;
 use Filament\Actions;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
 
 class RouteResource extends Resource
 {
@@ -112,6 +116,66 @@ class RouteResource extends Resource
             ])
             ->actions([
                 Actions\EditAction::make(),
+                Actions\Action::make('copy')
+                    ->label('Copy')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('gray')
+                    ->schema(fn (Route $record) => [
+                        Forms\Components\DatePicker::make('new_date')
+                            ->label('New date')
+                            ->required()
+                            ->default(Carbon::parse($record->route_date)->addWeek()),
+                        Forms\Components\Select::make('new_crew_id')
+                            ->label('Crew')
+                            ->relationship('crew', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->default($record->crew_id)
+                            ->helperText('Pick a different crew to copy onto, or keep the same one.'),
+                        Forms\Components\Toggle::make('reset_status')
+                            ->label('Reset all stop statuses to pending')
+                            ->default(true),
+                    ])
+                    ->action(function (array $data, Route $record) {
+                        $newDate = $data['new_date'];
+                        $newCrewId = $data['new_crew_id'] ?? $record->crew_id;
+                        $resetStatus = (bool) ($data['reset_status'] ?? true);
+
+                        $crewName = Crew::whereKey($newCrewId)->value('name') ?? 'Route';
+
+                        $newRoute = DB::transaction(function () use ($record, $newDate, $newCrewId, $crewName, $resetStatus) {
+                            $copy = Route::create([
+                                'name' => Carbon::parse($newDate)->format('D, M j') . ' — ' . $crewName,
+                                'route_date' => $newDate,
+                                'crew_id' => $newCrewId,
+                                'status' => 'planning',
+                                'notes' => $record->notes,
+                            ]);
+
+                            foreach ($record->stops()->orderBy('sort_order')->get() as $stop) {
+                                $copy->stops()->create([
+                                    'job_id' => null, // decouple from the source date's Job instances
+                                    'customer_id' => $stop->customer_id,
+                                    'property_id' => $stop->property_id,
+                                    'service_id' => $stop->service_id,
+                                    'sort_order' => $stop->sort_order,
+                                    'status' => $resetStatus ? 'pending' : $stop->status,
+                                    'completed_at' => $resetStatus ? null : $stop->completed_at,
+                                    'notes' => $stop->notes,
+                                ]);
+                            }
+
+                            return $copy;
+                        });
+
+                        Notification::make()
+                            ->title('Route copied')
+                            ->body("Created \"{$newRoute->name}\" with " . $newRoute->stops()->count() . ' stops.')
+                            ->success()
+                            ->send();
+                    })
+                    ->modalHeading(fn (Route $record) => 'Copy route: ' . $record->name)
+                    ->modalSubmitActionLabel('Create copy'),
             ])
             ->bulkActions([
                 Actions\BulkActionGroup::make([

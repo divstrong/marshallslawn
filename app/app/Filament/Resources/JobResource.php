@@ -5,6 +5,9 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\JobResource\Pages;
 use App\Models\Job;
 use Filament\Forms;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -27,48 +30,65 @@ class JobResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Select::make('customer_id')
-                ->relationship('customer', 'last_name')
-                ->searchable()
-                ->preload()
-                ->required(),
-            Forms\Components\Select::make('property_id')
-                ->relationship('property', 'address')
-                ->searchable()
-                ->preload(),
-            Forms\Components\Select::make('estimate_id')
-                ->relationship('estimate', 'estimate_number')
-                ->searchable()
-                ->preload(),
-            Forms\Components\Select::make('crew_id')
-                ->relationship('crew', 'name')
-                ->searchable()
-                ->preload(),
-            Forms\Components\TextInput::make('title')
-                ->required()
-                ->maxLength(255),
-            Forms\Components\Textarea::make('description')
-                ->columnSpanFull(),
-            Forms\Components\Select::make('status')
-                ->options([
-                    'pending' => 'Pending',
-                    'scheduled' => 'Scheduled',
-                    'in_progress' => 'In Progress',
-                    'completed' => 'Completed',
-                    'cancelled' => 'Cancelled',
-                ])
-                ->required(),
-            Forms\Components\Select::make('priority')
-                ->options([
-                    'low' => 'Low',
-                    'normal' => 'Normal',
-                    'high' => 'High',
-                    'urgent' => 'Urgent',
-                ])
-                ->required(),
-            Forms\Components\DatePicker::make('scheduled_date'),
-            Forms\Components\Textarea::make('notes')
-                ->columnSpanFull(),
+            Tabs::make('Job')
+                ->columnSpanFull()
+                ->tabs([
+                    Tab::make('General')
+                        ->icon('heroicon-o-information-circle')
+                        ->columns(2)
+                        ->schema([
+                            Forms\Components\Select::make('customer_id')
+                                ->relationship('customer', 'last_name')
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+                            Forms\Components\Select::make('property_id')
+                                ->relationship('property', 'address')
+                                ->searchable()
+                                ->preload(),
+                            Forms\Components\Select::make('estimate_id')
+                                ->relationship('estimate', 'estimate_number')
+                                ->searchable()
+                                ->preload(),
+                            Forms\Components\Select::make('crew_id')
+                                ->relationship('crew', 'name')
+                                ->searchable()
+                                ->preload(),
+                            Forms\Components\TextInput::make('title')
+                                ->required()
+                                ->maxLength(255)
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('description')
+                                ->columnSpanFull(),
+                            Forms\Components\Select::make('status')
+                                ->options([
+                                    'pending' => 'Pending',
+                                    'scheduled' => 'Scheduled',
+                                    'in_progress' => 'In Progress',
+                                    'completed' => 'Completed',
+                                    'cancelled' => 'Cancelled',
+                                ])
+                                ->required(),
+                            Forms\Components\Select::make('priority')
+                                ->options([
+                                    'low' => 'Low',
+                                    'normal' => 'Normal',
+                                    'high' => 'High',
+                                    'urgent' => 'Urgent',
+                                ])
+                                ->required(),
+                            Forms\Components\DatePicker::make('scheduled_date'),
+                            Forms\Components\Textarea::make('notes')
+                                ->columnSpanFull(),
+                        ]),
+                    Tab::make('Attachments')
+                        ->icon('heroicon-o-paper-clip')
+                        ->badge(fn (?Job $record): ?string => $record?->media()->count() ?: null)
+                        ->hidden(fn (?Job $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.job.attachments-tab'),
+                        ]),
+                ]),
         ]);
     }
 
@@ -86,7 +106,13 @@ class JobResource extends Resource
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
                 Tables\Columns\TextColumn::make('priority')
-                    ->badge(),
+                    ->badge()
+                    ->color(fn (?string $state) => match ($state) {
+                        'urgent', 'high' => 'danger',
+                        'normal' => 'warning',
+                        'low' => 'success',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('scheduled_date')
                     ->date()
                     ->sortable(),

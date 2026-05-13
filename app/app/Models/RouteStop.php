@@ -12,6 +12,7 @@ class RouteStop extends Model
 
     protected $fillable = [
         'route_id',
+        'job_id',
         'customer_id',
         'property_id',
         'service_id',
@@ -32,6 +33,11 @@ class RouteStop extends Model
     public function route(): BelongsTo
     {
         return $this->belongsTo(Route::class);
+    }
+
+    public function job(): BelongsTo
+    {
+        return $this->belongsTo(Job::class);
     }
 
     public function customer(): BelongsTo

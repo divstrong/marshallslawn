@@ -22,6 +22,9 @@ class Property extends Model
         'city',
         'state',
         'zip',
+        'latitude',
+        'longitude',
+        'geocoded_at',
         'lot_size',
         'lawn_size',
         'square_footage',
@@ -38,8 +41,16 @@ class Property extends Model
     {
         return [
             'square_footage' => 'decimal:2',
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
+            'geocoded_at' => 'datetime',
             'is_primary' => 'boolean',
         ];
+    }
+
+    public function hasCoordinates(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
     }
 
     public function customer(): BelongsTo
