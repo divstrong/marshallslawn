@@ -47,6 +47,11 @@ class Dispatch extends Page
 
     public ?int $selectedJobId = null;
 
+    public ?int $selectedForemanId = null;
+
+    #[Url(as: 'gps')]
+    public bool $showGps = true;
+
     public function mount(): void
     {
         $this->date ??= now()->toDateString();
@@ -190,6 +195,103 @@ class Dispatch extends Page
     }
 
     #[Computed]
+    public function foremanPins(): array
+    {
+        if (! $this->showGps) {
+            return [];
+        }
+
+        $crewMap = $this->crewColorMap;
+        if (empty($crewMap)) {
+            return [];
+        }
+
+        $crews = Crew::with('foreman')
+            ->whereIn('id', array_keys($crewMap))
+            ->whereNotNull('foreman_id')
+            ->get();
+
+        // Stop centroids per crew for the current date (so the foreman appears near their route)
+        $stopCentroids = [];
+        foreach ($this->stops as $stop) {
+            $cid = $stop['crew_id'];
+            if (! isset($stopCentroids[$cid])) {
+                $stopCentroids[$cid] = ['lat' => 0.0, 'lng' => 0.0, 'n' => 0];
+            }
+            $stopCentroids[$cid]['lat'] += $stop['lat'];
+            $stopCentroids[$cid]['lng'] += $stop['lng'];
+            $stopCentroids[$cid]['n']++;
+        }
+
+        // Richmond fallback
+        $fallbackLat = 37.5407;
+        $fallbackLng = -77.4360;
+
+        $pins = [];
+        foreach ($crews as $crew) {
+            $foreman = $crew->foreman;
+            if (! $foreman) {
+                continue;
+            }
+
+            // Filter: only show if crew is in the active filter (or no filter is active)
+            if (! empty($this->crewIds) && ! in_array((int) $crew->id, array_map('intval', $this->crewIds), true)) {
+                continue;
+            }
+
+            // Deterministic offset per crew so the pin doesn't jump around on re-renders
+            $offsetLat = ((((int) $crew->id) * 17) % 100 - 50) / 10000;
+            $offsetLng = ((((int) $crew->id) * 23) % 100 - 50) / 10000;
+
+            if (isset($stopCentroids[$crew->id]) && $stopCentroids[$crew->id]['n'] > 0) {
+                $c = $stopCentroids[$crew->id];
+                $lat = $c['lat'] / $c['n'] + $offsetLat;
+                $lng = $c['lng'] / $c['n'] + $offsetLng;
+            } else {
+                // No stops today: float near Richmond with a larger offset
+                $lat = $fallbackLat + $offsetLat * 5;
+                $lng = $fallbackLng + $offsetLng * 5;
+            }
+
+            $name = trim(($foreman->first_name ?? '') . ' ' . ($foreman->last_name ?? ''))
+                ?: ($foreman->name ?? 'Foreman');
+            $initials = strtoupper(substr($foreman->first_name ?? '', 0, 1) . substr($foreman->last_name ?? '', 0, 1));
+            if ($initials === '') {
+                $initials = strtoupper(substr($name, 0, 2));
+            }
+
+            $pins[] = [
+                'id' => (int) $foreman->id,
+                'crew_id' => (int) $crew->id,
+                'crew_name' => $crew->name,
+                'name' => $name,
+                'initials' => $initials ?: '?',
+                'color' => $crewMap[$crew->id]['color'] ?? '#6b7280',
+                'phone' => $foreman->mobile_phone ?? $foreman->phone,
+                'lat' => round($lat, 7),
+                'lng' => round($lng, 7),
+                'stops_today' => $stopCentroids[$crew->id]['n'] ?? 0,
+            ];
+        }
+
+        return $pins;
+    }
+
+    #[Computed]
+    public function selectedForeman(): ?array
+    {
+        if (! $this->selectedForemanId) {
+            return null;
+        }
+        foreach ($this->foremanPins as $f) {
+            if ($f['id'] === $this->selectedForemanId) {
+                return $f;
+            }
+        }
+        return null;
+    }
+
+    #[Computed]
     public function unmappedStops(): array
     {
         $rows = RouteStop::query()
@@ -267,18 +369,28 @@ class Dispatch extends Page
     {
         $this->selectedStopId = $id;
         $this->selectedJobId = null;
+        $this->selectedForemanId = null;
     }
 
     public function selectJob(int $id): void
     {
         $this->selectedJobId = $id;
         $this->selectedStopId = null;
+        $this->selectedForemanId = null;
+    }
+
+    public function selectForeman(int $id): void
+    {
+        $this->selectedForemanId = $id;
+        $this->selectedStopId = null;
+        $this->selectedJobId = null;
     }
 
     public function clearSelection(): void
     {
         $this->selectedStopId = null;
         $this->selectedJobId = null;
+        $this->selectedForemanId = null;
     }
 
     public function toggleCrew(int $id): void
@@ -307,6 +419,16 @@ class Dispatch extends Page
 
     public function updatedStatusFilter(): void
     {
+        $this->emitStopsUpdated();
+    }
+
+    public function toggleGps(): void
+    {
+        $this->showGps = ! $this->showGps;
+        if (! $this->showGps && $this->selectedForemanId) {
+            $this->selectedForemanId = null;
+        }
+        unset($this->foremanPins, $this->selectedForeman);
         $this->emitStopsUpdated();
     }
 
@@ -345,6 +467,7 @@ class Dispatch extends Page
             'dispatch:stops-updated',
             stops: $this->stops,
             unroutedJobs: $this->unroutedJobs,
+            foremen: $this->foremanPins,
             crewColors: $this->crewColorMap,
         );
     }

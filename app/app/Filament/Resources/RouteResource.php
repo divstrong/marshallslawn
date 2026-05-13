@@ -4,7 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Concerns\ChecksResourceAccess;
 use App\Filament\Resources\RouteResource\Pages;
-use App\Filament\Resources\RouteResource\RelationManagers\StopsRelationManager;
 use App\Models\Crew;
 use App\Models\Route;
 use Carbon\Carbon;
@@ -12,6 +11,9 @@ use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -32,38 +34,55 @@ class RouteResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\TextInput::make('name')
-                ->required()
-                ->maxLength(255)
-                ->placeholder('Mon AM — North Side'),
-            Forms\Components\DatePicker::make('route_date')
-                ->required()
-                ->default(now()),
-            Forms\Components\Select::make('crew_id')
-                ->label('Crew (Foreman)')
-                ->relationship('crew', 'name')
-                ->getOptionLabelFromRecordUsing(function ($record) {
-                    $foreman = $record->foreman;
-                    $foremanName = $foreman
-                        ? trim(($foreman->first_name ?? '') . ' ' . ($foreman->last_name ?? '')) ?: ($foreman->name ?? '')
-                        : null;
+            Tabs::make('Route')
+                ->columnSpanFull()
+                ->tabs([
+                    Tab::make('General')
+                        ->icon('heroicon-o-information-circle')
+                        ->columns(2)
+                        ->schema([
+                            Forms\Components\TextInput::make('name')
+                                ->required()
+                                ->maxLength(255)
+                                ->placeholder('Mon AM — North Side')
+                                ->columnSpanFull(),
+                            Forms\Components\DatePicker::make('route_date')
+                                ->required()
+                                ->default(now()),
+                            Forms\Components\Select::make('crew_id')
+                                ->label('Crew (Foreman)')
+                                ->relationship('crew', 'name')
+                                ->getOptionLabelFromRecordUsing(function ($record) {
+                                    $foreman = $record->foreman;
+                                    $foremanName = $foreman
+                                        ? trim(($foreman->first_name ?? '') . ' ' . ($foreman->last_name ?? '')) ?: ($foreman->name ?? '')
+                                        : null;
 
-                    return $foremanName
-                        ? "{$record->name} — {$foremanName}"
-                        : $record->name;
-                })
-                ->searchable()
-                ->preload(),
-            Forms\Components\Select::make('status')
-                ->options([
-                    'planning' => 'Planning',
-                    'active' => 'Active',
-                    'completed' => 'Completed',
-                ])
-                ->default('planning')
-                ->required(),
-            Forms\Components\Textarea::make('notes')
-                ->columnSpanFull(),
+                                    return $foremanName
+                                        ? "{$record->name} — {$foremanName}"
+                                        : $record->name;
+                                })
+                                ->searchable()
+                                ->preload(),
+                            Forms\Components\Select::make('status')
+                                ->options([
+                                    'planning' => 'Planning',
+                                    'active' => 'Active',
+                                    'completed' => 'Completed',
+                                ])
+                                ->default('planning')
+                                ->required(),
+                            Forms\Components\Textarea::make('notes')
+                                ->columnSpanFull(),
+                        ]),
+                    Tab::make('Stops')
+                        ->icon('heroicon-o-map-pin')
+                        ->badge(fn (?Route $record): ?string => $record?->stops()->count() ?: null)
+                        ->hidden(fn (?Route $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.route.stops-tab'),
+                        ]),
+                ]),
         ]);
     }
 
@@ -186,9 +205,9 @@ class RouteResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            StopsRelationManager::class,
-        ];
+        // StopsRelationManager removed — stops are now managed via the drag/drop "Stops" tab
+        // on the edit form (powered by App\Livewire\RouteStopsManager).
+        return [];
     }
 
     public static function getPages(): array

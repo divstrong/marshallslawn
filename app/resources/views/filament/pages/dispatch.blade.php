@@ -3,11 +3,13 @@
     $stops = $this->stops;
     $unroutedJobs = $this->unroutedJobs;
     $pins = array_merge($stops, $unroutedJobs);
+    $foremen = $this->foremanPins;
     $crewColors = $this->crewColorMap;
     $summary = $this->summary;
     $unmapped = $this->unmappedStops;
     $selected = $this->selectedStop;
     $selectedJob = $this->selectedUnroutedJob;
+    $selectedForeman = $this->selectedForeman;
 @endphp
 
 <x-filament-panels::page>
@@ -175,6 +177,7 @@
         class="dispatch-page"
         x-data="dispatchBoard($wire, {
             pins: @js($pins),
+            foremen: @js($foremen),
             crewColors: @js($crewColors),
             apiKey: @js($mapsApiKey ?? ''),
         })"
@@ -192,7 +195,30 @@
                         <button type="button" wire:click="shiftDate(1)" class="d-icon-btn" title="Next day">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </button>
-                        <button type="button" wire:click="$set('date', '{{ now()->toDateString() }}')" class="d-btn">Today</button>
+                        @php
+                            $today = now()->toDateString();
+                            $tomorrow = now()->addDay()->toDateString();
+                            $yesterday = now()->subDay()->toDateString();
+                            $activeStyle = 'background: var(--d-accent); color: #fff; border-color: var(--d-accent);';
+                        @endphp
+                        <button
+                            type="button"
+                            wire:click="$set('date', '{{ $yesterday }}')"
+                            class="d-btn"
+                            @if ($this->date === $yesterday) style="{{ $activeStyle }}" @endif
+                        >Yesterday</button>
+                        <button
+                            type="button"
+                            wire:click="$set('date', '{{ $today }}')"
+                            class="d-btn"
+                            @if ($this->date === $today) style="{{ $activeStyle }}" @endif
+                        >Today</button>
+                        <button
+                            type="button"
+                            wire:click="$set('date', '{{ $tomorrow }}')"
+                            class="d-btn"
+                            @if ($this->date === $tomorrow) style="{{ $activeStyle }}" @endif
+                        >Tomorrow</button>
                     </div>
 
                     <div class="d-divider"></div>
@@ -220,6 +246,17 @@
                     </div>
 
                     <div class="d-spacer"></div>
+
+                    <button
+                        type="button"
+                        wire:click="toggleGps"
+                        class="d-chip"
+                        @if ($this->showGps) style="background: var(--d-accent); color: #fff; border-color: var(--d-accent);" @endif
+                        title="Show or hide crew foreman avatar pins (GPS placeholder)"
+                    >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                        Show GPS
+                    </button>
 
                     <select wire:model.live="statusFilter" class="d-select">
                         <option value="">All statuses</option>
@@ -249,7 +286,33 @@
                 </div>
 
                 <div class="d-stack">
-                    @if ($selectedJob)
+                    @if ($selectedForeman)
+                        <div class="d-card">
+                            <div class="d-row" style="justify-content: space-between;">
+                                <div class="d-row">
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:9999px;background:{{ $selectedForeman['color'] }};color:#fff;font-weight:700;font-size:14px;">{{ $selectedForeman['initials'] }}</span>
+                                    <div>
+                                        <div class="d-card-title">{{ $selectedForeman['name'] }}</div>
+                                        <div class="d-muted" style="font-size:12px;">{{ $selectedForeman['crew_name'] }} foreman</div>
+                                    </div>
+                                </div>
+                                <button type="button" wire:click="clearSelection" class="d-btn" style="height: 28px; padding: 0 8px; font-size: 12px;">Close</button>
+                            </div>
+                            <div class="d-field">
+                                <div class="d-label">Stops today</div>
+                                <div class="d-field-val">{{ $selectedForeman['stops_today'] }}</div>
+                            </div>
+                            @if ($selectedForeman['phone'])
+                                <div class="d-field">
+                                    <div class="d-label">Phone</div>
+                                    <a href="tel:{{ $selectedForeman['phone'] }}" class="d-link">{{ $selectedForeman['phone'] }}</a>
+                                </div>
+                            @endif
+                            <div class="d-field" style="font-size:11px;color:var(--d-muted);padding-top:8px;border-top:1px solid var(--d-border);">
+                                Position is a placeholder. Live GPS will appear here once the foreman app is installed with location services on.
+                            </div>
+                        </div>
+                    @elseif ($selectedJob)
                         <div class="d-card">
                             <div class="d-row" style="justify-content: space-between;">
                                 <div class="d-row">
@@ -445,13 +508,13 @@
                             if (!initial.apiKey) return;
 
                             this.loadMapsApi(initial.apiKey).then(() => {
-                                this.buildMap(initial.pins);
+                                this.buildMap(initial.pins, initial.foremen || []);
                             });
 
                             window.addEventListener('dispatch:stops-updated', (e) => {
-                                const { stops = [], unroutedJobs = [], crewColors } = e.detail || {};
+                                const { stops = [], unroutedJobs = [], foremen = [], crewColors } = e.detail || {};
                                 if (crewColors) this.crewColors = crewColors;
-                                this.refreshMarkers([...stops, ...unroutedJobs]);
+                                this.refreshMarkers([...stops, ...unroutedJobs], foremen);
                             });
                         },
 
@@ -470,7 +533,7 @@
                             });
                         },
 
-                        buildMap(pins) {
+                        buildMap(pins, foremen) {
                             const el = document.getElementById('dispatch-map');
                             if (!el) return;
                             this.map = new google.maps.Map(el, {
@@ -480,14 +543,19 @@
                                 streetViewControl: false,
                                 fullscreenControl: true,
                             });
-                            this.refreshMarkers(pins);
+                            this.refreshMarkers(pins, foremen);
                         },
 
-                        refreshMarkers(pins) {
+                        foremanIcon(initials, color) {
+                            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="50" viewBox="0 0 44 50"><circle cx="22" cy="22" r="20" fill="${color}" stroke="#ffffff" stroke-width="3"/><text x="22" y="28" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#ffffff">${initials}</text><circle cx="22" cy="46" r="3" fill="${color}" stroke="#ffffff" stroke-width="1.5"/></svg>`;
+                            return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+                        },
+
+                        refreshMarkers(pins, foremen = []) {
                             if (!this.map) return;
                             this.markers.forEach((m) => m.setMap(null));
                             this.markers = [];
-                            if (!pins.length) return;
+                            if (!pins.length && !foremen.length) return;
 
                             this.bounds = new google.maps.LatLngBounds();
                             pins.forEach((p) => {
@@ -516,6 +584,23 @@
                                 });
                                 this.markers.push(marker);
                                 this.bounds.extend({ lat: p.lat, lng: p.lng });
+                            });
+
+                            foremen.forEach((f) => {
+                                const marker = new google.maps.Marker({
+                                    position: { lat: f.lat, lng: f.lng },
+                                    map: this.map,
+                                    title: `${f.name} — ${f.crew_name}`,
+                                    icon: {
+                                        url: this.foremanIcon(f.initials, f.color),
+                                        scaledSize: new google.maps.Size(44, 50),
+                                        anchor: new google.maps.Point(22, 46),
+                                    },
+                                    zIndex: 1000,
+                                });
+                                marker.addListener('click', () => this.$wire.selectForeman(f.id));
+                                this.markers.push(marker);
+                                this.bounds.extend({ lat: f.lat, lng: f.lng });
                             });
 
                             if (this.markers.length === 1) {

@@ -176,7 +176,30 @@
                         <button type="button" wire:click="shiftDate(1)" class="d-icon-btn" title="Next day">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </button>
-                        <button type="button" wire:click="$set('date', '{{ now()->toDateString() }}')" class="d-btn">Today</button>
+                        @php
+                            $today = now()->toDateString();
+                            $tomorrow = now()->addDay()->toDateString();
+                            $yesterday = now()->subDay()->toDateString();
+                            $activeStyle = 'background: var(--d-accent); color: #fff; border-color: var(--d-accent);';
+                        @endphp
+                        <button
+                            type="button"
+                            wire:click="$set('date', '{{ $yesterday }}')"
+                            class="d-btn"
+                            @if ($this->date === $yesterday) style="{{ $activeStyle }}" @endif
+                        >Yesterday</button>
+                        <button
+                            type="button"
+                            wire:click="$set('date', '{{ $today }}')"
+                            class="d-btn"
+                            @if ($this->date === $today) style="{{ $activeStyle }}" @endif
+                        >Today</button>
+                        <button
+                            type="button"
+                            wire:click="$set('date', '{{ $tomorrow }}')"
+                            class="d-btn"
+                            @if ($this->date === $tomorrow) style="{{ $activeStyle }}" @endif
+                        >Tomorrow</button>
                     </div>
 
                     <div class="d-divider"></div>
