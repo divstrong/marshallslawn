@@ -1,0 +1,59 @@
+<?php
+
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\JobController;
+use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\LookupController;
+use App\Http\Controllers\Api\QuoteController;
+use App\Http\Controllers\Api\ScheduleController;
+use App\Http\Controllers\Api\TimeLogController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Native Mobile App API
+|--------------------------------------------------------------------------
+| Token-authenticated endpoints for the Expo client (Foreman / Field /
+| Estimator experiences).
+*/
+
+// Public — authentication.
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/dev/login', [AuthController::class, 'devLogin']);
+
+// Authenticated — Sanctum bearer token.
+Route::middleware('auth:sanctum')->group(function (): void {
+    Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Jobs.
+    Route::get('/jobs', [JobController::class, 'index']);
+    Route::get('/jobs/{job}', [JobController::class, 'show']);
+    Route::post('/jobs/{job}/start', [JobController::class, 'start']);
+    Route::post('/jobs/{job}/complete', [JobController::class, 'complete']);
+    Route::post('/jobs/{job}/notes', [JobController::class, 'addNote']);
+    Route::post('/jobs/{job}/media', [JobController::class, 'storeMedia']);
+    Route::delete('/jobs/{job}/media/{media}', [JobController::class, 'destroyMedia']);
+
+    // Foreman schedule (route-ordered day view).
+    Route::get('/schedule', [ScheduleController::class, 'index']);
+
+    // GPS breadcrumbs from the native app.
+    Route::post('/locations', [LocationController::class, 'store']);
+
+    // Day-level time clock.
+    Route::get('/time-logs', [TimeLogController::class, 'index']);
+    Route::post('/time-logs/clock-in', [TimeLogController::class, 'clockIn']);
+    Route::post('/time-logs/clock-out', [TimeLogController::class, 'clockOut']);
+
+    // Estimator quotes.
+    Route::get('/quotes', [QuoteController::class, 'index']);
+    Route::post('/quotes', [QuoteController::class, 'store']);
+    Route::get('/quotes/{quote}', [QuoteController::class, 'show']);
+    Route::match(['put', 'patch'], '/quotes/{quote}', [QuoteController::class, 'update']);
+
+    // Lookups for quote building.
+    Route::get('/customers', [LookupController::class, 'customers']);
+    Route::get('/customers/{customer}/properties', [LookupController::class, 'properties']);
+    Route::get('/services', [LookupController::class, 'services']);
+});

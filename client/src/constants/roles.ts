@@ -1,0 +1,60 @@
+/**
+ * Role-driven navigation. Each role gets a different set of tabs and a
+ * different landing tab, mirroring the experiences described for the
+ * Foreman, Field, and Estimator users.
+ */
+
+import { Ionicons } from '@expo/vector-icons';
+
+import type { Role } from '@/lib/types';
+
+export type TabName = 'schedule' | 'jobs' | 'time' | 'quotes' | 'settings';
+
+export interface TabDef {
+  name: TabName;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  activeIcon: keyof typeof Ionicons.glyphMap;
+}
+
+export const TABS: Record<TabName, TabDef> = {
+  schedule: { name: 'schedule', label: 'Schedule', icon: 'calendar-outline', activeIcon: 'calendar' },
+  jobs: { name: 'jobs', label: 'Jobs', icon: 'briefcase-outline', activeIcon: 'briefcase' },
+  time: { name: 'time', label: 'Time', icon: 'time-outline', activeIcon: 'time' },
+  quotes: {
+    name: 'quotes',
+    label: 'Quotes',
+    icon: 'document-text-outline',
+    activeIcon: 'document-text',
+  },
+  settings: {
+    name: 'settings',
+    label: 'Profile',
+    icon: 'person-circle-outline',
+    activeIcon: 'person-circle',
+  },
+};
+
+/** Tabs shown in the bottom bar, in order, per role. */
+export const ROLE_TABS: Record<Role, TabName[]> = {
+  foreman: ['schedule', 'jobs', 'time', 'settings'],
+  field: ['jobs', 'time', 'settings'],
+  estimator: ['quotes', 'jobs', 'settings'],
+};
+
+/** Landing tab when a role first enters the app. */
+export const ROLE_DEFAULT_TAB: Record<Role, TabName> = {
+  foreman: 'schedule',
+  field: 'jobs',
+  estimator: 'quotes',
+};
+
+export function tabsForRole(role: Role | undefined): TabDef[] {
+  const names: TabName[] = role ? ROLE_TABS[role] : ['jobs', 'settings'];
+  return names.map((name) => TABS[name]);
+}
+
+export function defaultRouteForRole(role: Role | undefined): string {
+  const tab = role ? ROLE_DEFAULT_TAB[role] : 'jobs';
+  return `/${tab}`;
+}
