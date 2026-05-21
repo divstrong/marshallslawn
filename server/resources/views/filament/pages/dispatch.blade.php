@@ -322,6 +322,43 @@
                                     </div>
                                 @endif
                             </div>
+
+                            {{-- Foreman <-> office chat --}}
+                            <div wire:poll.8s style="margin-top:4px;border-top:1px solid var(--d-border);padding-top:10px;">
+                                <div class="d-label" style="margin-bottom:6px;">Chat</div>
+                                <div style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:2px;">
+                                    @forelse ($this->chatMessages as $msg)
+                                        <div style="display:flex;{{ $msg['sender'] === 'office' ? 'justify-content:flex-end' : 'justify-content:flex-start' }};">
+                                            <div style="max-width:82%;padding:6px 9px;border-radius:10px;font-size:12px;line-height:1.4;{{ $msg['sender'] === 'office' ? 'background:var(--d-accent);color:#fff;border-bottom-right-radius:3px;' : 'background:#f1f5f9;color:#0f172a;border-bottom-left-radius:3px;' }}">
+                                                @if ($msg['attachment_url'])
+                                                    @if ($msg['attachment_type'] === 'video')
+                                                        <video src="{{ $msg['attachment_url'] }}" controls style="max-width:200px;border-radius:6px;display:block;margin-bottom:4px;"></video>
+                                                    @else
+                                                        <a href="{{ $msg['attachment_url'] }}" target="_blank" rel="noopener">
+                                                            <img src="{{ $msg['attachment_url'] }}" alt="attachment" style="max-width:200px;border-radius:6px;display:block;margin-bottom:4px;">
+                                                        </a>
+                                                    @endif
+                                                @endif
+                                                @if ($msg['body'])
+                                                    <div>{{ $msg['body'] }}</div>
+                                                @endif
+                                                <div style="font-size:10px;opacity:0.65;margin-top:3px;">{{ $msg['sender_name'] }} · {{ $msg['time'] }}</div>
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="d-muted" style="font-size:12px;">No messages yet — start the conversation.</div>
+                                    @endforelse
+                                </div>
+                                <div wire:loading wire:target="chatAttachment" class="d-muted" style="font-size:11px;margin-top:6px;">Uploading attachment…</div>
+                                <form wire:submit="sendChat" style="display:flex;gap:6px;margin-top:8px;align-items:center;">
+                                    <label title="Attach photo or video" style="height:34px;width:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--d-border);border-radius:6px;cursor:pointer;color:var(--d-muted);">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 15l-5-5L5 21"/></svg>
+                                        <input type="file" wire:model="chatAttachment" accept="image/*,video/*" style="display:none;">
+                                    </label>
+                                    <input type="text" wire:model="chatBody" placeholder="Message {{ $selectedForeman['name'] }}…" style="flex:1;height:34px;border:1px solid var(--d-border);border-radius:6px;padding:0 9px;font-size:12px;background:#fff;color:#0f172a;">
+                                    <button type="submit" class="d-btn" style="height:34px;padding:0 12px;font-size:12px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);">Send</button>
+                                </form>
+                            </div>
                         </div>
                     @elseif ($selectedJob)
                         <div class="d-card">
@@ -561,7 +598,11 @@
                             // Bottom dot encodes GPS freshness: green=live, amber=stale, gray=estimated.
                             const ring = opts.estimated ? '#9ca3af' : (opts.live ? '#16a34a' : '#f59e0b');
                             const groupOpacity = opts.estimated ? '0.55' : '1';
-                            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="50" viewBox="0 0 44 50"><g opacity="${groupOpacity}"><circle cx="22" cy="22" r="20" fill="${color}" stroke="#ffffff" stroke-width="3"/><text x="22" y="28" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#ffffff">${initials}</text><circle cx="22" cy="45" r="5" fill="#ffffff"/><circle cx="22" cy="45" r="3" fill="${ring}"/></g></svg>`;
+                            // Red badge when the foreman has unread chat messages.
+                            const unread = opts.unread > 0
+                                ? `<circle cx="35" cy="9" r="7.5" fill="#dc2626" stroke="#ffffff" stroke-width="2"/><text x="35" y="12.5" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="9" font-weight="700" fill="#ffffff">${opts.unread > 9 ? '9+' : opts.unread}</text>`
+                                : '';
+                            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="50" viewBox="0 0 44 50"><g opacity="${groupOpacity}"><circle cx="22" cy="22" r="20" fill="${color}" stroke="#ffffff" stroke-width="3"/><text x="22" y="28" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#ffffff">${initials}</text><circle cx="22" cy="45" r="5" fill="#ffffff"/><circle cx="22" cy="45" r="3" fill="${ring}"/></g>${unread}</svg>`;
                             return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
                         },
 
@@ -613,6 +654,7 @@
                                         url: this.foremanIcon(f.initials, f.color, {
                                             live: f.is_live,
                                             estimated: !f.has_location,
+                                            unread: f.unread_chat,
                                         }),
                                         scaledSize: new google.maps.Size(44, 50),
                                         anchor: new google.maps.Point(22, 46),

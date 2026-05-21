@@ -159,6 +159,23 @@ export interface QuoteLineItemDraft {
   unit_price: string;
 }
 
+export interface ChatAttachment {
+  type: 'photo' | 'video';
+  url: string;
+  name: string | null;
+}
+
+export interface ChatMessage {
+  id: number;
+  sender: 'foreman' | 'office';
+  sender_name: string;
+  body: string | null;
+  attachment: ChatAttachment | null;
+  read_at: string | null;
+  created_at: string | null;
+  created_human: string | null;
+}
+
 export interface QuotePayload {
   customer_id: number;
   property_id?: number | null;

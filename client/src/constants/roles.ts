@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import type { Role } from '@/lib/types';
 
-export type TabName = 'schedule' | 'jobs' | 'time' | 'quotes' | 'settings';
+export type TabName = 'schedule' | 'jobs' | 'time' | 'quotes' | 'chat' | 'settings';
 
 export interface TabDef {
   name: TabName;
@@ -27,6 +27,7 @@ export const TABS: Record<TabName, TabDef> = {
     icon: 'document-text-outline',
     activeIcon: 'document-text',
   },
+  chat: { name: 'chat', label: 'Chat', icon: 'chatbubbles-outline', activeIcon: 'chatbubbles' },
   settings: {
     name: 'settings',
     label: 'Profile',
@@ -37,7 +38,7 @@ export const TABS: Record<TabName, TabDef> = {
 
 /** Tabs shown in the bottom bar, in order, per role. */
 export const ROLE_TABS: Record<Role, TabName[]> = {
-  foreman: ['schedule', 'jobs', 'time', 'settings'],
+  foreman: ['schedule', 'jobs', 'time', 'chat', 'settings'],
   field: ['jobs', 'time', 'settings'],
   estimator: ['quotes', 'jobs', 'settings'],
 };

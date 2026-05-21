@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\LookupController;
+use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\QuoteController;
 use App\Http\Controllers\Api\ScheduleController;
 use App\Http\Controllers\Api\TimeLogController;
@@ -40,6 +42,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     // GPS breadcrumbs from the native app.
     Route::post('/locations', [LocationController::class, 'store']);
+
+    // Foreman <-> office chat.
+    Route::get('/chat', [ChatController::class, 'index']);
+    Route::post('/chat', [ChatController::class, 'store']);
+    Route::get('/chat/unread', [ChatController::class, 'unread']);
+
+    // Push notification device tokens.
+    Route::post('/push-token', [PushTokenController::class, 'store']);
+    Route::delete('/push-token', [PushTokenController::class, 'destroy']);
 
     // Day-level time clock.
     Route::get('/time-logs', [TimeLogController::class, 'index']);

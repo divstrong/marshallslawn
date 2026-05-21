@@ -3,13 +3,17 @@
 Expo (React Native) app for field staff. It mirrors the server's `/mobile`
 Livewire views and gives each role a tailored experience:
 
-| Role          | Lands on  | Tabs                             | Notes |
-|---------------|-----------|----------------------------------|-------|
-| **Foreman**   | Schedule  | Schedule · Jobs · Time · Profile | Today's crew route in order; start/stop the job clock per stop. |
-| **Field**     | Jobs      | Jobs · Time · Profile            | Assigned jobs + day time clock. |
-| **Estimator** | Quotes    | Quotes · Jobs · Profile          | Create / manage quotes; sees all jobs (read-only). No time clock. |
+| Role          | Lands on  | Tabs                                    | Notes |
+|---------------|-----------|-----------------------------------------|-------|
+| **Foreman**   | Schedule  | Schedule · Jobs · Time · Chat · Profile | Today's crew route in order; start/stop the job clock per stop. Background GPS + chat with the office. |
+| **Field**     | Jobs      | Jobs · Time · Profile                   | Assigned jobs + day time clock. |
+| **Estimator** | Quotes    | Quotes · Jobs · Profile                 | Create / manage quotes; sees all jobs (read-only). No time clock. |
 
 All roles get the Profile tab (account details + sign out).
+
+The Foreman **Chat** tab is a two-way conversation with the office; staff
+reply from the Dispatch screen in the back-office. Messages support photos,
+videos, and links, with push notifications when the app is closed.
 
 ## Prerequisites
 
@@ -38,21 +42,30 @@ npm install
 npx expo start
 ```
 
-> **Background GPS** (foreman location tracking) and full camera support
-> need a **development build** — run `npx expo run:ios` / `npx expo run:android`
+> **Background GPS**, camera capture, and **push notifications** need a
+> **development build** — run `npx expo run:ios` / `npx expo run:android`
 > or build with EAS. They do not run in Expo Go; everything else does.
+>
+> Push notifications also require an EAS project id. Run `eas init` once
+> (it adds `extra.eas.projectId` to `app.json`); until then the app runs
+> fine but device push tokens won't register.
 
 ### Pointing the app at the API
 
-`src/constants/config.ts` defaults to:
+`src/constants/config.ts` defaults to the **live API**
+(`https://app.marshallslawninc.com/api`), so release builds and on-device
+testing work out of the box.
 
-- iOS simulator / web → `http://localhost:8000/api`
-- Android emulator → `http://10.0.2.2:8000/api`
-
-On a **physical device**, set the host machine's LAN IP via an env var
-(e.g. in a `.env` file at the client root):
+For local development against a local Laravel server, override it with
+`EXPO_PUBLIC_API_URL` in a `.env` file at the client root, then restart
+the bundler (`expo start --clear`):
 
 ```
+# iOS simulator / web
+EXPO_PUBLIC_API_URL=http://localhost:8000/api
+# Android emulator (host reached via 10.0.2.2)
+EXPO_PUBLIC_API_URL=http://10.0.2.2:8000/api
+# physical device on the same network
 EXPO_PUBLIC_API_URL=http://192.168.1.20:8000/api
 ```
 

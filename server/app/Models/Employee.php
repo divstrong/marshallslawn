@@ -100,6 +100,16 @@ class Employee extends Authenticatable
         return $this->hasMany(EmployeeLocation::class);
     }
 
+    public function chatMessages(): HasMany
+    {
+        return $this->hasMany(ChatMessage::class);
+    }
+
+    public function pushTokens(): HasMany
+    {
+        return $this->hasMany(PushToken::class);
+    }
+
     /** Most recent GPS ping — used for the live foreman pin on Dispatch. */
     public function latestLocation(): HasOne
     {

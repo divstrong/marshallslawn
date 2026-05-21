@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
 import { AuthProvider, useAuth } from '@/context/auth';
+import { ChatProvider } from '@/context/chat';
 import { LocationProvider } from '@/context/location';
 import '@/lib/location-task'; // registers the background location task
 
@@ -41,8 +42,10 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <LocationProvider>
-        <StatusBar style="light" />
-        <RootNavigator />
+        <ChatProvider>
+          <StatusBar style="light" />
+          <RootNavigator />
+        </ChatProvider>
       </LocationProvider>
     </AuthProvider>
   );

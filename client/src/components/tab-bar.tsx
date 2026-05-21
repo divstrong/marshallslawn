@@ -6,6 +6,7 @@ import { Icon } from '@/components/icon';
 import { tabsForRole } from '@/constants/roles';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
+import { useChat } from '@/context/chat';
 
 /**
  * Bottom navigation. All tab screens exist for every role; this bar only
@@ -13,6 +14,7 @@ import { useAuth } from '@/context/auth';
  */
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { employee } = useAuth();
+  const { unread } = useChat();
   const insets = useSafeAreaInsets();
 
   const tabs = tabsForRole(employee?.role);
@@ -40,9 +42,18 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           }
         };
 
+        const showBadge = tab.name === 'chat' && unread > 0;
+
         return (
           <Pressable key={tab.name} onPress={onPress} style={styles.tab} hitSlop={6}>
-            <Icon name={active ? tab.activeIcon : tab.icon} size={24} color={color} />
+            <View>
+              <Icon name={active ? tab.activeIcon : tab.icon} size={24} color={color} />
+              {showBadge ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+                </View>
+              ) : null}
+            </View>
             <Text style={[styles.label, { color }]}>{tab.label}</Text>
           </Pressable>
         );
@@ -71,5 +82,22 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -9,
+    minWidth: 17,
+    height: 17,
+    borderRadius: Radius.full,
+    backgroundColor: AppColors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: AppColors.onBrand,
+    fontSize: 10,
+    fontWeight: '800',
   },
 });

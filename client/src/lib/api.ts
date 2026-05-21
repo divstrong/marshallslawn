@@ -6,6 +6,7 @@
 
 import { API_BASE_URL } from '@/constants/config';
 import type {
+  ChatMessage,
   Customer,
   Employee,
   Job,
@@ -174,6 +175,70 @@ export const api = {
   },
   deleteJobPhoto(jobId: number, mediaId: number) {
     return request<{ deleted: boolean }>('DELETE', `/jobs/${jobId}/media/${mediaId}`);
+  },
+
+  // --- Chat (foreman <-> office) ---
+  chat() {
+    return request<{ data: ChatMessage[] }>('GET', '/chat').then(unwrap);
+  },
+  chatUnread() {
+    return request<{ count: number }>('GET', '/chat/unread');
+  },
+  async sendChatMessage(input: {
+    body?: string;
+    file?: { uri: string; name: string; type: string };
+  }): Promise<ChatMessage> {
+    const form = new FormData();
+    if (input.body) {
+      form.append('body', input.body);
+    }
+    if (input.file) {
+      form.append('attachment', {
+        uri: input.file.uri,
+        name: input.file.name,
+        type: input.file.type,
+      } as any);
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(buildUrl('/chat'), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: form,
+      });
+    } catch {
+      throw new ApiError('Could not reach the server. Check your connection.', 0);
+    }
+
+    let payload: any = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    if (!response.ok) {
+      throw new ApiError(
+        payload?.message ?? `Send failed (${response.status}).`,
+        response.status,
+        payload?.errors ?? {},
+      );
+    }
+    return payload.data as ChatMessage;
+  },
+
+  // --- Push notifications ---
+  registerPushToken(token: string, platform: string) {
+    return request<{ registered: boolean }>('POST', '/push-token', {
+      body: { token, platform },
+    });
+  },
+  removePushToken(token: string) {
+    return request<{ removed: boolean }>('DELETE', '/push-token', { body: { token } });
   },
 
   // --- Schedule ---

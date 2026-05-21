@@ -6,7 +6,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { TOKEN_STORAGE_KEY } from '@/constants/config';
+import { PUSH_TOKEN_STORAGE_KEY, TOKEN_STORAGE_KEY } from '@/constants/config';
 import { api, setAuthToken } from '@/lib/api';
 import { getItem, removeItem, setItem } from '@/lib/storage';
 import type { Employee, Role } from '@/lib/types';
@@ -93,6 +93,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    // Deregister this device's push token while the session is still valid.
+    try {
+      const pushToken = await getItem(PUSH_TOKEN_STORAGE_KEY);
+      if (pushToken) {
+        await api.removePushToken(pushToken).catch(() => {});
+        await removeItem(PUSH_TOKEN_STORAGE_KEY);
+      }
+    } catch {
+      // Best effort — fall through to clearing the session.
+    }
     try {
       await api.logout();
     } catch {

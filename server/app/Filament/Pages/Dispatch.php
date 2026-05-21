@@ -3,16 +3,19 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Concerns\ChecksResourceAccess;
+use App\Models\ChatMessage;
 use App\Models\Crew;
 use App\Models\RouteStop;
 use Carbon\Carbon;
 use Filament\Pages\Page;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
+use Livewire\WithFileUploads;
 
 class Dispatch extends Page
 {
     use ChecksResourceAccess;
+    use WithFileUploads;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map';
 
@@ -54,6 +57,11 @@ class Dispatch extends Page
 
     #[Url(as: 'gps')]
     public bool $showGps = true;
+
+    /** Composer state for the foreman chat panel. */
+    public string $chatBody = '';
+
+    public $chatAttachment = null;
 
     public function mount(): void
     {
@@ -230,6 +238,14 @@ class Dispatch extends Page
         $fallbackLat = 37.5407;
         $fallbackLng = -77.4360;
 
+        // Unread chat counts (messages from foremen the office hasn't read).
+        $unreadChat = ChatMessage::query()
+            ->where('sender', ChatMessage::SENDER_FOREMAN)
+            ->whereNull('read_at')
+            ->selectRaw('employee_id, count(*) as total')
+            ->groupBy('employee_id')
+            ->pluck('total', 'employee_id');
+
         $pins = [];
         foreach ($crews as $crew) {
             $foreman = $crew->foreman;
@@ -294,6 +310,7 @@ class Dispatch extends Page
                 'has_location' => $hasLocation,
                 'is_live' => $isLive,
                 'last_seen' => $lastSeen,
+                'unread_chat' => (int) ($unreadChat[$foreman->id] ?? 0),
             ];
         }
 
@@ -407,6 +424,97 @@ class Dispatch extends Page
         $this->selectedForemanId = $id;
         $this->selectedStopId = null;
         $this->selectedJobId = null;
+        $this->chatBody = '';
+
+        // Opening a foreman's panel marks their messages as read.
+        ChatMessage::query()
+            ->where('employee_id', $id)
+            ->where('sender', ChatMessage::SENDER_FOREMAN)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        unset($this->chatMessages, $this->foremanPins, $this->selectedForeman);
+    }
+
+    #[Computed]
+    public function chatMessages(): array
+    {
+        if (! $this->selectedForemanId) {
+            return [];
+        }
+
+        return ChatMessage::query()
+            ->with('senderUser:id,name')
+            ->where('employee_id', $this->selectedForemanId)
+            ->orderBy('created_at')
+            ->limit(200)
+            ->get()
+            ->map(fn (ChatMessage $message) => [
+                'id' => (int) $message->id,
+                'sender' => $message->sender,
+                'sender_name' => $message->sender === ChatMessage::SENDER_OFFICE
+                    ? ($message->senderUser?->name ?? 'Office')
+                    : 'Foreman',
+                'body' => $message->body,
+                'attachment_type' => $message->attachment_type,
+                'attachment_url' => $message->attachmentUrl(),
+                'time' => $message->created_at?->format('M j, g:i A'),
+            ])
+            ->all();
+    }
+
+    public function sendChat(): void
+    {
+        $body = trim($this->chatBody);
+        if (! $this->selectedForemanId || $body === '') {
+            return;
+        }
+
+        ChatMessage::create([
+            'employee_id' => $this->selectedForemanId,
+            'sender' => ChatMessage::SENDER_OFFICE,
+            'sender_user_id' => auth()->id(),
+            'body' => $body,
+        ]);
+
+        $this->chatBody = '';
+        unset($this->chatMessages);
+    }
+
+    public function updatedChatAttachment(): void
+    {
+        if (! $this->selectedForemanId || ! $this->chatAttachment) {
+            return;
+        }
+
+        $file = $this->chatAttachment;
+        $mime = (string) $file->getMimeType();
+        $type = str_starts_with($mime, 'video/')
+            ? 'video'
+            : (str_starts_with($mime, 'image/') ? 'photo' : null);
+
+        if ($type === null) {
+            $this->chatAttachment = null;
+
+            return;
+        }
+
+        $path = $file->store('chat-media', 'public');
+
+        ChatMessage::create([
+            'employee_id' => $this->selectedForemanId,
+            'sender' => ChatMessage::SENDER_OFFICE,
+            'sender_user_id' => auth()->id(),
+            'attachment_type' => $type,
+            'attachment_disk' => 'public',
+            'attachment_path' => $path,
+            'attachment_name' => $file->getClientOriginalName(),
+            'attachment_mime' => $mime,
+            'attachment_size' => $file->getSize(),
+        ]);
+
+        $this->chatAttachment = null;
+        unset($this->chatMessages);
     }
 
     public function clearSelection(): void

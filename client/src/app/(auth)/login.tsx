@@ -1,3 +1,5 @@
+import { Image } from 'expo-image';
+import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -63,6 +65,7 @@ export default function LoginScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <StatusBar style="dark" />
       <ScrollView
         style={styles.flex}
         contentContainerStyle={[
@@ -71,11 +74,12 @@ export default function LoginScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.brandMark}>
-          <Icon name="leaf" size={36} color={AppColors.onBrand} />
-        </View>
-        <Text style={styles.brandName}>Marshall&apos;s Lawn</Text>
-        <Text style={styles.brandTagline}>Crew Field App</Text>
+        <Image
+          source={require('@/assets/images/logo.png')}
+          style={styles.logo}
+          contentFit="contain"
+        />
+        <Text style={styles.brandTagline}>Field App</Text>
 
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>Sign in</Text>
@@ -146,30 +150,21 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: AppColors.brand,
+    backgroundColor: AppColors.background,
   },
   content: {
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
   },
-  brandMark: {
-    width: 76,
-    height: 76,
-    borderRadius: Radius.full,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandName: {
-    color: AppColors.onBrand,
-    fontSize: 26,
-    fontWeight: '800',
-    marginTop: Spacing.three,
+  logo: {
+    width: 240,
+    height: 150,
   },
   brandTagline: {
-    color: 'rgba(255,255,255,0.85)',
+    color: AppColors.textMuted,
     fontSize: 14,
-    marginTop: 2,
+    fontWeight: '600',
+    marginTop: Spacing.one,
     marginBottom: Spacing.six,
   },
   card: {
