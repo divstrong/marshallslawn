@@ -32,6 +32,7 @@ class EmployeeResource extends JsonResource
             'role' => $this->role,
             'role_label' => $role?->label ?? ucfirst((string) $this->role),
             'division' => $this->division,
+            'avatar_url' => $this->avatar_path ? url('storage/' . $this->avatar_path) : null,
             'capabilities' => [
                 'can_see_routes' => (bool) $role?->can_see_routes,
                 'can_see_chemicals' => (bool) $role?->can_see_chemicals,

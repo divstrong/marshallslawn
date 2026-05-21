@@ -59,9 +59,10 @@ async function request<T>(
   path: string,
   options: { query?: Query; body?: unknown } = {},
 ): Promise<T> {
+  const url = buildUrl(path, options.query);
   let response: Response;
   try {
-    response = await fetch(buildUrl(path, options.query), {
+    response = await fetch(url, {
       method,
       headers: {
         Accept: 'application/json',
@@ -70,8 +71,14 @@ async function request<T>(
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
-  } catch {
-    throw new ApiError('Could not reach the server. Check your connection.', 0);
+  } catch (e) {
+    if (__DEV__) {
+      console.log(`[Marshalls Lawn] ${method} ${url} — fetch failed:`, e);
+    }
+    throw new ApiError(
+      __DEV__ ? `Could not reach ${url}` : 'Could not reach the server. Check your connection.',
+      0,
+    );
   }
 
   if (response.status === 204) {
@@ -115,6 +122,45 @@ export const api = {
   },
   logout() {
     return request<{ message: string }>('POST', '/logout');
+  },
+
+  // --- Profile ---
+  async uploadAvatar(file: { uri: string; name: string; type: string }): Promise<Employee> {
+    const form = new FormData();
+    form.append('photo', { uri: file.uri, name: file.name, type: file.type } as any);
+
+    let response: Response;
+    try {
+      response = await fetch(buildUrl('/profile/avatar'), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: form,
+      });
+    } catch {
+      throw new ApiError('Could not reach the server. Check your connection.', 0);
+    }
+
+    let payload: any = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    if (!response.ok) {
+      throw new ApiError(
+        payload?.message ?? `Upload failed (${response.status}).`,
+        response.status,
+        payload?.errors ?? {},
+      );
+    }
+    return payload.data as Employee;
+  },
+  removeAvatar() {
+    return request<{ data: Employee }>('DELETE', '/profile/avatar').then(unwrap);
   },
 
   // --- Jobs ---

@@ -20,6 +20,11 @@ const PRODUCTION_API_URL = 'https://app.marshallslawninc.com/api';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? PRODUCTION_API_URL;
 
+if (__DEV__) {
+  // Surfaces the active API URL in the Metro console on every app start.
+  console.log('[Marshalls Lawn] API base URL →', API_BASE_URL);
+}
+
 /** Storage key for the persisted auth token. */
 export const TOKEN_STORAGE_KEY = 'marshalls.auth.token';
 

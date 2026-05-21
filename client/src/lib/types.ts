@@ -25,6 +25,7 @@ export interface Employee {
   role: Role;
   role_label: string;
   division: string | null;
+  avatar_url: string | null;
   capabilities: Capabilities;
 }
 

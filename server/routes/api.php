@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\LookupController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\QuoteController;
 use App\Http\Controllers\Api\ScheduleController;
@@ -27,6 +28,10 @@ Route::post('/dev/login', [AuthController::class, 'devLogin']);
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Profile photo.
+    Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
+    Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar']);
 
     // Jobs.
     Route::get('/jobs', [JobController::class, 'index']);
