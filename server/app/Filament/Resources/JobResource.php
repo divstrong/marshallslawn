@@ -7,6 +7,8 @@ use App\Models\Job;
 use Filament\Forms;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
@@ -54,18 +56,13 @@ class JobResource extends Resource
                                 ->relationship('crew', 'name')
                                 ->searchable()
                                 ->preload(),
-                            Forms\Components\TextInput::make('title')
-                                ->required()
-                                ->maxLength(255)
-                                ->columnSpanFull(),
-                            Forms\Components\Textarea::make('description')
-                                ->columnSpanFull(),
                             Forms\Components\Select::make('status')
                                 ->options([
                                     'pending' => 'Pending',
                                     'scheduled' => 'Scheduled',
                                     'in_progress' => 'In Progress',
                                     'completed' => 'Completed',
+                                    'skipped' => 'Skipped',
                                     'cancelled' => 'Cancelled',
                                 ])
                                 ->required(),
@@ -77,9 +74,38 @@ class JobResource extends Resource
                                     'urgent' => 'Urgent',
                                 ])
                                 ->required(),
-                            Forms\Components\DatePicker::make('scheduled_date'),
+                            Forms\Components\Radio::make('is_scheduled')
+                                ->label('Scheduled')
+                                ->options([
+                                    'no' => 'No (TBD)',
+                                    'yes' => 'Yes',
+                                ])
+                                ->default('no')
+                                ->inline()
+                                ->inlineLabel(false)
+                                ->live()
+                                ->dehydrated(false)
+                                ->afterStateHydrated(function ($component, ?Job $record) {
+                                    $component->state($record?->scheduled_date ? 'yes' : 'no');
+                                })
+                                ->afterStateUpdated(function ($state, Set $set) {
+                                    if ($state !== 'yes') {
+                                        $set('scheduled_date', null);
+                                    }
+                                }),
+                            Forms\Components\DatePicker::make('scheduled_date')
+                                ->label('Scheduled date')
+                                ->visible(fn (Get $get): bool => $get('is_scheduled') === 'yes')
+                                ->required(fn (Get $get): bool => $get('is_scheduled') === 'yes'),
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
+                        ]),
+                    Tab::make('Services')
+                        ->icon('heroicon-o-wrench-screwdriver')
+                        ->badge(fn (?Job $record): ?string => $record?->jobServices()->count() ?: null)
+                        ->hidden(fn (?Job $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.job.services-tab'),
                         ]),
                     Tab::make('Attachments')
                         ->icon('heroicon-o-paper-clip')
@@ -96,13 +122,20 @@ class JobResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title')
-                    ->searchable(),
+                Tables\Columns\TextColumn::make('id')
+                    ->label('Job #')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('customer.last_name')
                     ->label('Customer')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('crew.name')
                     ->label('Crew'),
+                Tables\Columns\TextColumn::make('jobServices.service.name')
+                    ->label('Services')
+                    ->badge()
+                    ->separator(',')
+                    ->limitList(3)
+                    ->expandableLimitedList(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
                 Tables\Columns\TextColumn::make('priority')
@@ -115,9 +148,29 @@ class JobResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('scheduled_date')
                     ->date()
+                    ->placeholder('TBD')
                     ->sortable(),
             ])
-            ->filters([])
+            ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'scheduled' => 'Scheduled',
+                        'in_progress' => 'In Progress',
+                        'completed' => 'Completed',
+                        'skipped' => 'Skipped',
+                        'cancelled' => 'Cancelled',
+                    ]),
+                Tables\Filters\SelectFilter::make('priority')
+                    ->label('Priority')
+                    ->options([
+                        'low' => 'Low',
+                        'normal' => 'Normal',
+                        'high' => 'High',
+                        'urgent' => 'Urgent',
+                    ]),
+            ])
             ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),

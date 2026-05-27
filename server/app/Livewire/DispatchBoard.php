@@ -1,29 +1,24 @@
 <?php
 
-namespace App\Filament\Pages;
+namespace App\Livewire;
 
-use App\Filament\Concerns\ChecksResourceAccess;
 use App\Models\ChatMessage;
 use App\Models\Crew;
 use App\Models\RouteStop;
 use Carbon\Carbon;
-use Filament\Pages\Page;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
+use Livewire\Component;
 use Livewire\WithFileUploads;
 
-class Dispatch extends Page
+#[Layout('layouts.dispatch')]
+#[Title('Dispatch')]
+class DispatchBoard extends Component
 {
-    use ChecksResourceAccess;
     use WithFileUploads;
-
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map';
-
-    protected static string | \UnitEnum | null $navigationGroup = 'Operations';
-
-    protected static ?int $navigationSort = 1;
-
-    protected string $view = 'filament.pages.dispatch';
 
     private const CREW_PALETTE = [
         '#e00a35', // brand red
@@ -55,6 +50,12 @@ class Dispatch extends Page
 
     public ?int $selectedForemanId = null;
 
+    /** Stop id awaiting Skip confirmation in the modal. */
+    public ?int $confirmSkipStopId = null;
+
+    /** Right-side chat panel state. */
+    public bool $chatPanelOpen = false;
+
     #[Url(as: 'gps')]
     public bool $showGps = true;
 
@@ -65,12 +66,10 @@ class Dispatch extends Page
 
     public function mount(): void
     {
-        $this->date ??= now()->toDateString();
-    }
+        $user = Auth::user();
+        abort_unless($user && $user->hasAccessTo('Dispatch'), 403);
 
-    public function getMaxContentWidth(): \Filament\Support\Enums\Width
-    {
-        return \Filament\Support\Enums\Width::Full;
+        $this->date ??= now()->toDateString();
     }
 
     #[Computed]
@@ -253,14 +252,10 @@ class Dispatch extends Page
                 continue;
             }
 
-            // Filter: only show if crew is in the active filter (or no filter is active)
             if (! empty($this->crewIds) && ! in_array((int) $crew->id, array_map('intval', $this->crewIds), true)) {
                 continue;
             }
 
-            // Prefer a real GPS ping from the foreman's app; fall back to a
-            // synthetic position (route centroid + deterministic offset)
-            // when the app has not reported a location yet.
             $location = $foreman->latestLocation;
             $hasLocation = $location !== null;
             $isLive = false;
@@ -274,7 +269,6 @@ class Dispatch extends Page
                 );
                 $lastSeen = $location->recorded_at->diffForHumans();
             } else {
-                // Deterministic offset per crew so the pin doesn't jump around on re-renders
                 $offsetLat = ((((int) $crew->id) * 17) % 100 - 50) / 10000;
                 $offsetLng = ((((int) $crew->id) * 23) % 100 - 50) / 10000;
 
@@ -283,7 +277,6 @@ class Dispatch extends Page
                     $lat = $c['lat'] / $c['n'] + $offsetLat;
                     $lng = $c['lng'] / $c['n'] + $offsetLng;
                 } else {
-                    // No stops today: float near Richmond with a larger offset
                     $lat = $fallbackLat + $offsetLat * 5;
                     $lng = $fallbackLng + $offsetLng * 5;
                 }
@@ -425,15 +418,9 @@ class Dispatch extends Page
         $this->selectedStopId = null;
         $this->selectedJobId = null;
         $this->chatBody = '';
+        $this->chatPanelOpen = false;
 
-        // Opening a foreman's panel marks their messages as read.
-        ChatMessage::query()
-            ->where('employee_id', $id)
-            ->where('sender', ChatMessage::SENDER_FOREMAN)
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
-
-        unset($this->chatMessages, $this->foremanPins, $this->selectedForeman);
+        unset($this->chatMessages, $this->selectedForeman);
     }
 
     #[Computed]
@@ -479,6 +466,32 @@ class Dispatch extends Page
 
         $this->chatBody = '';
         unset($this->chatMessages);
+
+        $this->dispatch('dispatch:chat-updated');
+    }
+
+    public function openChatPanel(): void
+    {
+        if (! $this->selectedForemanId) {
+            return;
+        }
+        $this->chatPanelOpen = true;
+
+        // Opening the chat panel marks the foreman's unread messages as read.
+        ChatMessage::query()
+            ->where('employee_id', $this->selectedForemanId)
+            ->where('sender', ChatMessage::SENDER_FOREMAN)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        unset($this->chatMessages, $this->foremanPins, $this->selectedForeman);
+        $this->emitStopsUpdated();
+        $this->dispatch('dispatch:chat-updated');
+    }
+
+    public function closeChatPanel(): void
+    {
+        $this->chatPanelOpen = false;
     }
 
     public function updatedChatAttachment(): void
@@ -515,6 +528,8 @@ class Dispatch extends Page
 
         $this->chatAttachment = null;
         unset($this->chatMessages);
+
+        $this->dispatch('dispatch:chat-updated');
     }
 
     public function clearSelection(): void
@@ -522,6 +537,7 @@ class Dispatch extends Page
         $this->selectedStopId = null;
         $this->selectedJobId = null;
         $this->selectedForemanId = null;
+        $this->chatPanelOpen = false;
     }
 
     public function toggleCrew(int $id): void
@@ -587,6 +603,49 @@ class Dispatch extends Page
         $this->emitStopsUpdated();
     }
 
+    /** Open the Skip-confirmation modal for the currently selected stop. */
+    public function requestSkip(?int $id = null): void
+    {
+        $this->confirmSkipStopId = $id ?? $this->selectedStopId;
+    }
+
+    public function cancelSkip(): void
+    {
+        $this->confirmSkipStopId = null;
+    }
+
+    /**
+     * Confirm skipping: mark the underlying job as 'skipped', clear its scheduled_date
+     * (returning it to the unscheduled pile), and remove the stop from today's route.
+     */
+    public function confirmSkip(): void
+    {
+        if (! $this->confirmSkipStopId) {
+            return;
+        }
+
+        $stop = RouteStop::find($this->confirmSkipStopId);
+        if (! $stop) {
+            $this->confirmSkipStopId = null;
+            return;
+        }
+
+        if ($stop->job_id) {
+            \App\Models\Job::where('id', $stop->job_id)->update([
+                'status' => 'skipped',
+                'scheduled_date' => null,
+            ]);
+        }
+
+        $stop->delete();
+
+        $this->confirmSkipStopId = null;
+        $this->selectedStopId = null;
+
+        unset($this->stops, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary, $this->unmappedStops);
+        $this->emitStopsUpdated();
+    }
+
     public function getGoogleMapsApiKey(): ?string
     {
         return config('services.google.maps_key');
@@ -601,5 +660,10 @@ class Dispatch extends Page
             foremen: $this->foremanPins,
             crewColors: $this->crewColorMap,
         );
+    }
+
+    public function render()
+    {
+        return view('livewire.dispatch-board');
     }
 }

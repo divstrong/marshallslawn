@@ -1,0 +1,473 @@
+/**
+ * English / Spanish strings for the whole app.
+ *
+ * `en` is the source of truth for the key set; `es` is typed against it
+ * so a missing Spanish key is a compile error. Keys are flat and dotted.
+ * Use `{name}` placeholders for interpolation — see `translate()`.
+ */
+
+export type Language = 'en' | 'es';
+
+export const LANGUAGES: { code: Language; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+];
+
+const en = {
+  // Common
+  'common.cancel': 'Cancel',
+  'common.save': 'Save',
+  'common.retry': 'Try again',
+  'common.somethingWrong': 'Something went wrong',
+  'common.takePhoto': 'Take photo',
+  'common.recordVideo': 'Record video',
+  'common.chooseLibrary': 'Choose from library',
+  'common.remove': 'Remove',
+  'common.navigate': 'Navigate',
+  'common.cameraNeeded': 'Camera access is needed to take a photo.',
+
+  // Tabs
+  'nav.schedule': 'Schedule',
+  'nav.jobs': 'Jobs',
+  'nav.time': 'Time',
+  'nav.quotes': 'Quotes',
+  'nav.chat': 'Chat',
+  'nav.settings': 'Profile',
+
+  // Job / quote statuses
+  'status.scheduled': 'Scheduled',
+  'status.in_progress': 'In Progress',
+  'status.completed': 'Completed',
+  'status.cancelled': 'Cancelled',
+  'status.pending': 'Pending',
+  'status.draft': 'Draft',
+  'status.sent': 'Sent',
+  'status.accepted': 'Accepted',
+  'status.declined': 'Declined',
+  'status.expired': 'Expired',
+
+  // Priority
+  'priority.high': 'High',
+  'priority.normal': 'Normal',
+  'priority.medium': 'Medium',
+  'priority.low': 'Low',
+
+  // Login
+  'login.tagline': 'Field App',
+  'login.signIn': 'Sign in',
+  'login.email': 'Email',
+  'login.emailPlaceholder': 'you@marshallslawn.com',
+  'login.password': 'Password',
+  'login.passwordPlaceholder': 'Enter your password',
+  'login.demoHint': 'Demo account: foreman@marshallslawn.test / password',
+  'login.errCredentials': 'Enter your email and password.',
+  'login.errFailed': 'Sign in failed.',
+  'login.devTitle': 'DEVELOPER QUICK LOGIN',
+  'login.devHint': 'Jump straight into a role to preview its experience.',
+  'login.roleForeman': 'Foreman',
+  'login.roleField': 'Field',
+  'login.roleEstimator': 'Estimator',
+
+  // Schedule
+  'schedule.title': 'Schedule',
+  'schedule.subtitle': "Your crew's route",
+  'schedule.today': 'Today',
+  'schedule.tapToday': 'Tap to return to today',
+  'schedule.jobsScheduled': 'Jobs Scheduled',
+  'schedule.inRouteOrder': 'In route order',
+  'schedule.loading': 'Loading route…',
+  'schedule.emptyTitle': 'No jobs scheduled',
+  'schedule.emptyMsg': 'There are no jobs on the route for this day.',
+
+  // Jobs list
+  'jobs.title': 'Jobs',
+  'jobs.filterAll': 'All',
+  'jobs.filterScheduled': 'Scheduled',
+  'jobs.filterInProgress': 'In Progress',
+  'jobs.filterCompleted': 'Completed',
+  'jobs.countOne': '{n} job',
+  'jobs.countMany': '{n} jobs',
+  'jobs.subtitleCrew': 'Jobs assigned to your crew',
+  'jobs.subtitleAll': 'All jobs',
+  'jobs.loading': 'Loading jobs…',
+  'jobs.emptyTitle': 'No jobs',
+  'jobs.emptyMsg': 'There are no jobs matching this filter.',
+  'jobs.highPriority': 'High priority',
+  'jobs.noAddress': 'No address on file',
+
+  // Job detail
+  'job.title': 'Job',
+  'job.statusLabel': 'Job Status',
+  'job.notStarted': 'This job has not been started yet.',
+  'job.startedAt': 'Started at {time}',
+  'job.startedField': 'Started',
+  'job.finishedField': 'Finished',
+  'job.startJob': 'Start Job',
+  'job.completeJob': 'Complete Job',
+  'job.completeTitle': 'Complete job',
+  'job.completeMsg': 'Mark this job as complete?',
+  'job.complete': 'Complete',
+  'job.priority': 'Priority',
+  'job.scheduled': 'Scheduled',
+  'job.crew': 'Crew',
+  'job.duration': 'Duration',
+  'job.customer': 'Customer',
+  'job.property': 'Property',
+  'job.description': 'Description',
+  'job.photos': 'Photos',
+  'job.notes': 'Notes',
+  'job.noNotes': 'No notes on this job yet.',
+  'job.addNotePlaceholder': 'Add a note…',
+  'job.addNote': 'Add note',
+  'job.loading': 'Loading job…',
+  'job.notFound': 'Job not found.',
+
+  // Job photos
+  'jobPhotos.empty': 'No photos yet — capture one from the job site.',
+  'jobPhotos.add': 'Add photo',
+  'jobPhotos.uploading': 'Uploading…',
+  'jobPhotos.addMsg': 'Attach a photo to this job.',
+  'jobPhotos.removeTitle': 'Remove photo',
+  'jobPhotos.removeMsg': 'Remove this photo from the job?',
+
+  // Time clock
+  'time.title': 'Time Clock',
+  'time.subtitle': 'Clock in and out for the day',
+  'time.hoursToday': 'Hours Today',
+  'time.onClock': 'On the clock',
+  'time.notClocked': 'Not clocked in',
+  'time.clockedInAt': 'Clocked in at {time}',
+  'time.startHint': 'Start a shift when you begin your day.',
+  'time.clockOut': 'Clock Out',
+  'time.clockIn': 'Clock In',
+  'time.todaySection': 'Today',
+  'time.recentShifts': 'Recent Shifts',
+  'time.active': 'Active',
+  'time.break': '{n} min break',
+  'time.loading': 'Loading time logs…',
+
+  // Quotes list
+  'quotes.title': 'Quotes',
+  'quotes.filterAll': 'All',
+  'quotes.filterDraft': 'Draft',
+  'quotes.filterSent': 'Sent',
+  'quotes.filterAccepted': 'Accepted',
+  'quotes.filterDeclined': 'Declined',
+  'quotes.countOne': '{n} quote',
+  'quotes.countMany': '{n} quotes',
+  'quotes.subtitle': 'Your estimates',
+  'quotes.loading': 'Loading quotes…',
+  'quotes.emptyTitle': 'No quotes yet',
+  'quotes.emptyMsg': 'Tap + to create your first quote.',
+  'quotes.validUntil': 'Valid until {date}',
+  'quotes.created': 'Created {date}',
+
+  // Quote editor
+  'quote.newTitle': 'New Quote',
+  'quote.editTitle': 'Edit Quote',
+  'quote.estimator': 'Estimator',
+  'quote.customer': 'Customer',
+  'quote.selectCustomer': 'Select a customer',
+  'quote.property': 'Property',
+  'quote.status': 'Status',
+  'quote.lineItems': 'Line Items',
+  'quote.item': 'Item {n}',
+  'quote.description': 'Description',
+  'quote.qty': 'Qty',
+  'quote.unitPrice': 'Unit price',
+  'quote.lineTotal': 'Line total: {amount}',
+  'quote.addLineItem': 'Add line item',
+  'quote.notes': 'Notes',
+  'quote.notesPlaceholder': 'Optional notes for this quote…',
+  'quote.total': 'Quote Total',
+  'quote.saveChanges': 'Save changes',
+  'quote.create': 'Create quote',
+  'quote.pickerTitle': 'Select Customer',
+  'quote.searchCustomers': 'Search customers…',
+  'quote.noCustomers': 'No customers found.',
+  'quote.searching': 'Searching…',
+  'quote.loading': 'Loading quote…',
+  'quote.errCustomer': 'Select a customer for this quote.',
+  'quote.errLineItem': 'Add at least one line item.',
+
+  // Chat
+  'chat.title': 'Chat',
+  'chat.subtitle': 'Office / Dispatch',
+  'chat.loading': 'Loading chat…',
+  'chat.emptyTitle': 'No messages yet',
+  'chat.emptyMsg': 'Send the office a message to start the conversation.',
+  'chat.placeholder': 'Message the office…',
+  'chat.addTitle': 'Add to chat',
+  'chat.addMsg': 'Attach a photo or video.',
+  'chat.playVideo': 'Tap to play video',
+
+  // Settings / profile
+  'settings.title': 'Profile',
+  'settings.subtitle': 'Account & settings',
+  'settings.contactInfo': 'Contact Info',
+  'settings.phone': 'Phone',
+  'settings.email': 'Email',
+  'settings.address': 'Address',
+  'settings.notOnFile': 'Not on file',
+  'settings.language': 'Language',
+  'settings.locationSharing': 'Location Sharing',
+  'settings.locOn': 'On — sharing with dispatch',
+  'settings.locOff': 'Off',
+  'settings.locActive':
+    'Your location is shared with the office while you are on the clock so dispatch can find your crew on the map.',
+  'settings.locWeb': "Location tracking runs on the Marshall's Lawn mobile app (iOS / Android).",
+  'settings.locDenied':
+    'Location permission is turned off. Turn it on in device settings so dispatch can see your crew.',
+  'settings.locPrompt':
+    'Turn on location sharing so dispatch can see where your crew is during the workday.',
+  'settings.enableLocation': 'Enable location sharing',
+  'settings.openSettings': 'Open device settings',
+  'settings.about': 'About',
+  'settings.appVersion': 'App version',
+  'settings.signOut': 'Sign out',
+  'settings.signOutConfirm': 'Are you sure you want to sign out?',
+  'settings.photoTitle': 'Profile photo',
+  'settings.photoMsg': 'Update your profile picture.',
+  'settings.removePhoto': 'Remove photo',
+};
+
+const es: Record<keyof typeof en, string> = {
+  // Common
+  'common.cancel': 'Cancelar',
+  'common.save': 'Guardar',
+  'common.retry': 'Reintentar',
+  'common.somethingWrong': 'Algo salió mal',
+  'common.takePhoto': 'Tomar foto',
+  'common.recordVideo': 'Grabar video',
+  'common.chooseLibrary': 'Elegir de la galería',
+  'common.remove': 'Eliminar',
+  'common.navigate': 'Navegar',
+  'common.cameraNeeded': 'Se necesita acceso a la cámara para tomar una foto.',
+
+  // Tabs
+  'nav.schedule': 'Horario',
+  'nav.jobs': 'Trabajos',
+  'nav.time': 'Tiempo',
+  'nav.quotes': 'Cotizaciones',
+  'nav.chat': 'Chat',
+  'nav.settings': 'Perfil',
+
+  // Job / quote statuses
+  'status.scheduled': 'Programado',
+  'status.in_progress': 'En Progreso',
+  'status.completed': 'Completado',
+  'status.cancelled': 'Cancelado',
+  'status.pending': 'Pendiente',
+  'status.draft': 'Borrador',
+  'status.sent': 'Enviado',
+  'status.accepted': 'Aceptado',
+  'status.declined': 'Rechazado',
+  'status.expired': 'Expirado',
+
+  // Priority
+  'priority.high': 'Alta',
+  'priority.normal': 'Normal',
+  'priority.medium': 'Media',
+  'priority.low': 'Baja',
+
+  // Login
+  'login.tagline': 'App de Campo',
+  'login.signIn': 'Iniciar sesión',
+  'login.email': 'Correo electrónico',
+  'login.emailPlaceholder': 'tu@marshallslawn.com',
+  'login.password': 'Contraseña',
+  'login.passwordPlaceholder': 'Ingresa tu contraseña',
+  'login.demoHint': 'Cuenta demo: foreman@marshallslawn.test / password',
+  'login.errCredentials': 'Ingresa tu correo y contraseña.',
+  'login.errFailed': 'Error al iniciar sesión.',
+  'login.devTitle': 'ACCESO RÁPIDO (DESARROLLO)',
+  'login.devHint': 'Entra directamente a un rol para previsualizar su experiencia.',
+  'login.roleForeman': 'Capataz',
+  'login.roleField': 'Campo',
+  'login.roleEstimator': 'Estimador',
+
+  // Schedule
+  'schedule.title': 'Horario',
+  'schedule.subtitle': 'La ruta de tu cuadrilla',
+  'schedule.today': 'Hoy',
+  'schedule.tapToday': 'Toca para volver a hoy',
+  'schedule.jobsScheduled': 'Trabajos Programados',
+  'schedule.inRouteOrder': 'En orden de ruta',
+  'schedule.loading': 'Cargando ruta…',
+  'schedule.emptyTitle': 'Sin trabajos programados',
+  'schedule.emptyMsg': 'No hay trabajos en la ruta para este día.',
+
+  // Jobs list
+  'jobs.title': 'Trabajos',
+  'jobs.filterAll': 'Todos',
+  'jobs.filterScheduled': 'Programados',
+  'jobs.filterInProgress': 'En Progreso',
+  'jobs.filterCompleted': 'Completados',
+  'jobs.countOne': '{n} trabajo',
+  'jobs.countMany': '{n} trabajos',
+  'jobs.subtitleCrew': 'Trabajos asignados a tu cuadrilla',
+  'jobs.subtitleAll': 'Todos los trabajos',
+  'jobs.loading': 'Cargando trabajos…',
+  'jobs.emptyTitle': 'Sin trabajos',
+  'jobs.emptyMsg': 'No hay trabajos que coincidan con este filtro.',
+  'jobs.highPriority': 'Prioridad alta',
+  'jobs.noAddress': 'Sin dirección registrada',
+
+  // Job detail
+  'job.title': 'Trabajo',
+  'job.statusLabel': 'Estado del Trabajo',
+  'job.notStarted': 'Este trabajo aún no ha comenzado.',
+  'job.startedAt': 'Iniciado a las {time}',
+  'job.startedField': 'Iniciado',
+  'job.finishedField': 'Finalizado',
+  'job.startJob': 'Iniciar Trabajo',
+  'job.completeJob': 'Completar Trabajo',
+  'job.completeTitle': 'Completar trabajo',
+  'job.completeMsg': '¿Marcar este trabajo como completado?',
+  'job.complete': 'Completar',
+  'job.priority': 'Prioridad',
+  'job.scheduled': 'Programado',
+  'job.crew': 'Cuadrilla',
+  'job.duration': 'Duración',
+  'job.customer': 'Cliente',
+  'job.property': 'Propiedad',
+  'job.description': 'Descripción',
+  'job.photos': 'Fotos',
+  'job.notes': 'Notas',
+  'job.noNotes': 'Aún no hay notas en este trabajo.',
+  'job.addNotePlaceholder': 'Agregar una nota…',
+  'job.addNote': 'Agregar nota',
+  'job.loading': 'Cargando trabajo…',
+  'job.notFound': 'Trabajo no encontrado.',
+
+  // Job photos
+  'jobPhotos.empty': 'Aún no hay fotos — captura una en el sitio de trabajo.',
+  'jobPhotos.add': 'Agregar foto',
+  'jobPhotos.uploading': 'Subiendo…',
+  'jobPhotos.addMsg': 'Adjunta una foto a este trabajo.',
+  'jobPhotos.removeTitle': 'Eliminar foto',
+  'jobPhotos.removeMsg': '¿Eliminar esta foto del trabajo?',
+
+  // Time clock
+  'time.title': 'Reloj de Tiempo',
+  'time.subtitle': 'Marca entrada y salida del día',
+  'time.hoursToday': 'Horas Hoy',
+  'time.onClock': 'En turno',
+  'time.notClocked': 'Sin marcar entrada',
+  'time.clockedInAt': 'Entrada a las {time}',
+  'time.startHint': 'Inicia un turno cuando empieces tu día.',
+  'time.clockOut': 'Marcar Salida',
+  'time.clockIn': 'Marcar Entrada',
+  'time.todaySection': 'Hoy',
+  'time.recentShifts': 'Turnos Recientes',
+  'time.active': 'Activo',
+  'time.break': '{n} min de descanso',
+  'time.loading': 'Cargando registros…',
+
+  // Quotes list
+  'quotes.title': 'Cotizaciones',
+  'quotes.filterAll': 'Todas',
+  'quotes.filterDraft': 'Borrador',
+  'quotes.filterSent': 'Enviadas',
+  'quotes.filterAccepted': 'Aceptadas',
+  'quotes.filterDeclined': 'Rechazadas',
+  'quotes.countOne': '{n} cotización',
+  'quotes.countMany': '{n} cotizaciones',
+  'quotes.subtitle': 'Tus cotizaciones',
+  'quotes.loading': 'Cargando cotizaciones…',
+  'quotes.emptyTitle': 'Aún no hay cotizaciones',
+  'quotes.emptyMsg': 'Toca + para crear tu primera cotización.',
+  'quotes.validUntil': 'Válido hasta {date}',
+  'quotes.created': 'Creado {date}',
+
+  // Quote editor
+  'quote.newTitle': 'Nueva Cotización',
+  'quote.editTitle': 'Editar Cotización',
+  'quote.estimator': 'Estimador',
+  'quote.customer': 'Cliente',
+  'quote.selectCustomer': 'Selecciona un cliente',
+  'quote.property': 'Propiedad',
+  'quote.status': 'Estado',
+  'quote.lineItems': 'Artículos',
+  'quote.item': 'Artículo {n}',
+  'quote.description': 'Descripción',
+  'quote.qty': 'Cant.',
+  'quote.unitPrice': 'Precio unitario',
+  'quote.lineTotal': 'Total de línea: {amount}',
+  'quote.addLineItem': 'Agregar artículo',
+  'quote.notes': 'Notas',
+  'quote.notesPlaceholder': 'Notas opcionales para esta cotización…',
+  'quote.total': 'Total de Cotización',
+  'quote.saveChanges': 'Guardar cambios',
+  'quote.create': 'Crear cotización',
+  'quote.pickerTitle': 'Seleccionar Cliente',
+  'quote.searchCustomers': 'Buscar clientes…',
+  'quote.noCustomers': 'No se encontraron clientes.',
+  'quote.searching': 'Buscando…',
+  'quote.loading': 'Cargando cotización…',
+  'quote.errCustomer': 'Selecciona un cliente para esta cotización.',
+  'quote.errLineItem': 'Agrega al menos un artículo.',
+
+  // Chat
+  'chat.title': 'Chat',
+  'chat.subtitle': 'Oficina / Despacho',
+  'chat.loading': 'Cargando chat…',
+  'chat.emptyTitle': 'Aún no hay mensajes',
+  'chat.emptyMsg': 'Envía un mensaje a la oficina para iniciar la conversación.',
+  'chat.placeholder': 'Mensaje a la oficina…',
+  'chat.addTitle': 'Agregar al chat',
+  'chat.addMsg': 'Adjunta una foto o video.',
+  'chat.playVideo': 'Toca para reproducir el video',
+
+  // Settings / profile
+  'settings.title': 'Perfil',
+  'settings.subtitle': 'Cuenta y configuración',
+  'settings.contactInfo': 'Información de Contacto',
+  'settings.phone': 'Teléfono',
+  'settings.email': 'Correo',
+  'settings.address': 'Dirección',
+  'settings.notOnFile': 'No registrado',
+  'settings.language': 'Idioma',
+  'settings.locationSharing': 'Compartir Ubicación',
+  'settings.locOn': 'Activado — compartiendo con despacho',
+  'settings.locOff': 'Desactivado',
+  'settings.locActive':
+    'Tu ubicación se comparte con la oficina mientras estás en turno para que despacho pueda ubicar a tu cuadrilla en el mapa.',
+  'settings.locWeb': "El rastreo de ubicación funciona en la app móvil de Marshall's Lawn (iOS / Android).",
+  'settings.locDenied':
+    'El permiso de ubicación está desactivado. Actívalo en la configuración del dispositivo para que despacho pueda ver a tu cuadrilla.',
+  'settings.locPrompt':
+    'Activa el compartir ubicación para que despacho sepa dónde está tu cuadrilla durante el día.',
+  'settings.enableLocation': 'Activar compartir ubicación',
+  'settings.openSettings': 'Abrir configuración del dispositivo',
+  'settings.about': 'Acerca de',
+  'settings.appVersion': 'Versión de la app',
+  'settings.signOut': 'Cerrar sesión',
+  'settings.signOutConfirm': '¿Seguro que deseas cerrar sesión?',
+  'settings.photoTitle': 'Foto de perfil',
+  'settings.photoMsg': 'Actualiza tu foto de perfil.',
+  'settings.removePhoto': 'Eliminar foto',
+};
+
+export type TranslationKey = keyof typeof en;
+
+const dictionaries: Record<Language, Record<string, string>> = { en, es };
+
+/**
+ * Resolve a key for a language, filling `{name}` placeholders from
+ * `params`. Falls back to English, then `fallback`, then the key itself.
+ */
+export function translate(
+  language: Language,
+  key: string,
+  params?: Record<string, string | number>,
+  fallback?: string,
+): string {
+  const raw = dictionaries[language][key] ?? dictionaries.en[key] ?? fallback ?? key;
+  if (!params) {
+    return raw;
+  }
+  return raw.replace(/\{(\w+)\}/g, (_match, name: string) =>
+    params[name] !== undefined ? String(params[name]) : `{${name}}`,
+  );
+}

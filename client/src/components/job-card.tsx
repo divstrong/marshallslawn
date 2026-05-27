@@ -3,12 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Icon } from '@/components/icon';
 import { Card, StatusBadge } from '@/components/ui';
 import { AppColors, Spacing } from '@/constants/theme';
+import { useLanguage } from '@/context/language';
 import { formatDateShort } from '@/lib/format';
 import type { Job } from '@/lib/types';
 
 /** A job summary card used in the Jobs list. */
 export function JobCard({ job, onPress }: { job: Job; onPress: () => void }) {
-  const address = job.property?.full_address ?? 'No address on file';
+  const { t } = useLanguage();
+  const address = job.property?.full_address ?? t('jobs.noAddress');
   const isHighPriority = job.priority?.toLowerCase() === 'high';
 
   return (
@@ -41,7 +43,7 @@ export function JobCard({ job, onPress }: { job: Job; onPress: () => void }) {
         {isHighPriority ? (
           <View style={styles.metaRow}>
             <Icon name="flag" size={14} color={AppColors.danger} />
-            <Text style={[styles.meta, { color: AppColors.danger }]}>High priority</Text>
+            <Text style={[styles.meta, { color: AppColors.danger }]}>{t('jobs.highPriority')}</Text>
           </View>
         ) : null}
       </View>

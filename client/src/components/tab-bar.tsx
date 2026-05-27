@@ -7,6 +7,7 @@ import { tabsForRole } from '@/constants/roles';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
 import { useChat } from '@/context/chat';
+import { useLanguage } from '@/context/language';
 
 /**
  * Bottom navigation. All tab screens exist for every role; this bar only
@@ -15,6 +16,7 @@ import { useChat } from '@/context/chat';
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { employee } = useAuth();
   const { unread } = useChat();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const tabs = tabsForRole(employee?.role);
@@ -54,7 +56,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                 </View>
               ) : null}
             </View>
-            <Text style={[styles.label, { color }]}>{tab.label}</Text>
+            <Text style={[styles.label, { color }]}>{t(`nav.${tab.name}`)}</Text>
           </Pressable>
         );
       })}

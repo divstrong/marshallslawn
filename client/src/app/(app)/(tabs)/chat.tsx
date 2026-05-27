@@ -21,6 +21,7 @@ import { MediaViewer, type MediaSource } from '@/components/media-viewer';
 import { EmptyState, ErrorState, LoadingState, ScreenHeader } from '@/components/ui';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
 import { useChat } from '@/context/chat';
+import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
 import { api } from '@/lib/api';
 import { formatTime } from '@/lib/format';
@@ -31,6 +32,7 @@ type PickMode = 'camera-photo' | 'camera-video' | 'library';
 
 export default function ChatScreen() {
   const { refresh: refreshBadge } = useChat();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const { data, loading, error, reload } = useApiResource(() => api.chat(), []);
@@ -67,11 +69,11 @@ export default function ChatScreen() {
       setText('');
       await reload();
     } catch (e) {
-      Alert.alert('Chat', e instanceof Error ? e.message : 'Your message was not sent.');
+      Alert.alert(t('chat.title'), e instanceof Error ? e.message : t('common.somethingWrong'));
     } finally {
       setSending(false);
     }
-  }, [text, sending, reload]);
+  }, [text, sending, reload, t]);
 
   const sendAttachment = useCallback(
     async (file: { uri: string; name: string; type: string }) => {
@@ -81,12 +83,12 @@ export default function ChatScreen() {
         setText('');
         await reload();
       } catch (e) {
-        Alert.alert('Chat', e instanceof Error ? e.message : 'The attachment was not sent.');
+        Alert.alert(t('chat.title'), e instanceof Error ? e.message : t('common.somethingWrong'));
       } finally {
         setSending(false);
       }
     },
-    [text, reload],
+    [text, reload, t],
   );
 
   const pick = useCallback(
@@ -101,7 +103,7 @@ export default function ChatScreen() {
         } else {
           const permission = await ImagePicker.requestCameraPermissionsAsync();
           if (!permission.granted) {
-            Alert.alert('Camera', 'Camera access is needed to capture media.');
+            Alert.alert(t('chat.title'), t('common.cameraNeeded'));
             return;
           }
           result = await ImagePicker.launchCameraAsync({
@@ -120,20 +122,20 @@ export default function ChatScreen() {
           type: asset.mimeType ?? (isVideo ? 'video/mp4' : 'image/jpeg'),
         });
       } catch (e) {
-        Alert.alert('Chat', e instanceof Error ? e.message : 'Could not open the picker.');
+        Alert.alert(t('chat.title'), e instanceof Error ? e.message : t('common.somethingWrong'));
       }
     },
-    [sendAttachment],
+    [sendAttachment, t],
   );
 
   const openAttachMenu = useCallback(() => {
-    Alert.alert('Add to chat', 'Attach a photo or video.', [
-      { text: 'Take photo', onPress: () => pick('camera-photo') },
-      { text: 'Record video', onPress: () => pick('camera-video') },
-      { text: 'Choose from library', onPress: () => pick('library') },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('chat.addTitle'), t('chat.addMsg'), [
+      { text: t('common.takePhoto'), onPress: () => pick('camera-photo') },
+      { text: t('common.recordVideo'), onPress: () => pick('camera-video') },
+      { text: t('common.chooseLibrary'), onPress: () => pick('library') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
-  }, [pick]);
+  }, [pick, t]);
 
   const canSend = text.trim().length > 0 && !sending;
 
@@ -142,10 +144,10 @@ export default function ChatScreen() {
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScreenHeader title="Chat" subtitle="Office / Dispatch" />
+      <ScreenHeader title={t('chat.title')} subtitle={t('chat.subtitle')} />
 
       {loading && !data ? (
-        <LoadingState label="Loading chat…" />
+        <LoadingState label={t('chat.loading')} />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={reload} />
       ) : (
@@ -159,8 +161,8 @@ export default function ChatScreen() {
             <View style={styles.empty}>
               <EmptyState
                 icon="chatbubbles-outline"
-                title="No messages yet"
-                message="Send the office a message to start the conversation."
+                title={t('chat.emptyTitle')}
+                message={t('chat.emptyMsg')}
               />
             </View>
           }
@@ -173,7 +175,7 @@ export default function ChatScreen() {
         </Pressable>
         <TextInput
           style={styles.input}
-          placeholder="Message the office…"
+          placeholder={t('chat.placeholder')}
           placeholderTextColor={AppColors.textFaint}
           value={text}
           onChangeText={setText}
@@ -205,6 +207,7 @@ function ChatBubble({
   message: ChatMessage;
   onOpenMedia: (source: MediaSource) => void;
 }) {
+  const { t } = useLanguage();
   const mine = message.sender === 'foreman';
   const attachment = message.attachment;
 
@@ -226,7 +229,7 @@ function ChatBubble({
             ) : (
               <View style={[styles.attachmentMedia, styles.videoTile]}>
                 <Icon name="play-circle" size={46} color="#ffffff" />
-                <Text style={styles.videoLabel}>Tap to play video</Text>
+                <Text style={styles.videoLabel}>{t('chat.playVideo')}</Text>
               </View>
             )}
           </Pressable>

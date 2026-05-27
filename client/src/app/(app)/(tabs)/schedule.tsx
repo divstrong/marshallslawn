@@ -5,6 +5,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { Icon } from '@/components/icon';
 import { Card, EmptyState, ErrorState, LoadingState, ScreenHeader, StatusBadge } from '@/components/ui';
 import { AppColors, Radius, Spacing, statusTone } from '@/constants/theme';
+import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
 import { api } from '@/lib/api';
 import { formatDateFull } from '@/lib/format';
@@ -30,6 +31,7 @@ function shiftDate(value: string, days: number): string {
 
 export default function ScheduleScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [date, setDate] = useState(todayString());
   const [refreshing, setRefreshing] = useState(false);
 
@@ -46,7 +48,7 @@ export default function ScheduleScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader title="Schedule" subtitle="Your crew's route" />
+      <ScreenHeader title={t('schedule.title')} subtitle={t('schedule.subtitle')} />
 
       <ScrollView
         contentContainerStyle={styles.body}
@@ -59,7 +61,9 @@ export default function ScheduleScreen() {
           </Pressable>
           <Pressable onPress={() => setDate(todayString())} style={styles.dateCenter}>
             <Text style={styles.dateText}>{formatDateFull(date)}</Text>
-            <Text style={styles.dateTag}>{isToday ? 'Today' : 'Tap to return to today'}</Text>
+            <Text style={styles.dateTag}>
+              {isToday ? t('schedule.today') : t('schedule.tapToday')}
+            </Text>
           </Pressable>
           <Pressable onPress={() => setDate(shiftDate(date, 1))} hitSlop={8} style={styles.dateArrow}>
             <Icon name="chevron-forward" size={22} color={AppColors.textMuted} />
@@ -69,22 +73,22 @@ export default function ScheduleScreen() {
         {/* Job count */}
         <View style={styles.countCard}>
           <View>
-            <Text style={styles.countLabel}>Jobs Scheduled</Text>
-            <Text style={styles.countHint}>In route order</Text>
+            <Text style={styles.countLabel}>{t('schedule.jobsScheduled')}</Text>
+            <Text style={styles.countHint}>{t('schedule.inRouteOrder')}</Text>
           </View>
           <Text style={styles.countValue}>{data ? jobs.length : '—'}</Text>
         </View>
 
         {/* Route timeline */}
         {loading ? (
-          <LoadingState label="Loading route…" />
+          <LoadingState label={t('schedule.loading')} />
         ) : error ? (
           <ErrorState message={error} onRetry={reload} />
         ) : jobs.length === 0 ? (
           <EmptyState
             icon="calendar-outline"
-            title="No jobs scheduled"
-            message="There are no jobs on the route for this day."
+            title={t('schedule.emptyTitle')}
+            message={t('schedule.emptyMsg')}
           />
         ) : (
           <View style={styles.timeline}>

@@ -6,19 +6,14 @@ import { JobCard } from '@/components/job-card';
 import { EmptyState, ErrorState, FilterTabs, LoadingState, ScreenHeader } from '@/components/ui';
 import { AppColors, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
+import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
 import { api } from '@/lib/api';
-
-const FILTERS = [
-  { label: 'All', value: 'all' },
-  { label: 'Scheduled', value: 'scheduled' },
-  { label: 'In Progress', value: 'in_progress' },
-  { label: 'Completed', value: 'completed' },
-];
 
 export default function JobsScreen() {
   const router = useRouter();
   const { employee } = useAuth();
+  const { t } = useLanguage();
   const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -30,19 +25,26 @@ export default function JobsScreen() {
     setRefreshing(false);
   }, [reload]);
 
+  const filters = [
+    { label: t('jobs.filterAll'), value: 'all' },
+    { label: t('jobs.filterScheduled'), value: 'scheduled' },
+    { label: t('jobs.filterInProgress'), value: 'in_progress' },
+    { label: t('jobs.filterCompleted'), value: 'completed' },
+  ];
+
   const jobs = data ?? [];
   const subtitle =
-    employee?.role === 'estimator' ? 'All jobs' : 'Jobs assigned to your crew';
+    employee?.role === 'estimator' ? t('jobs.subtitleAll') : t('jobs.subtitleCrew');
+  const countSubtitle = t(jobs.length === 1 ? 'jobs.countOne' : 'jobs.countMany', {
+    n: jobs.length,
+  });
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader
-        title="Jobs"
-        subtitle={data ? `${jobs.length} ${jobs.length === 1 ? 'job' : 'jobs'}` : subtitle}
-      />
+      <ScreenHeader title={t('jobs.title')} subtitle={data ? countSubtitle : subtitle} />
 
       <View style={styles.filters}>
-        <FilterTabs options={FILTERS} value={filter} onChange={setFilter} />
+        <FilterTabs options={filters} value={filter} onChange={setFilter} />
       </View>
 
       <FlatList
@@ -55,14 +57,14 @@ export default function JobsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           loading ? (
-            <LoadingState label="Loading jobs…" />
+            <LoadingState label={t('jobs.loading')} />
           ) : error ? (
             <ErrorState message={error} onRetry={reload} />
           ) : (
             <EmptyState
               icon="briefcase-outline"
-              title="No jobs"
-              message="There are no jobs matching this filter."
+              title={t('jobs.emptyTitle')}
+              message={t('jobs.emptyMsg')}
             />
           )
         }

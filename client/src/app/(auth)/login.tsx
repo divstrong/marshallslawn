@@ -16,16 +16,18 @@ import { Icon } from '@/components/icon';
 import { Button, Card, TextField } from '@/components/ui';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
+import { useLanguage } from '@/context/language';
 import type { Role } from '@/lib/types';
 
-const DEV_ROLES: { role: Role; label: string; icon: 'calendar' | 'briefcase' | 'document-text' }[] = [
-  { role: 'foreman', label: 'Foreman', icon: 'calendar' },
-  { role: 'field', label: 'Field', icon: 'briefcase' },
-  { role: 'estimator', label: 'Estimator', icon: 'document-text' },
+const DEV_ROLES: { role: Role; labelKey: string; icon: 'calendar' | 'briefcase' | 'document-text' }[] = [
+  { role: 'foreman', labelKey: 'login.roleForeman', icon: 'calendar' },
+  { role: 'field', labelKey: 'login.roleField', icon: 'briefcase' },
+  { role: 'estimator', labelKey: 'login.roleEstimator', icon: 'document-text' },
 ];
 
 export default function LoginScreen() {
   const { signIn, signInWithRole } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState('');
@@ -35,7 +37,7 @@ export default function LoginScreen() {
 
   const submit = async () => {
     if (!email.trim() || !password) {
-      setError('Enter your email and password.');
+      setError(t('login.errCredentials'));
       return;
     }
     setError(null);
@@ -44,7 +46,7 @@ export default function LoginScreen() {
       await signIn(email.trim(), password);
       // On success the root navigator swaps to the app group.
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Sign in failed.');
+      setError(e instanceof Error ? e.message : t('login.errFailed'));
       setBusy(null);
     }
   };
@@ -55,7 +57,7 @@ export default function LoginScreen() {
     try {
       await signInWithRole(role);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Sign in failed.');
+      setError(e instanceof Error ? e.message : t('login.errFailed'));
       setBusy(null);
     }
   };
@@ -79,10 +81,10 @@ export default function LoginScreen() {
           style={styles.logo}
           contentFit="contain"
         />
-        <Text style={styles.brandTagline}>Field App</Text>
+        <Text style={styles.brandTagline}>{t('login.tagline')}</Text>
 
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Sign in</Text>
+          <Text style={styles.cardTitle}>{t('login.signIn')}</Text>
 
           {error ? (
             <View style={styles.errorBox}>
@@ -92,26 +94,26 @@ export default function LoginScreen() {
           ) : null}
 
           <TextField
-            label="Email"
+            label={t('login.email')}
             value={email}
             onChangeText={setEmail}
-            placeholder="you@marshallslawn.com"
+            placeholder={t('login.emailPlaceholder')}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
             inputMode="email"
           />
           <TextField
-            label="Password"
+            label={t('login.password')}
             value={password}
             onChangeText={setPassword}
-            placeholder="Enter your password"
+            placeholder={t('login.passwordPlaceholder')}
             secureTextEntry
-            hint="Demo account: foreman@marshallslawn.test / password"
+            hint={t('login.demoHint')}
           />
 
           <Button
-            label="Sign in"
+            label={t('login.signIn')}
             icon="log-in-outline"
             onPress={submit}
             loading={busy === 'login'}
@@ -121,8 +123,8 @@ export default function LoginScreen() {
 
         {__DEV__ ? (
           <Card style={styles.card}>
-            <Text style={styles.devLabel}>DEVELOPER QUICK LOGIN</Text>
-            <Text style={styles.devHint}>Jump straight into a role to preview its experience.</Text>
+            <Text style={styles.devLabel}>{t('login.devTitle')}</Text>
+            <Text style={styles.devHint}>{t('login.devHint')}</Text>
             <View style={styles.devRow}>
               {DEV_ROLES.map((item) => (
                 <Pressable
@@ -136,7 +138,7 @@ export default function LoginScreen() {
                   ]}
                 >
                   <Icon name={item.icon} size={22} color={AppColors.brand} />
-                  <Text style={styles.devButtonText}>{item.label}</Text>
+                  <Text style={styles.devButtonText}>{t(item.labelKey)}</Text>
                 </Pressable>
               ))}
             </View>

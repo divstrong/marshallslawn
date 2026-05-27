@@ -12,7 +12,7 @@
     $selectedForeman = $this->selectedForeman;
 @endphp
 
-<x-filament-panels::page>
+<div>
     <style>
         .dispatch-page {
             --d-card-bg: #fff;
@@ -82,14 +82,14 @@
             display: grid; grid-template-columns: 1fr; gap: 16px;
         }
         @media (min-width: 1024px) {
-            .dispatch-page .d-grid { grid-template-columns: 2fr 1fr; }
+            .dispatch-page .d-grid { grid-template-columns: 3fr 1fr; }
         }
         .dispatch-page .d-map-wrap {
-            position: relative; min-height: 600px; border-radius: 12px;
+            position: relative; min-height: calc(100vh - 200px); border-radius: 12px;
             border: 1px solid var(--d-border); background: rgb(243, 244, 246); overflow: hidden;
         }
         .dark .dispatch-page .d-map-wrap { background: rgb(31, 41, 55); }
-        .dispatch-page .d-map-host { width: 100%; height: 100%; min-height: 600px; }
+        .dispatch-page .d-map-host { width: 100%; height: 100%; min-height: calc(100vh - 200px); }
         .dispatch-page .d-map-empty {
             position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
             text-align: center; padding: 32px;
@@ -171,6 +171,97 @@
         .dispatch-page .d-status-dot.completed { color: rgb(22, 163, 74); }
         .dispatch-page .d-status-dot.skipped { color: rgb(220, 38, 38); }
         .dispatch-page .d-status-dot.in_progress { color: rgb(217, 119, 6); }
+        .dispatch-page .d-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600;
+            border: 1px solid var(--d-border); background: var(--d-card-bg); color: var(--d-text);
+        }
+        .dispatch-page .d-badge.pending { background: #f1f5f9; color: rgb(71, 85, 105); border-color: rgb(203, 213, 225); }
+        .dispatch-page .d-badge.in_progress { background: #fef3c7; color: rgb(120, 53, 15); border-color: rgb(252, 211, 77); }
+        .dispatch-page .d-badge.completed { background: #dcfce7; color: rgb(22, 101, 52); border-color: rgb(134, 239, 172); }
+        .dispatch-page .d-badge.skipped { background: #fee2e2; color: rgb(153, 27, 27); border-color: rgb(252, 165, 165); }
+        .dispatch-page .d-btn-skip {
+            border-color: rgb(252, 165, 165); color: rgb(153, 27, 27); background: #fff;
+        }
+        .dispatch-page .d-btn-skip:hover { background: #fee2e2; }
+        .dispatch-page .d-modal-backdrop {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); z-index: 1000;
+            display: flex; align-items: center; justify-content: center; padding: 16px;
+        }
+        .dispatch-page .d-modal {
+            background: var(--d-card-bg); border-radius: 12px; padding: 24px;
+            max-width: 440px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+        .dispatch-page .d-modal-title { font-size: 16px; font-weight: 600; }
+        .dispatch-page .d-modal-body { font-size: 14px; color: var(--d-muted); margin-top: 8px; line-height: 1.5; }
+        .dispatch-page .d-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+        .dispatch-page .d-btn-danger {
+            background: #dc2626; color: #fff; border-color: #dc2626;
+        }
+        .dispatch-page .d-btn-danger:hover { background: #b91c1c; border-color: #b91c1c; }
+        .dispatch-page .d-btn-chat {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--d-accent); color: #fff; border-color: var(--d-accent);
+        }
+        .dispatch-page .d-btn-chat:hover { filter: brightness(0.95); }
+        .dispatch-page .d-btn-chat .d-unread-pill {
+            background: #fff; color: var(--d-accent);
+            font-size: 10px; font-weight: 700; line-height: 1;
+            padding: 2px 6px; border-radius: 9999px;
+        }
+        .dispatch-page .d-chat-panel {
+            position: fixed; top: 0; right: 0; height: 100vh; width: 100%;
+            max-width: 420px; background: var(--d-card-bg);
+            border-left: 1px solid var(--d-border);
+            box-shadow: -8px 0 24px rgba(0,0,0,0.08);
+            z-index: 900; display: flex; flex-direction: column;
+            transform: translateX(100%); transition: transform 220ms ease;
+        }
+        .dispatch-page .d-chat-panel.is-open { transform: translateX(0); }
+        .dispatch-page .d-chat-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; border-bottom: 1px solid var(--d-border);
+        }
+        .dispatch-page .d-chat-header-main {
+            display: flex; align-items: center; gap: 10px; min-width: 0;
+        }
+        .dispatch-page .d-chat-name { font-weight: 600; font-size: 14px; }
+        .dispatch-page .d-chat-sub { font-size: 12px; color: var(--d-muted); }
+        .dispatch-page .d-chat-body {
+            flex: 1 1 auto; overflow-y: auto; padding: 14px 16px;
+            display: flex; flex-direction: column; gap: 8px;
+            background: rgb(249, 250, 251);
+        }
+        .dark .dispatch-page .d-chat-body { background: rgb(15, 23, 42); }
+        .dispatch-page .d-chat-footer {
+            padding: 12px 16px; border-top: 1px solid var(--d-border);
+            background: var(--d-card-bg);
+        }
+        .dispatch-page .d-chat-bubble {
+            max-width: 80%; padding: 8px 11px; border-radius: 12px;
+            font-size: 13px; line-height: 1.45; word-wrap: break-word;
+        }
+        .dispatch-page .d-chat-bubble.office {
+            background: var(--d-accent); color: #fff; align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .dispatch-page .d-chat-bubble.foreman {
+            background: #fff; color: rgb(15, 23, 42);
+            border: 1px solid var(--d-border); align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .dark .dispatch-page .d-chat-bubble.foreman { background: rgb(30, 41, 59); color: #f1f5f9; }
+        .dispatch-page .d-chat-meta {
+            font-size: 10px; opacity: 0.7; margin-top: 4px;
+        }
+        .dispatch-page .d-chat-empty {
+            margin: auto; text-align: center; color: var(--d-muted); font-size: 13px; padding: 32px;
+        }
+        .dispatch-page .d-chat-backdrop {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35);
+            z-index: 899; opacity: 0; pointer-events: none; transition: opacity 180ms ease;
+        }
+        .dispatch-page .d-chat-backdrop.is-open { opacity: 1; pointer-events: auto; }
     </style>
 
     <div
@@ -227,8 +318,6 @@
                         @foreach ($crewColors as $crewId => $crew)
                             @php
                                 $crewIds = array_map('intval', $this->crewIds);
-                                // Active when explicitly selected. When no filter is set, no chip is highlighted
-                                // (the map shows all crews by default). Click any chip to filter to that crew.
                                 $isActive = in_array($crewId, $crewIds, true);
                             @endphp
                             <button
@@ -323,41 +412,22 @@
                                 @endif
                             </div>
 
-                            {{-- Foreman <-> office chat --}}
-                            <div wire:poll.8s style="margin-top:4px;border-top:1px solid var(--d-border);padding-top:10px;">
-                                <div class="d-label" style="margin-bottom:6px;">Chat</div>
-                                <div style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:2px;">
-                                    @forelse ($this->chatMessages as $msg)
-                                        <div style="display:flex;{{ $msg['sender'] === 'office' ? 'justify-content:flex-end' : 'justify-content:flex-start' }};">
-                                            <div style="max-width:82%;padding:6px 9px;border-radius:10px;font-size:12px;line-height:1.4;{{ $msg['sender'] === 'office' ? 'background:var(--d-accent);color:#fff;border-bottom-right-radius:3px;' : 'background:#f1f5f9;color:#0f172a;border-bottom-left-radius:3px;' }}">
-                                                @if ($msg['attachment_url'])
-                                                    @if ($msg['attachment_type'] === 'video')
-                                                        <video src="{{ $msg['attachment_url'] }}" controls style="max-width:200px;border-radius:6px;display:block;margin-bottom:4px;"></video>
-                                                    @else
-                                                        <a href="{{ $msg['attachment_url'] }}" target="_blank" rel="noopener">
-                                                            <img src="{{ $msg['attachment_url'] }}" alt="attachment" style="max-width:200px;border-radius:6px;display:block;margin-bottom:4px;">
-                                                        </a>
-                                                    @endif
-                                                @endif
-                                                @if ($msg['body'])
-                                                    <div>{{ $msg['body'] }}</div>
-                                                @endif
-                                                <div style="font-size:10px;opacity:0.65;margin-top:3px;">{{ $msg['sender_name'] }} · {{ $msg['time'] }}</div>
-                                            </div>
-                                        </div>
-                                    @empty
-                                        <div class="d-muted" style="font-size:12px;">No messages yet — start the conversation.</div>
-                                    @endforelse
-                                </div>
-                                <div wire:loading wire:target="chatAttachment" class="d-muted" style="font-size:11px;margin-top:6px;">Uploading attachment…</div>
-                                <form wire:submit="sendChat" style="display:flex;gap:6px;margin-top:8px;align-items:center;">
-                                    <label title="Attach photo or video" style="height:34px;width:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--d-border);border-radius:6px;cursor:pointer;color:var(--d-muted);">
-                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 15l-5-5L5 21"/></svg>
-                                        <input type="file" wire:model="chatAttachment" accept="image/*,video/*" style="display:none;">
-                                    </label>
-                                    <input type="text" wire:model="chatBody" placeholder="Message {{ $selectedForeman['name'] }}…" style="flex:1;height:34px;border:1px solid var(--d-border);border-radius:6px;padding:0 9px;font-size:12px;background:#fff;color:#0f172a;">
-                                    <button type="submit" class="d-btn" style="height:34px;padding:0 12px;font-size:12px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);">Send</button>
-                                </form>
+                            {{-- Open the chat side panel --}}
+                            <div class="d-field">
+                                <button
+                                    type="button"
+                                    wire:click="openChatPanel"
+                                    class="d-btn d-btn-chat"
+                                    style="width:100%; justify-content:center;"
+                                >
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    Chat
+                                    @if (! empty($selectedForeman['unread_chat']))
+                                        <span class="d-unread-pill">{{ $selectedForeman['unread_chat'] > 9 ? '9+' : $selectedForeman['unread_chat'] }}</span>
+                                    @endif
+                                </button>
                             </div>
                         </div>
                     @elseif ($selectedJob)
@@ -403,7 +473,16 @@
                                     <span class="d-dot" style="background-color: {{ $selected['color'] }}"></span>
                                     <span class="d-card-title">Stop #{{ $selected['sort_order'] }}</span>
                                 </div>
-                                <button type="button" wire:click="clearSelection" class="d-btn" style="height: 28px; padding: 0 8px; font-size: 12px;">Close</button>
+                                <div class="d-row" style="gap:6px;">
+                                    <button
+                                        type="button"
+                                        wire:click="requestSkip({{ $selected['id'] }})"
+                                        class="d-btn d-btn-skip"
+                                        style="height: 28px; padding: 0 10px; font-size: 12px;"
+                                        title="Skip this job for today and send back to unscheduled"
+                                    >Skip</button>
+                                    <button type="button" wire:click="clearSelection" class="d-btn" style="height: 28px; padding: 0 8px; font-size: 12px;">Close</button>
+                                </div>
                             </div>
                             <div class="d-field">
                                 <div class="d-label">Customer</div>
@@ -438,14 +517,21 @@
                             @endif
                             <div class="d-field">
                                 <div class="d-label">Status</div>
-                                <div class="d-status-pills">
-                                    @foreach (['pending' => 'Pending', 'in_progress' => 'In Progress', 'completed' => 'Done', 'skipped' => 'Skip'] as $key => $label)
-                                        <button
-                                            type="button"
-                                            wire:click="markStopStatus({{ $selected['id'] }}, '{{ $key }}')"
-                                            class="d-status-pill {{ $selected['status'] === $key ? 'is-active' : '' }}"
-                                        >{{ $label }}</button>
-                                    @endforeach
+                                @php
+                                    $statusLabels = [
+                                        'pending' => 'Pending',
+                                        'in_progress' => 'In Progress',
+                                        'completed' => 'Completed',
+                                        'skipped' => 'Skipped',
+                                    ];
+                                    $statusKey = $selected['status'] ?? 'pending';
+                                    $statusLabel = $statusLabels[$statusKey] ?? ucfirst($statusKey);
+                                @endphp
+                                <div style="margin-top:6px;">
+                                    <span class="d-badge {{ $statusKey }}">{{ $statusLabel }}</span>
+                                </div>
+                                <div class="d-muted" style="font-size: 11px; margin-top: 6px;">
+                                    Status is updated by the crew foreman as they clock in/out via the app.
                                 </div>
                             </div>
                         </div>
@@ -539,6 +625,100 @@
                 </div>
             </div>
         </div>
+
+        {{-- Right-side chat panel + backdrop. Rendered always so CSS transitions can play. --}}
+        <div
+            class="d-chat-backdrop {{ $chatPanelOpen ? 'is-open' : '' }}"
+            wire:click="closeChatPanel"
+        ></div>
+        <aside
+            class="d-chat-panel {{ $chatPanelOpen ? 'is-open' : '' }}"
+            aria-hidden="{{ $chatPanelOpen ? 'false' : 'true' }}"
+            wire:poll.8s
+        >
+            @if ($selectedForeman)
+                <div class="d-chat-header">
+                    <div class="d-chat-header-main">
+                        <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9999px;background:{{ $selectedForeman['color'] }};color:#fff;font-weight:700;font-size:13px;flex-shrink:0;">
+                            {{ $selectedForeman['initials'] }}
+                        </span>
+                        <div style="min-width:0;">
+                            <div class="d-chat-name d-truncate">{{ $selectedForeman['name'] }}</div>
+                            <div class="d-chat-sub d-truncate">{{ $selectedForeman['crew_name'] }} foreman</div>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="closeChatPanel" class="d-btn" style="height:30px;padding:0 10px;font-size:12px;">Close</button>
+                </div>
+
+                <div
+                    class="d-chat-body"
+                    x-data
+                    x-ref="body"
+                    x-init="$nextTick(() => $refs.body.scrollTop = $refs.body.scrollHeight)"
+                    @dispatch:chat-updated.window="$nextTick(() => $refs.body.scrollTop = $refs.body.scrollHeight)"
+                    wire:key="chat-body-{{ $selectedForeman['id'] }}"
+                >
+                    @forelse ($this->chatMessages as $msg)
+                        <div class="d-chat-bubble {{ $msg['sender'] === 'office' ? 'office' : 'foreman' }}">
+                            @if ($msg['attachment_url'])
+                                @if ($msg['attachment_type'] === 'video')
+                                    <video src="{{ $msg['attachment_url'] }}" controls style="max-width:240px;border-radius:8px;display:block;margin-bottom:6px;"></video>
+                                @else
+                                    <a href="{{ $msg['attachment_url'] }}" target="_blank" rel="noopener">
+                                        <img src="{{ $msg['attachment_url'] }}" alt="attachment" style="max-width:240px;border-radius:8px;display:block;margin-bottom:6px;">
+                                    </a>
+                                @endif
+                            @endif
+                            @if ($msg['body'])
+                                <div>{{ $msg['body'] }}</div>
+                            @endif
+                            <div class="d-chat-meta">{{ $msg['sender_name'] }} · {{ $msg['time'] }}</div>
+                        </div>
+                    @empty
+                        <div class="d-chat-empty">No messages yet — start the conversation.</div>
+                    @endforelse
+                </div>
+
+                <div class="d-chat-footer">
+                    <div wire:loading wire:target="chatAttachment" class="d-muted" style="font-size:11px;margin-bottom:6px;">Uploading attachment…</div>
+                    <form wire:submit="sendChat" style="display:flex;gap:6px;align-items:center;">
+                        <label title="Attach photo or video" style="height:36px;width:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--d-border);border-radius:8px;cursor:pointer;color:var(--d-muted);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 15l-5-5L5 21"/></svg>
+                            <input type="file" wire:model="chatAttachment" accept="image/*,video/*" style="display:none;">
+                        </label>
+                        <input
+                            type="text"
+                            wire:model="chatBody"
+                            placeholder="Message {{ $selectedForeman['name'] }}…"
+                            autocomplete="off"
+                            style="flex:1;height:36px;border:1px solid var(--d-border);border-radius:8px;padding:0 12px;font-size:13px;background:#fff;color:#0f172a;"
+                        >
+                        <button type="submit" class="d-btn" style="height:36px;padding:0 14px;font-size:13px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);">Send</button>
+                    </form>
+                </div>
+            @endif
+        </aside>
+
+        {{-- Skip confirmation modal --}}
+        @if ($this->confirmSkipStopId && $selected)
+            <div class="d-modal-backdrop" wire:click.self="cancelSkip">
+                <div class="d-modal" role="dialog" aria-modal="true" aria-labelledby="skip-modal-title">
+                    <div class="d-modal-title" id="skip-modal-title">Skip this job for today?</div>
+                    <div class="d-modal-body">
+                        <strong>{{ $selected['customer_name'] }}</strong> — {{ $selected['address'] }}
+                        @if ($selected['service_name'])
+                            <br><span style="opacity:0.75;">{{ $selected['service_name'] }}</span>
+                        @endif
+                        <br><br>
+                        The job will be marked <strong>Skipped</strong> and moved back to the unscheduled pile (no date) so you can re-assign it later.
+                    </div>
+                    <div class="d-modal-actions">
+                        <button type="button" wire:click="cancelSkip" class="d-btn">Cancel</button>
+                        <button type="button" wire:click="confirmSkip" class="d-btn d-btn-danger">Yes, skip job</button>
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
 
     @if ($mapsApiKey)
@@ -595,10 +775,8 @@
                         },
 
                         foremanIcon(initials, color, opts = {}) {
-                            // Bottom dot encodes GPS freshness: green=live, amber=stale, gray=estimated.
                             const ring = opts.estimated ? '#9ca3af' : (opts.live ? '#16a34a' : '#f59e0b');
                             const groupOpacity = opts.estimated ? '0.55' : '1';
-                            // Red badge when the foreman has unread chat messages.
                             const unread = opts.unread > 0
                                 ? `<circle cx="35" cy="9" r="7.5" fill="#dc2626" stroke="#ffffff" stroke-width="2"/><text x="35" y="12.5" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="9" font-weight="700" fill="#ffffff">${opts.unread > 9 ? '9+' : opts.unread}</text>`
                                 : '';
@@ -678,4 +856,4 @@
             </script>
         @endpush
     @endif
-</x-filament-panels::page>
+</div>

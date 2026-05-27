@@ -90,6 +90,11 @@ class Job extends Model
         return $this->hasMany(JobMedia::class);
     }
 
+    public function jobServices(): HasMany
+    {
+        return $this->hasMany(JobService::class)->orderBy('sort_order');
+    }
+
     public function timeLogs(): HasMany
     {
         return $this->hasMany(TimeLog::class);

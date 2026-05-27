@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'rea
 import { Icon } from '@/components/icon';
 import { Card } from '@/components/ui';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
+import { useLanguage } from '@/context/language';
 import { api } from '@/lib/api';
 import type { JobMedia } from '@/lib/types';
 
@@ -17,6 +18,7 @@ interface JobPhotosProps {
 
 /** Photo gallery + capture/upload for the job detail screen. */
 export function JobPhotos({ jobId, media, onChanged }: JobPhotosProps) {
+  const { t } = useLanguage();
   const [uploading, setUploading] = useState(false);
 
   const upload = async (asset: ImagePicker.ImagePickerAsset) => {
@@ -29,7 +31,7 @@ export function JobPhotos({ jobId, media, onChanged }: JobPhotosProps) {
       });
       await onChanged();
     } catch (e) {
-      Alert.alert('Upload', e instanceof Error ? e.message : 'The photo could not be uploaded.');
+      Alert.alert(t('job.photos'), e instanceof Error ? e.message : t('common.somethingWrong'));
     } finally {
       setUploading(false);
     }
@@ -40,7 +42,7 @@ export function JobPhotos({ jobId, media, onChanged }: JobPhotosProps) {
       if (source === 'camera') {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
         if (!permission.granted) {
-          Alert.alert('Camera', 'Camera access is needed to take a photo.');
+          Alert.alert(t('job.photos'), t('common.cameraNeeded'));
           return;
         }
         const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
@@ -57,30 +59,33 @@ export function JobPhotos({ jobId, media, onChanged }: JobPhotosProps) {
         }
       }
     } catch (e) {
-      Alert.alert('Photo', e instanceof Error ? e.message : 'Could not open the picker.');
+      Alert.alert(t('job.photos'), e instanceof Error ? e.message : t('common.somethingWrong'));
     }
   };
 
   const addPhoto = () => {
-    Alert.alert('Add photo', 'Attach a photo to this job.', [
-      { text: 'Take photo', onPress: () => pickFrom('camera') },
-      { text: 'Choose from library', onPress: () => pickFrom('library') },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('jobPhotos.add'), t('jobPhotos.addMsg'), [
+      { text: t('common.takePhoto'), onPress: () => pickFrom('camera') },
+      { text: t('common.chooseLibrary'), onPress: () => pickFrom('library') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   };
 
   const removePhoto = (item: JobMedia) => {
-    Alert.alert('Remove photo', 'Remove this photo from the job?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('jobPhotos.removeTitle'), t('jobPhotos.removeMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Remove',
+        text: t('common.remove'),
         style: 'destructive',
         onPress: async () => {
           try {
             await api.deleteJobPhoto(jobId, item.id);
             await onChanged();
           } catch (e) {
-            Alert.alert('Remove', e instanceof Error ? e.message : 'Could not remove the photo.');
+            Alert.alert(
+              t('jobPhotos.removeTitle'),
+              e instanceof Error ? e.message : t('common.somethingWrong'),
+            );
           }
         },
       },
@@ -101,7 +106,7 @@ export function JobPhotos({ jobId, media, onChanged }: JobPhotosProps) {
           ))}
         </View>
       ) : (
-        <Text style={styles.empty}>No photos yet — capture one from the job site.</Text>
+        <Text style={styles.empty}>{t('jobPhotos.empty')}</Text>
       )}
 
       <Pressable
@@ -114,7 +119,7 @@ export function JobPhotos({ jobId, media, onChanged }: JobPhotosProps) {
         ) : (
           <Icon name="camera-outline" size={18} color={AppColors.brand} />
         )}
-        <Text style={styles.addText}>{uploading ? 'Uploading…' : 'Add photo'}</Text>
+        <Text style={styles.addText}>{uploading ? t('jobPhotos.uploading') : t('jobPhotos.add')}</Text>
       </Pressable>
     </Card>
   );

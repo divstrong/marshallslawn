@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/icon';
 import { AppColors, Radius, Spacing, statusTone } from '@/constants/theme';
+import { useLanguage } from '@/context/language';
 
 /* -------------------------------------------------------------------------- */
 /* Header                                                                     */
@@ -112,8 +113,10 @@ export function Badge({ label, bg, fg }: { label: string; bg: string; fg: string
 
 /** Badge whose colors are derived from a job/quote status string. */
 export function StatusBadge({ status }: { status: string | null | undefined }) {
+  const { t } = useLanguage();
   const tone = statusTone(status);
-  return <Badge label={tone.label} bg={tone.bg} fg={tone.fg} />;
+  const label = status ? t(`status.${status}`, undefined, tone.label) : tone.label;
+  return <Badge label={label} bg={tone.bg} fg={tone.fg} />;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -285,15 +288,21 @@ export function EmptyState({ icon, title, message }: EmptyStateProps) {
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { t } = useLanguage();
   return (
     <View style={styles.centered}>
       <View style={[styles.emptyIcon, { backgroundColor: AppColors.dangerSoft }]}>
         <Icon name="alert-circle-outline" size={30} color={AppColors.danger} />
       </View>
-      <Text style={styles.stateTitle}>Something went wrong</Text>
+      <Text style={styles.stateTitle}>{t('common.somethingWrong')}</Text>
       <Text style={styles.stateText}>{message}</Text>
       {onRetry ? (
-        <Button label="Try again" variant="secondary" onPress={onRetry} style={styles.retry} />
+        <Button
+          label={t('common.retry')}
+          variant="secondary"
+          onPress={onRetry}
+          style={styles.retry}
+        />
       ) : null}
     </View>
   );

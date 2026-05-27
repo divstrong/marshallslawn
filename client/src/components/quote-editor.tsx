@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -25,6 +24,7 @@ import {
   TextField,
 } from '@/components/ui';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
+import { useLanguage } from '@/context/language';
 import { api } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
 import type { Customer, Property, QuoteLineItemDraft, QuoteStatus } from '@/lib/types';
@@ -46,6 +46,7 @@ function toNumber(value: string): number {
  */
 export function QuoteEditor({ quoteId }: { quoteId?: number }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const isEdit = quoteId !== undefined;
 
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -93,11 +94,11 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
         await loadProperties(quote.customer.id);
       }
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Could not load the quote.');
+      setLoadError(e instanceof Error ? e.message : t('common.somethingWrong'));
     } finally {
       setLoading(false);
     }
-  }, [isEdit, quoteId, loadProperties]);
+  }, [isEdit, quoteId, loadProperties, t]);
 
   useEffect(() => {
     hydrate();
@@ -133,7 +134,7 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
 
   const save = useCallback(async () => {
     if (!customer) {
-      setFormError('Select a customer for this quote.');
+      setFormError(t('quote.errCustomer'));
       return;
     }
     const items = lineItems
@@ -144,7 +145,7 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
         unit_price: toNumber(item.unit_price),
       }));
     if (items.length === 0) {
-      setFormError('Add at least one line item.');
+      setFormError(t('quote.errLineItem'));
       return;
     }
 
@@ -165,16 +166,16 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
       }
       router.back();
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Could not save the quote.');
+      setFormError(e instanceof Error ? e.message : t('common.somethingWrong'));
       setSaving(false);
     }
-  }, [customer, lineItems, propertyId, status, notes, isEdit, quoteId, router]);
+  }, [customer, lineItems, propertyId, status, notes, isEdit, quoteId, router, t]);
 
   if (loading) {
     return (
       <View style={styles.screen}>
-        <ScreenHeader title="Quote" onBack={() => router.back()} />
-        <LoadingState label="Loading quote…" />
+        <ScreenHeader title={t('quote.editTitle')} onBack={() => router.back()} />
+        <LoadingState label={t('quote.loading')} />
       </View>
     );
   }
@@ -182,7 +183,7 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
   if (loadError) {
     return (
       <View style={styles.screen}>
-        <ScreenHeader title="Quote" onBack={() => router.back()} />
+        <ScreenHeader title={t('quote.editTitle')} onBack={() => router.back()} />
         <ErrorState message={loadError} onRetry={hydrate} />
       </View>
     );
@@ -191,8 +192,8 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
   return (
     <View style={styles.screen}>
       <ScreenHeader
-        title={isEdit ? 'Edit Quote' : 'New Quote'}
-        subtitle="Estimator"
+        title={isEdit ? t('quote.editTitle') : t('quote.newTitle')}
+        subtitle={t('quote.estimator')}
         onBack={() => router.back()}
       />
 
@@ -210,12 +211,12 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
 
           {/* Customer */}
           <View style={styles.section}>
-            <SectionLabel>Customer</SectionLabel>
+            <SectionLabel>{t('quote.customer')}</SectionLabel>
             <Pressable onPress={() => setPickerOpen(true)}>
               <Card style={styles.selectRow}>
                 <View style={styles.flex}>
                   <Text style={customer ? styles.selectValue : styles.selectPlaceholder}>
-                    {customer ? customer.name : 'Select a customer'}
+                    {customer ? customer.name : t('quote.selectCustomer')}
                   </Text>
                   {customer?.city ? (
                     <Text style={styles.selectMeta}>
@@ -231,7 +232,7 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
           {/* Property */}
           {customer && properties.length > 0 ? (
             <View style={styles.section}>
-              <SectionLabel>Property</SectionLabel>
+              <SectionLabel>{t('quote.property')}</SectionLabel>
               <View style={styles.chips}>
                 {properties.map((property) => {
                   const active = property.id === propertyId;
@@ -253,7 +254,7 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
 
           {/* Status */}
           <View style={styles.section}>
-            <SectionLabel>Status</SectionLabel>
+            <SectionLabel>{t('quote.status')}</SectionLabel>
             <View style={styles.chips}>
               {STATUS_OPTIONS.map((option) => {
                 const active = option === status;
@@ -264,7 +265,7 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
                     style={[styles.chip, active && styles.chipActive]}
                   >
                     <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                      {t(`status.${option}`)}
                     </Text>
                   </Pressable>
                 );
@@ -274,11 +275,11 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
 
           {/* Line items */}
           <View style={styles.section}>
-            <SectionLabel>Line Items</SectionLabel>
+            <SectionLabel>{t('quote.lineItems')}</SectionLabel>
             {lineItems.map((item, index) => (
               <Card key={index} style={styles.itemCard}>
                 <View style={styles.itemHeader}>
-                  <Text style={styles.itemNumber}>Item {index + 1}</Text>
+                  <Text style={styles.itemNumber}>{t('quote.item', { n: index + 1 })}</Text>
                   {lineItems.length > 1 ? (
                     <Pressable onPress={() => removeItem(index)} hitSlop={8}>
                       <Icon name="trash-outline" size={18} color={AppColors.danger} />
@@ -286,14 +287,14 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
                   ) : null}
                 </View>
                 <TextField
-                  placeholder="Description"
+                  placeholder={t('quote.description')}
                   value={item.description}
                   onChangeText={(text) => updateItem(index, { description: text })}
                   style={styles.noMargin}
                 />
                 <View style={styles.itemRow}>
                   <TextField
-                    label="Qty"
+                    label={t('quote.qty')}
                     value={item.quantity}
                     onChangeText={(text) => updateItem(index, { quantity: text })}
                     keyboardType="decimal-pad"
@@ -301,7 +302,7 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
                   />
                   <View style={styles.itemSpacer} />
                   <TextField
-                    label="Unit price"
+                    label={t('quote.unitPrice')}
                     value={item.unit_price}
                     onChangeText={(text) => updateItem(index, { unit_price: text })}
                     keyboardType="decimal-pad"
@@ -310,13 +311,14 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
                   />
                 </View>
                 <Text style={styles.itemTotal}>
-                  Line total:{' '}
-                  {formatMoney(toNumber(item.quantity) * toNumber(item.unit_price))}
+                  {t('quote.lineTotal', {
+                    amount: formatMoney(toNumber(item.quantity) * toNumber(item.unit_price)),
+                  })}
                 </Text>
               </Card>
             ))}
             <Button
-              label="Add line item"
+              label={t('quote.addLineItem')}
               icon="add"
               variant="secondary"
               onPress={() => setLineItems((items) => [...items, emptyItem()])}
@@ -325,9 +327,9 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
 
           {/* Notes */}
           <View style={styles.section}>
-            <SectionLabel>Notes</SectionLabel>
+            <SectionLabel>{t('quote.notes')}</SectionLabel>
             <TextField
-              placeholder="Optional notes for this quote…"
+              placeholder={t('quote.notesPlaceholder')}
               value={notes}
               onChangeText={setNotes}
               multiline
@@ -337,12 +339,12 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
 
           {/* Total + save */}
           <Card style={styles.totalCard}>
-            <Text style={styles.totalLabel}>Quote Total</Text>
+            <Text style={styles.totalLabel}>{t('quote.total')}</Text>
             <Text style={styles.totalValue}>{formatMoney(total)}</Text>
           </Card>
 
           <Button
-            label={isEdit ? 'Save changes' : 'Create quote'}
+            label={isEdit ? t('quote.saveChanges') : t('quote.create')}
             icon="checkmark"
             loading={saving}
             onPress={save}
@@ -370,6 +372,7 @@ interface CustomerPickerProps {
 }
 
 function CustomerPicker({ visible, onClose, onSelect }: CustomerPickerProps) {
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Customer[]>([]);
@@ -400,14 +403,14 @@ function CustomerPicker({ visible, onClose, onSelect }: CustomerPickerProps) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={[styles.modal, { paddingTop: insets.top + Spacing.three }]}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Select Customer</Text>
+          <Text style={styles.modalTitle}>{t('quote.pickerTitle')}</Text>
           <Pressable onPress={onClose} hitSlop={10}>
             <Icon name="close" size={24} color={AppColors.text} />
           </Pressable>
         </View>
         <View style={styles.modalSearch}>
           <TextField
-            placeholder="Search customers…"
+            placeholder={t('quote.searchCustomers')}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -437,7 +440,7 @@ function CustomerPicker({ visible, onClose, onSelect }: CustomerPickerProps) {
           )}
           ListEmptyComponent={
             <Text style={styles.modalEmpty}>
-              {searching ? 'Searching…' : 'No customers found.'}
+              {searching ? t('quote.searching') : t('quote.noCustomers')}
             </Text>
           }
         />

@@ -146,6 +146,12 @@
         .sch-page .sch-tag.no-coords {
             background: rgba(245, 158, 11, 0.15); color: rgb(180, 83, 9);
         }
+        .sch-page .sch-tag.skipped {
+            background: rgba(220, 38, 38, 0.12); color: rgb(153, 27, 27); font-weight: 600;
+        }
+        .sch-page .sch-card.is-skipped {
+            border-left: 3px solid rgb(220, 38, 38);
+        }
 
         .sch-page .sch-hint {
             padding: 8px 16px;
@@ -229,17 +235,25 @@
                     <div class="sch-col">
                         <div class="sch-col-header">
                             <div class="sch-col-title">Unassigned Jobs</div>
+                            @php
+                                $skippedCount = collect($jobs)->where('is_skipped', true)->count();
+                                $todayCount = count($jobs) - $skippedCount;
+                                $dateLabel = \Carbon\Carbon::parse($this->date)->format('D, M j');
+                            @endphp
                             <div class="sch-col-sub">
                                 @if (count($jobs) === 0)
-                                    No jobs scheduled for {{ \Carbon\Carbon::parse($this->date)->format('D, M j') }}
+                                    No jobs scheduled for {{ $dateLabel }}
                                 @else
-                                    {{ count($jobs) }} {{ \Illuminate\Support\Str::plural('job', count($jobs)) }} on {{ \Carbon\Carbon::parse($this->date)->format('D, M j') }}
+                                    {{ $todayCount }} {{ \Illuminate\Support\Str::plural('job', $todayCount) }} on {{ $dateLabel }}
+                                    @if ($skippedCount > 0)
+                                        · <span style="color: rgb(153, 27, 27); font-weight: 600;">{{ $skippedCount }} skipped</span>
+                                    @endif
                                 @endif
                             </div>
                         </div>
                         <div wire:ignore.self id="sch-unassigned" class="sch-list" data-list="unassigned">
                             @forelse ($jobs as $job)
-                                <div class="sch-card" data-job-id="{{ $job['id'] }}">
+                                <div class="sch-card {{ ($job['is_skipped'] ?? false) ? 'is-skipped' : '' }}" data-job-id="{{ $job['id'] }}">
                                     <span class="sch-card-handle">
                                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
                                     </span>
@@ -249,6 +263,9 @@
                                             {{ $job['customer_name'] }} · {{ $job['address'] }}
                                         </div>
                                         <div style="margin-top: 4px;">
+                                            @if ($job['is_skipped'] ?? false)
+                                                <span class="sch-tag skipped">Skipped — needs reschedule</span>
+                                            @endif
                                             @if ($job['service_name'])
                                                 <span class="sch-tag">{{ $job['service_name'] }}</span>
                                             @endif

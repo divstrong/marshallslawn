@@ -14,21 +14,15 @@ import {
   StatusBadge,
 } from '@/components/ui';
 import { AppColors, Spacing } from '@/constants/theme';
+import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
 import { api } from '@/lib/api';
 import { formatDateShort, formatMoney } from '@/lib/format';
 import type { Quote } from '@/lib/types';
 
-const FILTERS = [
-  { label: 'All', value: 'all' },
-  { label: 'Draft', value: 'draft' },
-  { label: 'Sent', value: 'sent' },
-  { label: 'Accepted', value: 'accepted' },
-  { label: 'Declined', value: 'declined' },
-];
-
 export default function QuotesScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -43,18 +37,29 @@ export default function QuotesScreen() {
     setRefreshing(false);
   }, [reload]);
 
+  const filters = [
+    { label: t('quotes.filterAll'), value: 'all' },
+    { label: t('quotes.filterDraft'), value: 'draft' },
+    { label: t('quotes.filterSent'), value: 'sent' },
+    { label: t('quotes.filterAccepted'), value: 'accepted' },
+    { label: t('quotes.filterDeclined'), value: 'declined' },
+  ];
+
   const quotes = data ?? [];
+  const countSubtitle = t(quotes.length === 1 ? 'quotes.countOne' : 'quotes.countMany', {
+    n: quotes.length,
+  });
 
   return (
     <View style={styles.screen}>
       <ScreenHeader
-        title="Quotes"
-        subtitle={data ? `${quotes.length} ${quotes.length === 1 ? 'quote' : 'quotes'}` : 'Your estimates'}
+        title={t('quotes.title')}
+        subtitle={data ? countSubtitle : t('quotes.subtitle')}
         right={<HeaderButton icon="add" onPress={() => router.push('/quote/new')} />}
       />
 
       <View style={styles.filters}>
-        <FilterTabs options={FILTERS} value={filter} onChange={setFilter} />
+        <FilterTabs options={filters} value={filter} onChange={setFilter} />
       </View>
 
       <FlatList
@@ -67,14 +72,14 @@ export default function QuotesScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           loading ? (
-            <LoadingState label="Loading quotes…" />
+            <LoadingState label={t('quotes.loading')} />
           ) : error ? (
             <ErrorState message={error} onRetry={reload} />
           ) : (
             <EmptyState
               icon="document-text-outline"
-              title="No quotes yet"
-              message="Tap + to create your first quote."
+              title={t('quotes.emptyTitle')}
+              message={t('quotes.emptyMsg')}
             />
           )
         }
@@ -84,6 +89,7 @@ export default function QuotesScreen() {
 }
 
 function QuoteCard({ quote, onPress }: { quote: Quote; onPress: () => void }) {
+  const { t } = useLanguage();
   return (
     <Card onPress={onPress} style={styles.card}>
       <View style={styles.topRow}>
@@ -107,8 +113,8 @@ function QuoteCard({ quote, onPress }: { quote: Quote; onPress: () => void }) {
         <Text style={styles.total}>{formatMoney(quote.total)}</Text>
         <Text style={styles.meta}>
           {quote.valid_until
-            ? `Valid until ${formatDateShort(quote.valid_until)}`
-            : `Created ${formatDateShort(quote.created_at)}`}
+            ? t('quotes.validUntil', { date: formatDateShort(quote.valid_until) })
+            : t('quotes.created', { date: formatDateShort(quote.created_at) })}
         </Text>
       </View>
     </Card>

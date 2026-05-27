@@ -4,12 +4,14 @@ import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react
 import { Icon } from '@/components/icon';
 import { Button, Card, ErrorState, LoadingState, ScreenHeader, SectionLabel } from '@/components/ui';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
+import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
 import { api } from '@/lib/api';
 import { formatDateLong, formatDuration, formatHoursMinutes, formatTime, minutesSince } from '@/lib/format';
 import type { TimeLog } from '@/lib/types';
 
 export default function TimeScreen() {
+  const { t, language } = useLanguage();
   const [now, setNow] = useState(() => new Date());
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -29,6 +31,7 @@ export default function TimeScreen() {
   }, [reload]);
 
   const activeShift = data?.active_shift ?? null;
+  const locale = language === 'es' ? 'es' : 'en-US';
 
   // Live total: completed shifts + the running shift's elapsed minutes.
   const minutesToday = useMemo(() => {
@@ -54,17 +57,17 @@ export default function TimeScreen() {
         }
         await reload();
       } catch (e) {
-        Alert.alert('Time clock', e instanceof Error ? e.message : 'Something went wrong.');
+        Alert.alert(t('time.title'), e instanceof Error ? e.message : t('common.somethingWrong'));
       } finally {
         setBusy(false);
       }
     },
-    [reload],
+    [reload, t],
   );
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader title="Time Clock" subtitle="Clock in and out for the day" />
+      <ScreenHeader title={t('time.title')} subtitle={t('time.subtitle')} />
 
       <ScrollView
         contentContainerStyle={styles.body}
@@ -73,14 +76,14 @@ export default function TimeScreen() {
         {/* Live clock */}
         <Card style={styles.clockCard}>
           <Text style={styles.clockTime}>
-            {now.toLocaleTimeString('en-US', {
+            {now.toLocaleTimeString(locale, {
               hour: 'numeric',
               minute: '2-digit',
               second: '2-digit',
             })}
           </Text>
           <Text style={styles.clockDate}>
-            {now.toLocaleDateString('en-US', {
+            {now.toLocaleDateString(locale, {
               weekday: 'long',
               month: 'long',
               day: 'numeric',
@@ -90,12 +93,12 @@ export default function TimeScreen() {
 
         {/* Hours today */}
         <View style={styles.hoursCard}>
-          <Text style={styles.hoursLabel}>Hours Today</Text>
+          <Text style={styles.hoursLabel}>{t('time.hoursToday')}</Text>
           <Text style={styles.hoursValue}>{formatHoursMinutes(minutesToday)}</Text>
         </View>
 
         {loading ? (
-          <LoadingState label="Loading time logs…" />
+          <LoadingState label={t('time.loading')} />
         ) : error ? (
           <ErrorState message={error} onRetry={reload} />
         ) : (
@@ -110,19 +113,19 @@ export default function TimeScreen() {
                   ]}
                 />
                 <Text style={styles.shiftStatusText}>
-                  {activeShift ? 'On the clock' : 'Not clocked in'}
+                  {activeShift ? t('time.onClock') : t('time.notClocked')}
                 </Text>
               </View>
               {activeShift ? (
                 <Text style={styles.shiftMeta}>
-                  Clocked in at {formatTime(activeShift.clock_in)}
+                  {t('time.clockedInAt', { time: formatTime(activeShift.clock_in) })}
                 </Text>
               ) : (
-                <Text style={styles.shiftMeta}>Start a shift when you begin your day.</Text>
+                <Text style={styles.shiftMeta}>{t('time.startHint')}</Text>
               )}
               {activeShift ? (
                 <Button
-                  label="Clock Out"
+                  label={t('time.clockOut')}
                   icon="stop-circle-outline"
                   variant="danger"
                   loading={busy}
@@ -130,7 +133,7 @@ export default function TimeScreen() {
                 />
               ) : (
                 <Button
-                  label="Clock In"
+                  label={t('time.clockIn')}
                   icon="play-circle-outline"
                   variant="success"
                   loading={busy}
@@ -142,7 +145,7 @@ export default function TimeScreen() {
             {/* Today's shifts */}
             {data && data.today.length > 0 ? (
               <View style={styles.section}>
-                <SectionLabel>Today</SectionLabel>
+                <SectionLabel>{t('time.todaySection')}</SectionLabel>
                 <Card style={styles.logList}>
                   {data.today.map((log, index) => (
                     <ShiftRow key={log.id} log={log} divider={index > 0} />
@@ -154,7 +157,7 @@ export default function TimeScreen() {
             {/* History */}
             {data && data.history.length > 0 ? (
               <View style={styles.section}>
-                <SectionLabel>Recent Shifts</SectionLabel>
+                <SectionLabel>{t('time.recentShifts')}</SectionLabel>
                 <Card style={styles.logList}>
                   {data.history.map((log, index) => (
                     <ShiftRow key={log.id} log={log} divider={index > 0} showDate />
@@ -178,6 +181,7 @@ function ShiftRow({
   divider: boolean;
   showDate?: boolean;
 }) {
+  const { t } = useLanguage();
   const minutes = log.is_active && log.clock_in ? minutesSince(log.clock_in) : log.duration_minutes;
 
   return (
@@ -185,10 +189,10 @@ function ShiftRow({
       <View style={styles.logInfo}>
         <Text style={styles.logPrimary}>
           {showDate ? `${formatDateLong(log.clock_in)} · ` : ''}
-          {formatTime(log.clock_in)} – {log.clock_out ? formatTime(log.clock_out) : 'Active'}
+          {formatTime(log.clock_in)} – {log.clock_out ? formatTime(log.clock_out) : t('time.active')}
         </Text>
         {log.break_minutes > 0 ? (
-          <Text style={styles.logSecondary}>{log.break_minutes} min break</Text>
+          <Text style={styles.logSecondary}>{t('time.break', { n: log.break_minutes })}</Text>
         ) : null}
       </View>
       <Text style={[styles.logDuration, log.is_active && { color: AppColors.success }]}>
@@ -222,6 +226,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textMuted,
     marginTop: Spacing.one,
+    textTransform: 'capitalize',
   },
   hoursCard: {
     flexDirection: 'row',

@@ -23,7 +23,19 @@ class Crew extends Model
         'foreman_id',
         'status',
         'division',
+        'categories',
         'notes',
+    ];
+
+    protected $casts = [
+        'categories' => 'array',
+    ];
+
+    public const CATEGORIES = [
+        'mowing' => 'Mowing',
+        'spray_techs' => 'Spray Techs',
+        'projects' => 'Projects',
+        'managers' => 'Managers',
     ];
 
     public function foreman(): BelongsTo

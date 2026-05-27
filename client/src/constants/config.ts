@@ -31,4 +31,7 @@ export const TOKEN_STORAGE_KEY = 'marshalls.auth.token';
 /** Storage key for the registered Expo push token. */
 export const PUSH_TOKEN_STORAGE_KEY = 'marshalls.push.token';
 
+/** Storage key for the selected app language. */
+export const LANGUAGE_STORAGE_KEY = 'marshalls.language';
+
 export const APP_VERSION = '1.0.0-beta';

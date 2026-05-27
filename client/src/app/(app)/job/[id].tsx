@@ -24,6 +24,7 @@ import {
 } from '@/components/ui';
 import { AppColors, formatStatus, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
+import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
 import { api } from '@/lib/api';
 import { formatDateLong, formatDuration, formatTime } from '@/lib/format';
@@ -48,6 +49,7 @@ export default function JobDetailScreen() {
   const jobId = Number(id);
   const router = useRouter();
   const { employee } = useAuth();
+  const { t } = useLanguage();
 
   const { data: job, loading, error, reload } = useApiResource(() => api.job(jobId), [jobId]);
 
@@ -79,12 +81,12 @@ export default function JobDetailScreen() {
         }
         await reload();
       } catch (e) {
-        Alert.alert('Job', e instanceof Error ? e.message : 'Something went wrong.');
+        Alert.alert(t('job.title'), e instanceof Error ? e.message : t('common.somethingWrong'));
       } finally {
         setBusy(false);
       }
     },
-    [jobId, reload],
+    [jobId, reload, t],
   );
 
   const submitNote = useCallback(async () => {
@@ -96,24 +98,24 @@ export default function JobDetailScreen() {
       setNote('');
       await reload();
     } catch (e) {
-      Alert.alert('Note', e instanceof Error ? e.message : 'Could not add the note.');
+      Alert.alert(t('job.notes'), e instanceof Error ? e.message : t('common.somethingWrong'));
     } finally {
       setBusy(false);
     }
-  }, [jobId, note, reload]);
+  }, [jobId, note, reload, t]);
 
   return (
     <View style={styles.screen}>
       <ScreenHeader
-        title={job?.title ?? 'Job'}
+        title={job?.title ?? t('job.title')}
         subtitle={job?.customer?.name ?? undefined}
         onBack={() => router.back()}
       />
 
       {loading ? (
-        <LoadingState label="Loading job…" />
+        <LoadingState label={t('job.loading')} />
       ) : error || !job ? (
-        <ErrorState message={error ?? 'Job not found.'} onRetry={reload} />
+        <ErrorState message={error ?? t('job.notFound')} onRetry={reload} />
       ) : (
         <ScrollView
           contentContainerStyle={styles.body}
@@ -126,9 +128,9 @@ export default function JobDetailScreen() {
             isForeman={employee?.role === 'foreman'}
             onStart={() => runAction('start')}
             onComplete={() =>
-              Alert.alert('Complete job', 'Mark this job as complete?', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Complete', onPress: () => runAction('complete') },
+              Alert.alert(t('job.completeTitle'), t('job.completeMsg'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('job.complete'), onPress: () => runAction('complete') },
               ])
             }
           />
@@ -137,7 +139,7 @@ export default function JobDetailScreen() {
 
           {job.customer ? (
             <View style={styles.section}>
-              <SectionLabel>Customer</SectionLabel>
+              <SectionLabel>{t('job.customer')}</SectionLabel>
               <Card style={styles.gap}>
                 <Text style={styles.cardHeading}>{job.customer.name}</Text>
                 {job.customer.phone ? (
@@ -155,9 +157,9 @@ export default function JobDetailScreen() {
 
           {job.property ? (
             <View style={styles.section}>
-              <SectionLabel>Property</SectionLabel>
+              <SectionLabel>{t('job.property')}</SectionLabel>
               <Card style={styles.gap}>
-                <Text style={styles.cardHeading}>{job.property.address ?? 'Property'}</Text>
+                <Text style={styles.cardHeading}>{job.property.address ?? t('job.property')}</Text>
                 {job.property.city ? (
                   <Text style={styles.cardMuted}>
                     {[job.property.city, job.property.state].filter(Boolean).join(', ')}{' '}
@@ -169,7 +171,7 @@ export default function JobDetailScreen() {
                   onPress={() => openMaps(job.property!.full_address)}
                 >
                   <Icon name="navigate-outline" size={16} color={AppColors.brand} />
-                  <Text style={styles.linkText}>Navigate</Text>
+                  <Text style={styles.linkText}>{t('common.navigate')}</Text>
                 </Pressable>
               </Card>
             </View>
@@ -177,7 +179,7 @@ export default function JobDetailScreen() {
 
           {job.description ? (
             <View style={styles.section}>
-              <SectionLabel>Description</SectionLabel>
+              <SectionLabel>{t('job.description')}</SectionLabel>
               <Card>
                 <Text style={styles.bodyText}>{job.description}</Text>
               </Card>
@@ -186,16 +188,16 @@ export default function JobDetailScreen() {
 
           {/* Photos */}
           <View style={styles.section}>
-            <SectionLabel>Photos</SectionLabel>
+            <SectionLabel>{t('job.photos')}</SectionLabel>
             <JobPhotos jobId={jobId} media={job.media} onChanged={reload} />
           </View>
 
           {/* Notes */}
           <View style={styles.section}>
-            <SectionLabel>Notes</SectionLabel>
+            <SectionLabel>{t('job.notes')}</SectionLabel>
             <Card style={styles.gap}>
               {job.messages.length === 0 ? (
-                <Text style={styles.cardMuted}>No notes on this job yet.</Text>
+                <Text style={styles.cardMuted}>{t('job.noNotes')}</Text>
               ) : (
                 job.messages.map((message, index) => (
                   <View
@@ -204,20 +206,20 @@ export default function JobDetailScreen() {
                   >
                     <Text style={styles.bodyText}>{message.body}</Text>
                     <Text style={styles.noteMeta}>
-                      {message.sender ?? 'Note'} · {message.created_human ?? ''}
+                      {message.sender ?? t('job.notes')} · {message.created_human ?? ''}
                     </Text>
                   </View>
                 ))
               )}
               <TextField
-                placeholder="Add a note…"
+                placeholder={t('job.addNotePlaceholder')}
                 value={note}
                 onChangeText={setNote}
                 multiline
                 style={styles.noteInput}
               />
               <Button
-                label="Add note"
+                label={t('job.addNote')}
                 icon="chatbubble-outline"
                 variant="secondary"
                 onPress={submitNote}
@@ -245,35 +247,38 @@ interface JobTimerCardProps {
 }
 
 function JobTimerCard({ job, now, busy, isForeman, onStart, onComplete }: JobTimerCardProps) {
+  const { t } = useLanguage();
   const completed = job.status === 'completed';
   const inProgress = job.status === 'in_progress';
 
   return (
     <Card style={styles.timerCard}>
       <View style={styles.timerHeader}>
-        <Text style={styles.timerLabel}>Job Status</Text>
+        <Text style={styles.timerLabel}>{t('job.statusLabel')}</Text>
         <StatusBadge status={job.status} />
       </View>
 
       {inProgress && job.started_at ? (
         <>
           <Text style={styles.timerValue}>{stopwatch(job.started_at, now)}</Text>
-          <Text style={styles.timerMeta}>Started at {formatTime(job.started_at)}</Text>
+          <Text style={styles.timerMeta}>
+            {t('job.startedAt', { time: formatTime(job.started_at) })}
+          </Text>
         </>
       ) : completed ? (
         <View style={styles.timerSummary}>
-          <TimePair label="Started" value={formatTime(job.started_at)} />
-          <TimePair label="Finished" value={formatTime(job.finished_at)} />
+          <TimePair label={t('job.startedField')} value={formatTime(job.started_at)} />
+          <TimePair label={t('job.finishedField')} value={formatTime(job.finished_at)} />
         </View>
       ) : (
-        <Text style={styles.timerMeta}>This job has not been started yet.</Text>
+        <Text style={styles.timerMeta}>{t('job.notStarted')}</Text>
       )}
 
       {isForeman ? (
         <View style={styles.timerActions}>
           {!inProgress && !completed ? (
             <Button
-              label="Start Job"
+              label={t('job.startJob')}
               icon="play"
               variant="success"
               loading={busy}
@@ -282,7 +287,7 @@ function JobTimerCard({ job, now, busy, isForeman, onStart, onComplete }: JobTim
           ) : null}
           {inProgress ? (
             <Button
-              label="Complete Job"
+              label={t('job.completeJob')}
               icon="checkmark-done"
               variant="primary"
               loading={busy}
@@ -309,12 +314,17 @@ function TimePair({ label, value }: { label: string; value: string }) {
 /* -------------------------------------------------------------------------- */
 
 function DetailGrid({ job }: { job: Job }) {
+  const { t } = useLanguage();
+  const priority = job.priority || 'normal';
   const cells = [
-    { label: 'Priority', value: formatStatus(job.priority || 'normal') },
-    { label: 'Scheduled', value: formatDateLong(job.scheduled_date) },
-    { label: 'Crew', value: job.crew?.name ?? '—' },
     {
-      label: 'Duration',
+      label: t('job.priority'),
+      value: t(`priority.${priority}`, undefined, formatStatus(priority)),
+    },
+    { label: t('job.scheduled'), value: formatDateLong(job.scheduled_date) },
+    { label: t('job.crew'), value: job.crew?.name ?? '—' },
+    {
+      label: t('job.duration'),
       value:
         job.started_at && job.finished_at
           ? formatDuration(

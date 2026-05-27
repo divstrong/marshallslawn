@@ -3,10 +3,14 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\EstimateResource\Pages;
+use App\Filament\Resources\JobResource;
 use App\Models\Estimate;
 use App\Models\EstimateLineItem;
+use App\Models\Job;
+use App\Models\JobService;
 use Filament\Forms;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\DB;
 use Filament\Schemas\Schema;
 use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Resources\Resource;
@@ -90,13 +94,65 @@ class EstimateResource extends Resource
                 Actions\Action::make('view_public')
                     ->label('View')
                     ->icon('heroicon-o-eye')
+                    ->color('gray')
                     ->url(fn (Estimate $record) => $record->share_token ? $record->getPublicUrl() : null)
                     ->openUrlInNewTab()
                     ->visible(fn (Estimate $record) => (bool) $record->share_token),
-                Actions\EditAction::make(),
+                Actions\EditAction::make()
+                    ->color('gray'),
+                Actions\Action::make('convert')
+                    ->label('Convert')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalIcon('heroicon-o-exclamation-triangle')
+                    ->modalIconColor('primary')
+                    ->modalSubmitAction(fn ($action) => $action->color('primary'))
+                    ->modalHeading('Convert estimate to job?')
+                    ->modalDescription(fn (Estimate $record) => "This will create a new Job using the customer, property, and services from estimate {$record->estimate_number}. The job will be unscheduled (date = TBD) so you can schedule it later.")
+                    ->modalSubmitActionLabel('Yes, create job')
+                    ->action(function (Estimate $record) {
+                        $job = DB::transaction(function () use ($record) {
+                            $job = Job::create([
+                                'customer_id' => $record->customer_id,
+                                'property_id' => $record->property_id,
+                                'estimate_id' => $record->id,
+                                'status' => 'pending',
+                                'priority' => 'normal',
+                                'scheduled_date' => null, // TBD by default
+                                'notes' => $record->notes,
+                            ]);
+
+                            $sortOrder = 1;
+                            foreach ($record->lineItems()->orderBy('sort_order')->get() as $line) {
+                                // Skip discount lines — they aren't service work.
+                                if ((float) $line->total < 0) {
+                                    continue;
+                                }
+
+                                JobService::create([
+                                    'job_id' => $job->id,
+                                    'service_id' => $line->service_id,
+                                    'description' => $line->description,
+                                    'sort_order' => $sortOrder++,
+                                ]);
+                            }
+
+                            return $job;
+                        });
+
+                        Notification::make()
+                            ->title('Job created from estimate')
+                            ->body("Job #{$job->id} is unscheduled — set a date when you're ready.")
+                            ->success()
+                            ->send();
+
+                        return redirect(JobResource::getUrl('edit', ['record' => $job]));
+                    }),
                 Actions\Action::make('copy')
                     ->label('Copy')
                     ->icon('heroicon-o-document-duplicate')
+                    ->color('gray')
                     ->requiresConfirmation()
                     ->modalHeading('Duplicate Estimate')
                     ->modalDescription('This will create a new draft estimate with the same customer, property, line items, and notes.')

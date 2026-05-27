@@ -249,8 +249,16 @@ class Scheduling extends Page
     #[Computed]
     public function unassignedJobs(): array
     {
-        $assignedJobIds = RouteStop::query()
-            ->whereHas('route', fn ($q) => $q->whereDate('route_date', $this->date))
+        // Jobs assigned to a route on the currently selected day — drop these from the pile.
+        $todayRouteJobIds = RouteStop::query()
+            ->whereHas('route', fn ($r) => $r->whereDate('route_date', $this->date))
+            ->whereNotNull('job_id')
+            ->pluck('job_id')
+            ->all();
+
+        // Jobs assigned to ANY route (any day) — skipped jobs leave the pile as soon as
+        // they're put back on a route somewhere, even a future day.
+        $anyRouteJobIds = RouteStop::query()
             ->whereNotNull('job_id')
             ->pluck('job_id')
             ->all();
@@ -261,8 +269,20 @@ class Scheduling extends Page
                 'property:id,address,city,state,latitude,longitude',
                 'recurringTemplate.service:id,name',
             ])
-            ->whereDate('scheduled_date', $this->date)
-            ->whereNotIn('id', $assignedJobIds)
+            ->where(function ($q) use ($todayRouteJobIds, $anyRouteJobIds) {
+                // Jobs scheduled for the selected day that aren't already on today's route…
+                $q->where(function ($qq) use ($todayRouteJobIds) {
+                    $qq->whereDate('scheduled_date', $this->date)
+                       ->whereNotIn('id', $todayRouteJobIds);
+                })
+                // …plus any skipped job waiting to be re-assigned.
+                ->orWhere(function ($qq) use ($anyRouteJobIds) {
+                    $qq->where('status', 'skipped')
+                       ->whereNotIn('id', $anyRouteJobIds);
+                });
+            })
+            // Skipped jobs surface first so they're easy to grab and re-assign.
+            ->orderByRaw("CASE WHEN status = 'skipped' THEN 0 ELSE 1 END")
             ->orderBy('id')
             ->get()
             ->map(fn ($j) => $this->jobToArray($j))
@@ -305,6 +325,19 @@ class Scheduling extends Page
                 'sort_order' => $position,
                 'status' => 'pending',
             ]);
+
+            // If this job was skipped (or has no scheduled date), assigning it to a route
+            // implicitly re-schedules it for that route's date.
+            $updates = [];
+            if ($job->status === 'skipped') {
+                $updates['status'] = 'scheduled';
+            }
+            if ($job->scheduled_date?->toDateString() !== $route->route_date->toDateString()) {
+                $updates['scheduled_date'] = $route->route_date;
+            }
+            if (! empty($updates)) {
+                $job->update($updates);
+            }
         });
 
         $this->clearComputed();
@@ -430,6 +463,8 @@ class Scheduling extends Page
             'id' => (int) $job->id,
             'title' => $job->title,
             'priority' => $job->priority,
+            'status' => $job->status,
+            'is_skipped' => $job->status === 'skipped',
             'customer_name' => $customerName,
             'address' => $job->property?->address ?? '—',
             'city' => $job->property?->city,

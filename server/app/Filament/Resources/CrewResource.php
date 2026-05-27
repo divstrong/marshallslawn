@@ -35,6 +35,7 @@ class CrewResource extends Resource
                 ->tabs([
                     Tab::make('General')
                         ->icon('heroicon-o-information-circle')
+                        ->columns(2)
                         ->schema([
                             Forms\Components\TextInput::make('code')
                                 ->label('Crew Code')
@@ -58,6 +59,13 @@ class CrewResource extends Resource
                                 ->label('Legacy ID')
                                 ->disabled()
                                 ->maxLength(255),
+                            Forms\Components\CheckboxList::make('categories')
+                                ->label('Crew categories')
+                                ->helperText('Choose one or more types this crew handles.')
+                                ->options(Crew::CATEGORIES)
+                                ->columns(2)
+                                ->bulkToggleable()
+                                ->columnSpanFull(),
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
                         ]),
@@ -86,6 +94,11 @@ class CrewResource extends Resource
                     ->label('Foreman'),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
+                Tables\Columns\TextColumn::make('categories')
+                    ->label('Categories')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => Crew::CATEGORIES[$state] ?? $state)
+                    ->color('gray'),
                 Tables\Columns\TextColumn::make('division')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('members_count')
@@ -96,7 +109,18 @@ class CrewResource extends Resource
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([])
+            ->filters([
+                Tables\Filters\SelectFilter::make('categories')
+                    ->label('Category')
+                    ->options(Crew::CATEGORIES)
+                    ->query(function ($query, array $data) {
+                        $value = $data['value'] ?? null;
+                        if (! $value) {
+                            return $query;
+                        }
+                        return $query->whereJsonContains('categories', $value);
+                    }),
+            ])
             ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),

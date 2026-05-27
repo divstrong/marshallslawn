@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 
 import { AuthProvider, useAuth } from '@/context/auth';
 import { ChatProvider } from '@/context/chat';
+import { LanguageProvider } from '@/context/language';
 import { LocationProvider } from '@/context/location';
 import '@/lib/location-task'; // registers the background location task
 
@@ -40,13 +41,15 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <LocationProvider>
-        <ChatProvider>
-          <StatusBar style="light" />
-          <RootNavigator />
-        </ChatProvider>
-      </LocationProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <LocationProvider>
+          <ChatProvider>
+            <StatusBar style="light" />
+            <RootNavigator />
+          </ChatProvider>
+        </LocationProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
