@@ -722,10 +722,21 @@ class DispatchBoard extends Component
         }
 
         if ($stop->job_id) {
+            $job = \App\Models\Job::find($stop->job_id);
+            $originalDate = $job?->scheduled_date?->toDateString();
+
+            // Mass update bypasses model events (so the observer won't double-notify);
+            // we alert the crew's foreman + spray techs explicitly with the pre-skip
+            // date, since it's cleared here (issue #14).
             \App\Models\Job::where('id', $stop->job_id)->update([
                 'status' => 'skipped',
                 'scheduled_date' => null,
             ]);
+
+            if ($job) {
+                $job->status = 'skipped';
+                app(\App\Services\JobNotifier::class)->notifySkippedOrCancelled($job, 'skipped', $originalDate);
+            }
         }
 
         $stop->delete();
