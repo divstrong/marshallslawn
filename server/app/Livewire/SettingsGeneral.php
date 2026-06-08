@@ -15,6 +15,7 @@ class SettingsGeneral extends Component
     public string $companyState = '';
     public string $companyZip = '';
     public string $taxRate = '0';
+    public bool $dispatchServiceIcons = false;
 
     public function mount(): void
     {
@@ -28,6 +29,7 @@ class SettingsGeneral extends Component
         $this->companyState = $settings['company_state'] ?? '';
         $this->companyZip = $settings['company_zip'] ?? '';
         $this->taxRate = $settings['tax_rate'] ?? '0';
+        $this->dispatchServiceIcons = filter_var($settings['dispatch_service_icons'] ?? false, FILTER_VALIDATE_BOOLEAN);
     }
 
     public function save(): void
@@ -41,6 +43,7 @@ class SettingsGeneral extends Component
             'company_state' => $this->companyState,
             'company_zip' => $this->companyZip,
             'tax_rate' => $this->taxRate,
+            'dispatch_service_icons' => $this->dispatchServiceIcons ? '1' : '0',
         ];
 
         foreach ($fields as $key => $value) {

@@ -10,6 +10,8 @@
     $selected = $this->selectedStop;
     $selectedJob = $this->selectedUnroutedJob;
     $selectedForeman = $this->selectedForeman;
+    $serviceIcons = $this->serviceIconsEnabled;
+    $serviceGroups = \App\Models\Service::GROUPS;
 @endphp
 
 <div>
@@ -271,6 +273,7 @@
             foremen: @js($foremen),
             crewColors: @js($crewColors),
             apiKey: @js($mapsApiKey ?? ''),
+            serviceIcons: @js($serviceIcons),
         })"
         x-init="init()"
     >
@@ -354,6 +357,23 @@
                         <option value="completed">Completed</option>
                         <option value="skipped">Skipped</option>
                     </select>
+                </div>
+
+                {{-- Service-group filters (issue #15): show only jobs offering these services. --}}
+                <div class="d-row-wrap" style="margin-top: 8px;">
+                    <span class="d-label" style="align-self:center;">Services</span>
+                    @foreach (['spraying', 'mowing', 'mulching'] as $group)
+                        @php $isGroupActive = in_array($group, $this->serviceGroups, true); @endphp
+                        <button
+                            type="button"
+                            wire:click="toggleServiceGroup('{{ $group }}')"
+                            class="d-chip {{ $isGroupActive ? 'is-active' : '' }}"
+                            @if ($isGroupActive) style="background: var(--d-accent); color: #fff; border-color: var(--d-accent);" @endif
+                        >{{ $serviceGroups[$group] }}</button>
+                    @endforeach
+                    @if (! empty($this->serviceGroups))
+                        <button type="button" wire:click="$set('serviceGroups', [])" class="d-btn" style="height:28px;padding:0 10px;font-size:12px;">Clear</button>
+                    @endif
                 </div>
             </div>
 
@@ -573,9 +593,12 @@
                                     class="d-list-item {{ $selected && $selected['id'] === $stop['id'] ? 'is-active' : '' }}"
                                 >
                                     <span class="d-stop-num" style="background-color: {{ $stop['color'] }}">{{ $stop['sort_order'] }}</span>
+                                    @if ($serviceIcons && ! empty($stop['icon_url']))
+                                        <img src="{{ $stop['icon_url'] }}" alt="" style="width:22px;height:22px;border-radius:4px;object-fit:contain;flex-shrink:0;">
+                                    @endif
                                     <div class="d-list-main">
                                         <div class="d-truncate">{{ $stop['customer_name'] }}</div>
-                                        <div class="d-truncate d-muted" style="font-size: 12px;">{{ $stop['address'] }}</div>
+                                        <div class="d-truncate d-muted" style="font-size: 12px;">{{ $stop['address'] }}{{ $stop['service_name'] ? ' · ' . $stop['service_name'] : '' }}</div>
                                     </div>
                                     @if ($stop['status'] === 'completed')
                                         <span class="d-status-dot completed">✓</span>
@@ -595,6 +618,9 @@
                                     class="d-list-item {{ $selectedJob && $selectedJob['id'] === $job['id'] ? 'is-active' : '' }}"
                                 >
                                     <span class="d-stop-num" style="background-color: {{ $job['color'] }}">?</span>
+                                    @if ($serviceIcons && ! empty($job['icon_url']))
+                                        <img src="{{ $job['icon_url'] }}" alt="" style="width:22px;height:22px;border-radius:4px;object-fit:contain;flex-shrink:0;">
+                                    @endif
                                     <div class="d-list-main">
                                         <div class="d-truncate">{{ $job['customer_name'] }}</div>
                                         <div class="d-truncate d-muted" style="font-size: 12px;">{{ $job['address'] }} · unrouted</div>
@@ -731,6 +757,7 @@
                         markers: [],
                         bounds: null,
                         crewColors: initial.crewColors,
+                        serviceIcons: !!initial.serviceIcons,
 
                         init() {
                             if (!initial.apiKey) return;
@@ -740,8 +767,9 @@
                             });
 
                             window.addEventListener('dispatch:stops-updated', (e) => {
-                                const { stops = [], unroutedJobs = [], foremen = [], crewColors } = e.detail || {};
+                                const { stops = [], unroutedJobs = [], foremen = [], crewColors, serviceIcons } = e.detail || {};
                                 if (crewColors) this.crewColors = crewColors;
+                                if (typeof serviceIcons !== 'undefined') this.serviceIcons = !!serviceIcons;
                                 this.refreshMarkers([...stops, ...unroutedJobs], foremen);
                             });
                         },
@@ -795,12 +823,25 @@
                                 const isJob = p.kind === 'job';
                                 const opacity = p.status === 'completed' ? 0.5 : (p.status === 'skipped' ? 0.4 : 1);
                                 const labelText = isJob ? '?' : String(p.sort_order ?? '');
-                                const marker = new google.maps.Marker({
+
+                                // When "Service Icons" is enabled and this job's service has an
+                                // uploaded icon, drop the service icon as the map pin (issue #8/#15).
+                                const markerOpts = {
                                     position: { lat: p.lat, lng: p.lng },
                                     map: this.map,
                                     title: `${p.customer_name} — ${p.address}`,
-                                    label: { text: labelText, color: '#fff', fontSize: '11px', fontWeight: '600' },
-                                    icon: {
+                                };
+
+                                if (this.serviceIcons && p.icon_url) {
+                                    markerOpts.icon = {
+                                        url: p.icon_url,
+                                        scaledSize: new google.maps.Size(34, 34),
+                                        anchor: new google.maps.Point(17, 34),
+                                    };
+                                    markerOpts.opacity = opacity;
+                                } else {
+                                    markerOpts.label = { text: labelText, color: '#fff', fontSize: '11px', fontWeight: '600' };
+                                    markerOpts.icon = {
                                         path: 'M12 2C7.58 2 4 5.58 4 10c0 5.25 7 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8z',
                                         fillColor: p.color,
                                         fillOpacity: opacity,
@@ -809,8 +850,10 @@
                                         scale: isJob ? 1.4 : 1.7,
                                         anchor: new google.maps.Point(12, 23),
                                         labelOrigin: new google.maps.Point(12, 10),
-                                    },
-                                });
+                                    };
+                                }
+
+                                const marker = new google.maps.Marker(markerOpts);
                                 marker.addListener('click', () => {
                                     if (isJob) this.$wire.selectJob(p.id);
                                     else this.$wire.selectStop(p.id);
