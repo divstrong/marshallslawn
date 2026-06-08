@@ -1,3 +1,4 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect } from 'expo-router';
@@ -7,6 +8,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -128,14 +130,35 @@ export default function ChatScreen() {
     [sendAttachment, t],
   );
 
+  const pickFile = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) {
+        return;
+      }
+      const asset = result.assets[0];
+      await sendAttachment({
+        uri: asset.uri,
+        name: asset.name ?? `file-${Date.now()}`,
+        type: asset.mimeType ?? 'application/octet-stream',
+      });
+    } catch (e) {
+      Alert.alert(t('chat.title'), e instanceof Error ? e.message : t('common.somethingWrong'));
+    }
+  }, [sendAttachment, t]);
+
   const openAttachMenu = useCallback(() => {
     Alert.alert(t('chat.addTitle'), t('chat.addMsg'), [
       { text: t('common.takePhoto'), onPress: () => pick('camera-photo') },
       { text: t('common.recordVideo'), onPress: () => pick('camera-video') },
       { text: t('common.chooseLibrary'), onPress: () => pick('library') },
+      { text: t('common.chooseFile'), onPress: () => pickFile() },
       { text: t('common.cancel'), style: 'cancel' },
     ]);
-  }, [pick, t]);
+  }, [pick, pickFile, t]);
 
   const canSend = text.trim().length > 0 && !sending;
 
@@ -214,9 +237,22 @@ function ChatBubble({
   return (
     <View style={[styles.row, mine ? styles.rowMine : styles.rowTheirs]}>
       <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-        {attachment ? (
+        {attachment && attachment.type === 'file' ? (
           <Pressable
-            onPress={() => onOpenMedia({ type: attachment.type, url: attachment.url })}
+            onPress={() => Linking.openURL(attachment.url)}
+            style={[styles.fileRow, message.body ? styles.attachmentSpaced : null]}
+          >
+            <Icon name="document" size={22} color={mine ? '#ffffff' : AppColors.brand} />
+            <Text
+              numberOfLines={1}
+              style={[styles.fileName, mine ? styles.textMine : styles.textTheirs]}
+            >
+              {attachment.name ?? 'File'}
+            </Text>
+          </Pressable>
+        ) : attachment ? (
+          <Pressable
+            onPress={() => onOpenMedia({ type: attachment.type as MediaSource['type'], url: attachment.url })}
             style={[styles.attachmentWrap, message.body ? styles.attachmentSpaced : null]}
           >
             {attachment.type === 'photo' ? (
@@ -314,6 +350,18 @@ const styles = StyleSheet.create({
   },
   attachmentSpaced: {
     marginBottom: Spacing.two,
+  },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    maxWidth: 224,
+  },
+  fileName: {
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   attachmentMedia: {
     width: 224,

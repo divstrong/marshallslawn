@@ -689,6 +689,12 @@
                             @if ($msg['attachment_url'])
                                 @if ($msg['attachment_type'] === 'video')
                                     <video src="{{ $msg['attachment_url'] }}" controls style="max-width:240px;border-radius:8px;display:block;margin-bottom:6px;"></video>
+                                @elseif ($msg['attachment_type'] === 'file')
+                                    <a href="{{ $msg['attachment_url'] }}" target="_blank" rel="noopener" download
+                                       style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;border-radius:8px;background:rgba(15,23,42,0.06);text-decoration:none;color:inherit;max-width:240px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                                        <span class="d-truncate" style="font-size:12px;font-weight:600;">{{ $msg['attachment_name'] ?: 'Download file' }}</span>
+                                    </a>
                                 @else
                                     <a href="{{ $msg['attachment_url'] }}" target="_blank" rel="noopener">
                                         <img src="{{ $msg['attachment_url'] }}" alt="attachment" style="max-width:240px;border-radius:8px;display:block;margin-bottom:6px;">
@@ -708,9 +714,9 @@
                 <div class="d-chat-footer">
                     <div wire:loading wire:target="chatAttachment" class="d-muted" style="font-size:11px;margin-bottom:6px;">Uploading attachment…</div>
                     <form wire:submit="sendChat" style="display:flex;gap:6px;align-items:center;">
-                        <label title="Attach photo or video" style="height:36px;width:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--d-border);border-radius:8px;cursor:pointer;color:var(--d-muted);">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 15l-5-5L5 21"/></svg>
-                            <input type="file" wire:model="chatAttachment" accept="image/*,video/*" style="display:none;">
+                        <label title="Attach a photo, video, or file" style="height:36px;width:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--d-border);border-radius:8px;cursor:pointer;color:var(--d-muted);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                            <input type="file" wire:model="chatAttachment" style="display:none;">
                         </label>
                         <input
                             type="text"

@@ -161,7 +161,7 @@ export interface QuoteLineItemDraft {
 }
 
 export interface ChatAttachment {
-  type: 'photo' | 'video';
+  type: 'photo' | 'video' | 'file';
   url: string;
   name: string | null;
 }

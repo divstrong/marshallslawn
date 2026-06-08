@@ -525,6 +525,7 @@ class DispatchBoard extends Component
                 'body' => $message->body,
                 'attachment_type' => $message->attachment_type,
                 'attachment_url' => $message->attachmentUrl(),
+                'attachment_name' => $message->attachment_name,
                 'time' => $message->created_at?->format('M j, g:i A'),
             ])
             ->all();
@@ -584,13 +585,7 @@ class DispatchBoard extends Component
         $mime = (string) $file->getMimeType();
         $type = str_starts_with($mime, 'video/')
             ? 'video'
-            : (str_starts_with($mime, 'image/') ? 'photo' : null);
-
-        if ($type === null) {
-            $this->chatAttachment = null;
-
-            return;
-        }
+            : (str_starts_with($mime, 'image/') ? 'photo' : 'file');
 
         $path = $file->store('chat-media', 'public');
 
