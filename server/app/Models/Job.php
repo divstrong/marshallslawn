@@ -32,6 +32,7 @@ class Job extends Model
         'title',
         'description',
         'status',
+        'type',
         'waiting_list',
         'priority',
         'scheduled_date',

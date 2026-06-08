@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\JobResource\Pages;
 use App\Models\Job;
 use Filament\Forms;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Get;
@@ -74,6 +75,81 @@ class JobResource extends Resource
                                     'urgent' => 'Urgent',
                                 ])
                                 ->required(),
+
+                            // --- Type & recurrence (create only) — issue #13 ---
+                            Forms\Components\Radio::make('job_type')
+                                ->label('Type')
+                                ->options([
+                                    'one_time' => 'One Time',
+                                    'recurring' => 'Recurring',
+                                ])
+                                ->default('one_time')
+                                ->inline()
+                                ->inlineLabel(false)
+                                ->live()
+                                ->visibleOn('create')
+                                ->columnSpanFull(),
+                            Forms\Components\Select::make('services')
+                                ->label('Services')
+                                ->multiple()
+                                ->options(fn () => \App\Models\Service::query()
+                                    ->where('is_active', true)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                    ->all())
+                                ->searchable()
+                                ->preload()
+                                ->visibleOn('create')
+                                ->required(fn (Get $get): bool => $get('job_type') === 'recurring')
+                                ->helperText('Applied to the job(s). Required for a recurring series.')
+                                ->columnSpanFull(),
+                            Fieldset::make('Recurrence')
+                                ->visible(fn (Get $get): bool => $get('job_type') === 'recurring')
+                                ->visibleOn('create')
+                                ->columns(2)
+                                ->schema([
+                                    Forms\Components\Select::make('recur_frequency')
+                                        ->label('Frequency')
+                                        ->options([
+                                            'weekly' => 'Weekly',
+                                            'monthly' => 'Monthly',
+                                        ])
+                                        ->default('weekly')
+                                        ->live()
+                                        ->required(fn (Get $get): bool => $get('job_type') === 'recurring'),
+                                    Forms\Components\Select::make('recur_day_of_week')
+                                        ->label('Preferred day of week')
+                                        ->options([
+                                            0 => 'Sunday',
+                                            1 => 'Monday',
+                                            2 => 'Tuesday',
+                                            3 => 'Wednesday',
+                                            4 => 'Thursday',
+                                            5 => 'Friday',
+                                            6 => 'Saturday',
+                                        ])
+                                        ->visible(fn (Get $get): bool => $get('recur_frequency') === 'weekly')
+                                        ->placeholder('Any day'),
+                                    Forms\Components\Toggle::make('recur_indefinite')
+                                        ->label('Indefinite (no fixed count)')
+                                        ->live()
+                                        ->default(false),
+                                    Forms\Components\TextInput::make('recur_occurrences')
+                                        ->label('Number of occurrences')
+                                        ->numeric()
+                                        ->minValue(1)
+                                        ->maxValue(260)
+                                        ->visible(fn (Get $get): bool => ! $get('recur_indefinite'))
+                                        ->required(fn (Get $get): bool => $get('job_type') === 'recurring' && ! $get('recur_indefinite')),
+                                    Forms\Components\DatePicker::make('recur_start')
+                                        ->label('Start date')
+                                        ->default(now())
+                                        ->required(fn (Get $get): bool => $get('job_type') === 'recurring'),
+                                    Forms\Components\DatePicker::make('recur_end')
+                                        ->label('Stop date (optional)')
+                                        ->helperText('Caps the series even if the count/indefinite setting would continue.'),
+                                ]),
+
                             Forms\Components\Radio::make('is_scheduled')
                                 ->label('Scheduled')
                                 ->options([
@@ -136,6 +212,12 @@ class JobResource extends Resource
                     ->separator(',')
                     ->limitList(3)
                     ->expandableLimitedList(),
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Type')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => $state === 'recurring' ? 'Recurring' : 'One Time')
+                    ->color(fn (?string $state) => $state === 'recurring' ? 'info' : 'gray')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
                 Tables\Columns\TextColumn::make('priority')
