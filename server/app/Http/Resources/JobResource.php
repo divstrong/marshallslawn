@@ -38,6 +38,11 @@ class JobResource extends JsonResource
             'property' => $this->whenLoaded('property', fn () => $this->property
                 ? new PropertyResource($this->property)
                 : null),
+            'services' => $this->whenLoaded('jobServices', fn () => $this->jobServices->map(fn ($jobService) => [
+                'id' => $jobService->id,
+                'name' => $jobService->service?->name ?? 'Service',
+                'description' => $jobService->description ?: $jobService->service?->description,
+            ])->values()),
             'messages' => MessageResource::collection($this->whenLoaded('messages')),
             'media' => JobMediaResource::collection($this->whenLoaded('media')),
         ];

@@ -186,6 +186,31 @@ export default function JobDetailScreen() {
             </View>
           ) : null}
 
+          {/* Services */}
+          <View style={styles.section}>
+            <SectionLabel>{t('job.services')}</SectionLabel>
+            <Card style={styles.gap}>
+              {job.services && job.services.length > 0 ? (
+                job.services.map((service, index) => (
+                  <View
+                    key={service.id}
+                    style={[styles.noteRow, index > 0 && styles.noteRowDivider]}
+                  >
+                    <View style={styles.linkRow}>
+                      <Icon name="construct-outline" size={16} color={AppColors.brand} />
+                      <Text style={styles.cardHeading}>{service.name}</Text>
+                    </View>
+                    {service.description ? (
+                      <Text style={styles.bodyText}>{service.description}</Text>
+                    ) : null}
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.cardMuted}>{t('job.noServices')}</Text>
+              )}
+            </Card>
+          </View>
+
           {/* Photos */}
           <View style={styles.section}>
             <SectionLabel>{t('job.photos')}</SectionLabel>

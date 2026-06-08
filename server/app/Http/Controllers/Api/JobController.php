@@ -55,6 +55,7 @@ class JobController extends Controller
             'property',
             'customer',
             'crew',
+            'jobServices.service',
             'messages' => fn ($q) => $q->latest()->limit(20),
             'media' => fn ($q) => $q->latest(),
         ]);

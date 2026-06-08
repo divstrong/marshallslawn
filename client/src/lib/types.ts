@@ -88,8 +88,23 @@ export interface Job {
   crew: { id: number; name: string | null } | null;
   customer: Customer | null;
   property: Property | null;
+  services?: JobServiceLine[];
   messages: JobMessage[];
   media: JobMedia[];
+  /** Set by the API when a mowing job is scheduled near this spray job (Spray Tech). */
+  mowing_conflict?: MowingConflict | null;
+}
+
+export interface JobServiceLine {
+  id: number;
+  name: string;
+  description: string | null;
+}
+
+export interface MowingConflict {
+  scheduled_date: string;
+  days_away: number;
+  title: string | null;
 }
 
 export interface SchedulePayload {
