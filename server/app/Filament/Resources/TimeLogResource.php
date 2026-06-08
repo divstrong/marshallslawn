@@ -2,21 +2,29 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Concerns\ChecksResourceAccess;
 use App\Filament\Resources\TimeLogResource\Pages;
-use App\Models\TimeLog;
+use App\Models\Job;
+use Carbon\CarbonInterface;
+use Filament\Actions;
 use Filament\Forms;
-use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
-use App\Filament\Concerns\ChecksResourceAccess;
-use Filament\Actions;
+use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * Job-level time logs (issue #17).
+ *
+ * Reflects the start / stop times the crew records against each job in the field
+ * app (Job::started_at / finished_at), replacing the retired employee time clock.
+ */
 class TimeLogResource extends Resource
 {
     use ChecksResourceAccess;
 
-    protected static ?string $model = TimeLog::class;
+    protected static ?string $model = Job::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clock';
 
@@ -24,32 +32,36 @@ class TimeLogResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
+    protected static ?string $label = 'Time Log';
+
+    protected static ?string $pluralLabel = 'Time Logs';
+
+    protected static ?string $navigationLabel = 'Time Logs';
+
+    protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getEloquentQuery(): Builder
+    {
+        // Only jobs that have actually been started in the field have a time log.
+        return parent::getEloquentQuery()->whereNotNull('started_at');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Select::make('employee_id')
-                ->relationship('employee', 'name')
-                ->searchable()
-                ->preload()
-                ->required(),
-            Forms\Components\Select::make('job_id')
-                ->relationship('job', 'title')
-                ->searchable()
-                ->preload(),
-            Forms\Components\DateTimePicker::make('clock_in')
-                ->required(),
-            Forms\Components\DateTimePicker::make('clock_out'),
-            Forms\Components\TextInput::make('break_minutes')
-                ->numeric()
-                ->default(0),
-            Forms\Components\Select::make('status')
-                ->options([
-                    'clocked_in' => 'Clocked In',
-                    'clocked_out' => 'Clocked Out',
-                    'approved' => 'Approved',
-                    'rejected' => 'Rejected',
-                ])
-                ->required(),
+            Forms\Components\Placeholder::make('job_summary')
+                ->label('Job')
+                ->content(fn (?Job $record) => $record
+                    ? trim(($record->title ?: 'Job #' . $record->id) . ' — ' . self::customerName($record))
+                    : '—'),
+            Forms\Components\DateTimePicker::make('started_at')
+                ->label('Started')
+                ->seconds(false)
+                ->helperText('When the crew clocked on to this job.'),
+            Forms\Components\DateTimePicker::make('finished_at')
+                ->label('Finished')
+                ->seconds(false)
+                ->helperText('Leave blank while the job is still in progress.'),
             Forms\Components\Textarea::make('notes')
                 ->columnSpanFull(),
         ]);
@@ -59,21 +71,68 @@ class TimeLogResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('employee.name')
-                    ->label('Employee')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('job.title')
-                    ->label('Job'),
-                Tables\Columns\TextColumn::make('clock_in')
-                    ->dateTime()
+                Tables\Columns\TextColumn::make('title')
+                    ->label('Job')
+                    ->formatStateUsing(fn (?string $state, Job $record) => $state ?: 'Job #' . $record->id)
+                    ->searchable()
+                    ->wrap(),
+                Tables\Columns\TextColumn::make('customer')
+                    ->label('Customer')
+                    ->state(fn (Job $record) => self::customerName($record))
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas(
+                        'customer',
+                        fn (Builder $q) => $q
+                            ->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('company_name', 'like', "%{$search}%"),
+                    )),
+                Tables\Columns\TextColumn::make('crew.name')
+                    ->label('Crew')
+                    ->badge()
+                    ->placeholder('Unassigned'),
+                Tables\Columns\TextColumn::make('started_at')
+                    ->label('Started')
+                    ->dateTime('M j, g:i A')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('clock_out')
-                    ->dateTime()
+                Tables\Columns\TextColumn::make('finished_at')
+                    ->label('Finished')
+                    ->dateTime('M j, g:i A')
+                    ->placeholder('In progress')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('duration')
+                    ->label('Duration')
+                    ->state(fn (Job $record) => self::duration($record))
+                    ->badge()
+                    ->color(fn (Job $record) => $record->finished_at ? 'success' : 'warning'),
                 Tables\Columns\TextColumn::make('status')
-                    ->badge(),
+                    ->badge()
+                    ->toggleable(),
             ])
-            ->filters([])
+            ->defaultSort('started_at', 'desc')
+            ->filters([
+                Tables\Filters\SelectFilter::make('crew_id')
+                    ->label('Crew')
+                    ->relationship('crew', 'name'),
+                Tables\Filters\TernaryFilter::make('in_progress')
+                    ->label('In progress')
+                    ->placeholder('All')
+                    ->trueLabel('Still running')
+                    ->falseLabel('Finished')
+                    ->queries(
+                        true: fn (Builder $q) => $q->whereNull('finished_at'),
+                        false: fn (Builder $q) => $q->whereNotNull('finished_at'),
+                    ),
+                Tables\Filters\Filter::make('started_at')
+                    ->schema([
+                        Forms\Components\DatePicker::make('from')->label('Started from'),
+                        Forms\Components\DatePicker::make('until')->label('Started until'),
+                    ])
+                    ->query(function (Builder $q, array $data): Builder {
+                        return $q
+                            ->when($data['from'] ?? null, fn ($qq, $d) => $qq->whereDate('started_at', '>=', $d))
+                            ->when($data['until'] ?? null, fn ($qq, $d) => $qq->whereDate('started_at', '<=', $d));
+                    }),
+            ])
             ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),
@@ -85,6 +144,35 @@ class TimeLogResource extends Resource
             ]);
     }
 
+    private static function customerName(Job $job): string
+    {
+        $customer = $job->customer;
+        if (! $customer) {
+            return '—';
+        }
+
+        $name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
+
+        return $name ?: ($customer->company_name ?? '—');
+    }
+
+    private static function duration(Job $job): string
+    {
+        if (! $job->started_at) {
+            return '—';
+        }
+
+        $end = $job->finished_at ?? now();
+        $minutes = (int) abs($job->started_at->diffInMinutes($end));
+
+        $hours = intdiv($minutes, 60);
+        $mins = $minutes % 60;
+
+        $label = $hours > 0 ? "{$hours}h {$mins}m" : "{$mins}m";
+
+        return $job->finished_at ? $label : "{$label} (running)";
+    }
+
     public static function getRelations(): array
     {
         return [];
@@ -94,7 +182,6 @@ class TimeLogResource extends Resource
     {
         return [
             'index' => Pages\ListTimeLogs::route('/'),
-            'create' => Pages\CreateTimeLog::route('/create'),
             'edit' => Pages\EditTimeLog::route('/{record}/edit'),
         ];
     }
