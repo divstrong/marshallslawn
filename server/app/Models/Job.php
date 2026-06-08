@@ -32,6 +32,7 @@ class Job extends Model
         'title',
         'description',
         'status',
+        'waiting_list',
         'priority',
         'scheduled_date',
         'completed_date',
@@ -52,6 +53,7 @@ class Job extends Model
             'completed_date' => 'date',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'waiting_list' => 'boolean',
         ];
     }
 

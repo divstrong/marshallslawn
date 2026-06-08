@@ -38,12 +38,21 @@ class Scheduling extends Page
     #[Url(as: 'crew')]
     public ?int $crewId = null;
 
+    /** Active left-column queue: 'unassigned' (near-term) or 'waiting' (future). */
+    #[Url(as: 'queue')]
+    public string $queue = 'unassigned';
+
     public function mount(): void
     {
         $this->date ??= now()->toDateString();
         if (! $this->crewId) {
             $this->crewId = Crew::orderBy('id')->value('id');
         }
+    }
+
+    public function setQueue(string $queue): void
+    {
+        $this->queue = $queue === 'waiting' ? 'waiting' : 'unassigned';
     }
 
     public function getMaxContentWidth(): \Filament\Support\Enums\Width
@@ -269,6 +278,8 @@ class Scheduling extends Page
                 'property:id,address,city,state,latitude,longitude',
                 'recurringTemplate.service:id,name',
             ])
+            // Waiting-list jobs live in their own queue, not the near-term pile.
+            ->where('waiting_list', false)
             ->where(function ($q) use ($todayRouteJobIds, $anyRouteJobIds) {
                 // Jobs scheduled for the selected day that aren't already on today's route…
                 $q->where(function ($qq) use ($todayRouteJobIds) {
@@ -287,6 +298,51 @@ class Scheduling extends Page
             ->get()
             ->map(fn ($j) => $this->jobToArray($j))
             ->all();
+    }
+
+    /**
+     * The "Waiting List" queue — future jobs the user is holding back from the
+     * near-term Unassigned pile (issue #16). Not date-scoped, and excludes any job
+     * already placed on a route.
+     */
+    #[Computed]
+    public function waitingListJobs(): array
+    {
+        $anyRouteJobIds = RouteStop::query()
+            ->whereNotNull('job_id')
+            ->pluck('job_id')
+            ->all();
+
+        return Job::query()
+            ->with([
+                'customer:id,first_name,last_name,company_name',
+                'property:id,address,city,state,latitude,longitude',
+                'recurringTemplate.service:id,name',
+            ])
+            ->where('waiting_list', true)
+            ->whereNotIn('id', $anyRouteJobIds)
+            ->orderByRaw('scheduled_date IS NULL') // dated jobs first
+            ->orderBy('scheduled_date')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($j) => $this->jobToArray($j))
+            ->all();
+    }
+
+    public function moveToWaitingList(int $jobId): void
+    {
+        Job::whereKey($jobId)->update(['waiting_list' => true]);
+        $this->clearComputed();
+    }
+
+    public function moveToUnassigned(int $jobId): void
+    {
+        // Pull a future job into the near-term pile for the day on screen.
+        Job::whereKey($jobId)->update([
+            'waiting_list' => false,
+            'scheduled_date' => $this->date,
+        ]);
+        $this->clearComputed();
     }
 
     public function addJobToRoute(int $jobId, int $atIndex = -1): void
@@ -331,6 +387,10 @@ class Scheduling extends Page
             $updates = [];
             if ($job->status === 'skipped') {
                 $updates['status'] = 'scheduled';
+            }
+            // Routing a job always pulls it off the waiting list.
+            if ($job->waiting_list) {
+                $updates['waiting_list'] = false;
             }
             if ($job->scheduled_date?->toDateString() !== $route->route_date->toDateString()) {
                 $updates['scheduled_date'] = $route->route_date;
@@ -424,7 +484,7 @@ class Scheduling extends Page
 
     private function clearComputed(): void
     {
-        unset($this->route, $this->routeStops, $this->unassignedJobs, $this->selectedCrew);
+        unset($this->route, $this->routeStops, $this->unassignedJobs, $this->waitingListJobs, $this->selectedCrew);
     }
 
     private function stopToArray(RouteStop $stop): array
@@ -465,6 +525,8 @@ class Scheduling extends Page
             'priority' => $job->priority,
             'status' => $job->status,
             'is_skipped' => $job->status === 'skipped',
+            'waiting_list' => (bool) $job->waiting_list,
+            'scheduled_date' => $job->scheduled_date?->toDateString(),
             'customer_name' => $customerName,
             'address' => $job->property?->address ?? '—',
             'city' => $job->property?->city,
