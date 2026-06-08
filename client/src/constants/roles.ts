@@ -44,6 +44,8 @@ export const TABS: Record<TabName, TabDef> = {
  */
 export const ROLE_TABS: Record<Role, TabName[]> = {
   foreman: ['schedule', 'jobs', 'chat', 'settings'],
+  // Spray Tech mirrors the Foreman experience (issue #12).
+  spray_tech: ['schedule', 'jobs', 'chat', 'settings'],
   field: ['jobs', 'settings'],
   estimator: ['quotes', 'jobs', 'settings'],
 };
@@ -51,6 +53,7 @@ export const ROLE_TABS: Record<Role, TabName[]> = {
 /** Landing tab when a role first enters the app. */
 export const ROLE_DEFAULT_TAB: Record<Role, TabName> = {
   foreman: 'schedule',
+  spray_tech: 'schedule',
   field: 'jobs',
   estimator: 'quotes',
 };

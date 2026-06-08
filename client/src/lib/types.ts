@@ -3,7 +3,7 @@
  * classes on the server.
  */
 
-export type Role = 'foreman' | 'field' | 'estimator';
+export type Role = 'foreman' | 'spray_tech' | 'field' | 'estimator';
 
 export interface Capabilities {
   can_see_routes: boolean;

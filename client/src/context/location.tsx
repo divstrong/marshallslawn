@@ -32,7 +32,9 @@ const LocationContext = createContext<LocationContextValue | undefined>(undefine
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { employee, status } = useAuth();
-  const tracksThisRole = status === 'authenticated' && employee?.role === 'foreman';
+  const tracksThisRole =
+    status === 'authenticated' &&
+    (employee?.role === 'foreman' || employee?.role === 'spray_tech');
   const supported = Platform.OS !== 'web';
 
   const [permission, setPermission] = useState<TrackingPermission>('undetermined');

@@ -52,7 +52,7 @@ class AuthController extends Controller
         abort_unless(app()->environment('local') || config('app.debug'), 403, 'Dev login is disabled.');
 
         $data = $request->validate([
-            'role' => ['required', 'in:foreman,field,estimator'],
+            'role' => ['required', 'in:foreman,spray_tech,field,estimator'],
         ]);
 
         $employee = Employee::query()

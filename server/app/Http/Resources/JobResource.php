@@ -45,6 +45,8 @@ class JobResource extends JsonResource
             ])->values()),
             'messages' => MessageResource::collection($this->whenLoaded('messages')),
             'media' => JobMediaResource::collection($this->whenLoaded('media')),
+            // Set by JobController@show for spray jobs near a mowing visit (issue #12).
+            'mowing_conflict' => $this->mowing_conflict ?? null,
         ];
     }
 }

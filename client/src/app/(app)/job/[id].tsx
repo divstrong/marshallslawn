@@ -121,11 +121,13 @@ export default function JobDetailScreen() {
           contentContainerStyle={styles.body}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
+          {job.mowing_conflict ? <MowingConflictBanner conflict={job.mowing_conflict} /> : null}
+
           <JobTimerCard
             job={job}
             now={now}
             busy={busy}
-            isForeman={employee?.role === 'foreman'}
+            isForeman={employee?.role === 'foreman' || employee?.role === 'spray_tech'}
             onStart={() => runAction('start')}
             onComplete={() =>
               Alert.alert(t('job.completeTitle'), t('job.completeMsg'), [
@@ -259,6 +261,29 @@ export default function JobDetailScreen() {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Spray Tech mowing-conflict banner (issue #12)                              */
+/* -------------------------------------------------------------------------- */
+
+function MowingConflictBanner({
+  conflict,
+}: {
+  conflict: NonNullable<Job['mowing_conflict']>;
+}) {
+  const { t } = useLanguage();
+  return (
+    <View style={styles.conflictBanner}>
+      <Icon name="warning" size={22} color={AppColors.warning} />
+      <View style={styles.conflictTextWrap}>
+        <Text style={styles.conflictTitle}>{t('job.mowingConflictTitle')}</Text>
+        <Text style={styles.conflictBody}>
+          {t('job.mowingConflictBody', { date: formatDateLong(conflict.scheduled_date) })}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Foreman job timer                                                          */
 /* -------------------------------------------------------------------------- */
 
@@ -386,6 +411,30 @@ const styles = StyleSheet.create({
   },
   gap: {
     gap: Spacing.two,
+  },
+  conflictBanner: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    alignItems: 'flex-start',
+    backgroundColor: AppColors.warningSoft,
+    borderWidth: 1,
+    borderColor: AppColors.warning,
+    borderRadius: Radius.md,
+    padding: Spacing.three,
+  },
+  conflictTextWrap: {
+    flex: 1,
+  },
+  conflictTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: AppColors.text,
+  },
+  conflictBody: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    marginTop: 2,
+    lineHeight: 18,
   },
   timerCard: {
     gap: Spacing.three,

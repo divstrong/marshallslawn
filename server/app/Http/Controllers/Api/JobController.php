@@ -60,7 +60,56 @@ class JobController extends Controller
             'media' => fn ($q) => $q->latest(),
         ]);
 
+        // Spray Tech intelligence (issue #12): flag a mowing job scheduled within
+        // two days of this spray job at the same property.
+        $job->mowing_conflict = $this->mowingConflict($job);
+
         return new JobResource($job);
+    }
+
+    /**
+     * If this job involves spraying, find a mowing job at the same property
+     * scheduled within two days of it. Returns null when there's no conflict.
+     *
+     * @return array{scheduled_date: string, days_away: int, title: ?string}|null
+     */
+    private function mowingConflict(Job $job): ?array
+    {
+        if (! $job->property_id || ! $job->scheduled_date) {
+            return null;
+        }
+
+        $isSpray = $job->jobServices
+            ->contains(fn ($jobService) => $jobService->service?->service_group === 'spraying');
+
+        if (! $isSpray) {
+            return null;
+        }
+
+        $date = $job->scheduled_date->copy();
+
+        $mowing = Job::query()
+            ->where('property_id', $job->property_id)
+            ->where('id', '!=', $job->id)
+            ->whereNotIn('status', ['cancelled', 'skipped'])
+            ->whereNotNull('scheduled_date')
+            ->whereBetween('scheduled_date', [
+                $date->copy()->subDays(2)->toDateString(),
+                $date->copy()->addDays(2)->toDateString(),
+            ])
+            ->whereHas('jobServices.service', fn ($q) => $q->where('service_group', 'mowing'))
+            ->orderByRaw('ABS(DATEDIFF(scheduled_date, ?))', [$date->toDateString()])
+            ->first();
+
+        if (! $mowing) {
+            return null;
+        }
+
+        return [
+            'scheduled_date' => $mowing->scheduled_date->toDateString(),
+            'days_away' => (int) $date->diffInDays($mowing->scheduled_date, false),
+            'title' => $mowing->title,
+        ];
     }
 
     /**
@@ -184,12 +233,14 @@ class JobController extends Controller
     }
 
     /**
-     * Only a foreman of the job's crew may run the job clock.
+     * Only a foreman (or spray tech, who mirrors the foreman) of the job's crew
+     * may run the job clock.
      */
     private function authorizeForeman(Employee $employee, Job $job): void
     {
         abort_unless(
-            $employee->role === 'foreman' && $employee->crewIds()->contains($job->crew_id),
+            in_array($employee->role, ['foreman', 'spray_tech'], true)
+                && $employee->crewIds()->contains($job->crew_id),
             403,
             'Only the crew foreman can start or complete this job.',
         );

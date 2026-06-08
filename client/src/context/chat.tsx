@@ -32,7 +32,9 @@ const POLL_INTERVAL_MS = 25_000;
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { employee, status } = useAuth();
-  const hasChat = status === 'authenticated' && employee?.role === 'foreman';
+  const hasChat =
+    status === 'authenticated' &&
+    (employee?.role === 'foreman' || employee?.role === 'spray_tech');
 
   const [unread, setUnread] = useState(0);
 

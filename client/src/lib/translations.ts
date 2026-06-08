@@ -66,6 +66,7 @@ const en = {
   'login.devTitle': 'DEVELOPER QUICK LOGIN',
   'login.devHint': 'Jump straight into a role to preview its experience.',
   'login.roleForeman': 'Foreman',
+  'login.roleSprayTech': 'Spray Tech',
   'login.roleField': 'Field',
   'login.roleEstimator': 'Estimator',
 
@@ -117,6 +118,8 @@ const en = {
   'job.description': 'Description',
   'job.services': 'Services',
   'job.noServices': 'No services listed for this job.',
+  'job.mowingConflictTitle': 'Mowing scheduled nearby',
+  'job.mowingConflictBody': 'A mowing visit is scheduled for {date}. Coordinate your spray timing to avoid a conflict.',
   'job.photos': 'Photos',
   'job.notes': 'Notes',
   'job.noNotes': 'No notes on this job yet.',
@@ -287,6 +290,7 @@ const es: Record<keyof typeof en, string> = {
   'login.devTitle': 'ACCESO RÁPIDO (DESARROLLO)',
   'login.devHint': 'Entra directamente a un rol para previsualizar su experiencia.',
   'login.roleForeman': 'Capataz',
+  'login.roleSprayTech': 'Técnico de Aspersión',
   'login.roleField': 'Campo',
   'login.roleEstimator': 'Estimador',
 
@@ -338,6 +342,8 @@ const es: Record<keyof typeof en, string> = {
   'job.description': 'Descripción',
   'job.services': 'Servicios',
   'job.noServices': 'No hay servicios para este trabajo.',
+  'job.mowingConflictTitle': 'Corte de césped programado cerca',
+  'job.mowingConflictBody': 'Hay un corte de césped programado para {date}. Coordina el momento de la aspersión para evitar un conflicto.',
   'job.photos': 'Fotos',
   'job.notes': 'Notas',
   'job.noNotes': 'Aún no hay notas en este trabajo.',
