@@ -37,9 +37,14 @@ export const TABS: Record<TabName, TabDef> = {
 };
 
 /** Tabs shown in the bottom bar, in order, per role. */
+/**
+ * The employee time clock ("time") is intentionally hidden (issue #9): no employee
+ * time is tracked in the app. Foremen log start/stop per job from the job detail
+ * screen instead. The screen file is retained in case the clock is revived later.
+ */
 export const ROLE_TABS: Record<Role, TabName[]> = {
-  foreman: ['schedule', 'jobs', 'time', 'chat', 'settings'],
-  field: ['jobs', 'time', 'settings'],
+  foreman: ['schedule', 'jobs', 'chat', 'settings'],
+  field: ['jobs', 'settings'],
   estimator: ['quotes', 'jobs', 'settings'],
 };
 
