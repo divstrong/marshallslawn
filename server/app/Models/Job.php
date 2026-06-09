@@ -11,6 +11,9 @@ class Job extends Model
 {
     use HasFactory;
 
+    /** Hard ceiling for a single job's running timer (issue: 12h max per day). */
+    public const MAX_TIMER_HOURS = 12;
+
     /**
      * The table associated with the model.
      *
@@ -32,6 +35,8 @@ class Job extends Model
         'title',
         'description',
         'status',
+        'type',
+        'waiting_list',
         'priority',
         'scheduled_date',
         'completed_date',
@@ -52,7 +57,36 @@ class Job extends Model
             'completed_date' => 'date',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'waiting_list' => 'boolean',
         ];
+    }
+
+    /**
+     * Stop a running job timer. The finish time is capped to at most
+     * MAX_TIMER_HOURS after it started, so a timer left running by accident
+     * never logs more than the daily maximum.
+     */
+    public function stopTimer(?\Illuminate\Support\Carbon $at = null): void
+    {
+        if (! $this->started_at) {
+            return;
+        }
+
+        $at ??= now();
+        $cap = $this->started_at->copy()->addHours(self::MAX_TIMER_HOURS);
+        $finish = $at->lessThan($cap) ? $at : $cap;
+
+        $this->update([
+            'status' => 'completed',
+            'finished_at' => $finish,
+            'completed_date' => $finish->toDateString(),
+        ]);
+    }
+
+    /** A job whose timer is currently running (started but not finished). */
+    public function isTimerRunning(): bool
+    {
+        return $this->started_at !== null && $this->finished_at === null;
     }
 
     public function customer(): BelongsTo

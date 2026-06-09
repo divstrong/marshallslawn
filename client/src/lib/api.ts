@@ -181,6 +181,12 @@ export const api = {
       unwrap,
     );
   },
+  toggleJobService(jobId: number, serviceId: number) {
+    return request<{ data: { id: number; completed: boolean; completed_at: string | null } }>(
+      'POST',
+      `/jobs/${jobId}/services/${serviceId}/toggle`,
+    ).then(unwrap);
+  },
   async uploadJobPhoto(
     jobId: number,
     file: { uri: string; name: string; type: string },

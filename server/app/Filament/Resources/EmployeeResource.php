@@ -6,6 +6,8 @@ use App\Filament\Resources\EmployeeResource\Pages;
 use App\Models\Employee;
 use App\Models\Role;
 use Filament\Forms;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -28,64 +30,89 @@ class EmployeeResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\TextInput::make('first_name')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('last_name')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('name')
-                ->required()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('email')
-                ->email()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('phone')
-                ->tel()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('mobile_phone')
-                ->label('Mobile Phone')
-                ->tel()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('alt_phone')
-                ->label('Alt. Phone')
-                ->tel()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('address')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('city')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('state')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('zip')
-                ->maxLength(255),
-            Forms\Components\DatePicker::make('hire_date'),
-            Forms\Components\DatePicker::make('date_of_birth')
-                ->label('Date of Birth'),
-            Forms\Components\Select::make('role')
-                ->options(fn () => Role::orderBy('label')->pluck('label', 'name')->all())
-                ->required(),
-            Forms\Components\Select::make('status')
-                ->options([
-                    'active' => 'Active',
-                    'inactive' => 'Inactive',
-                    'terminated' => 'Terminated',
-                ])
-                ->required(),
-            Forms\Components\TextInput::make('hourly_rate')
-                ->numeric()
-                ->prefix('$'),
-            Forms\Components\TextInput::make('emergency_contact_name')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('emergency_contact_phone')
-                ->tel()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('division')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('legacy_id')
-                ->label('Legacy ID')
-                ->disabled()
-                ->maxLength(255),
-            Forms\Components\Textarea::make('notes')
-                ->columnSpanFull(),
+            Tabs::make('Employee')
+                ->columnSpanFull()
+                ->tabs([
+                    Tab::make('General')
+                        ->icon('heroicon-o-information-circle')
+                        ->columns(2)
+                        ->schema([
+                            Forms\Components\TextInput::make('first_name')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('last_name')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('name')
+                                ->required()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('email')
+                                ->email()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('password')
+                                ->label('Password')
+                                ->password()
+                                ->revealable()
+                                ->autocomplete('new-password')
+                                // Hashed by the model's cast on save. Only persisted when a
+                                // value is entered, so an empty field leaves the password unchanged.
+                                ->dehydrated(fn (?string $state): bool => filled($state))
+                                ->helperText('Leave blank to keep the current password. Enter a value to set or replace the login password.')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('phone')
+                                ->tel()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('mobile_phone')
+                                ->label('Mobile Phone')
+                                ->tel()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('alt_phone')
+                                ->label('Alt. Phone')
+                                ->tel()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('address')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('city')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('state')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('zip')
+                                ->maxLength(255),
+                            Forms\Components\DatePicker::make('hire_date'),
+                            Forms\Components\DatePicker::make('date_of_birth')
+                                ->label('Date of Birth'),
+                            Forms\Components\Select::make('role')
+                                ->options(fn () => Role::orderBy('label')->pluck('label', 'name')->all())
+                                ->required(),
+                            Forms\Components\Select::make('status')
+                                ->options([
+                                    'active' => 'Active',
+                                    'inactive' => 'Inactive',
+                                    'terminated' => 'Terminated',
+                                ])
+                                ->required(),
+                            Forms\Components\TextInput::make('hourly_rate')
+                                ->numeric()
+                                ->prefix('$'),
+                            Forms\Components\TextInput::make('emergency_contact_name')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('emergency_contact_phone')
+                                ->tel()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('division')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('legacy_id')
+                                ->label('Legacy ID')
+                                ->disabled()
+                                ->maxLength(255),
+                        ]),
+                    Tab::make('Notes')
+                        ->icon('heroicon-o-pencil-square')
+                        ->schema([
+                            Forms\Components\Textarea::make('notes')
+                                ->label('Notes')
+                                ->rows(10)
+                                ->columnSpanFull(),
+                        ]),
+                ]),
         ]);
     }
 

@@ -61,7 +61,7 @@ class ChatController extends Controller
     }
 
     /**
-     * POST /api/chat — send a message (text and/or one photo/video).
+     * POST /api/chat — send a message (text and/or one attachment: photo, video, or file).
      */
     public function store(Request $request): JsonResponse
     {
@@ -92,8 +92,7 @@ class ChatController extends Controller
             $mime = (string) $file->getMimeType();
             $type = str_starts_with($mime, 'video/')
                 ? 'video'
-                : (str_starts_with($mime, 'image/') ? 'photo' : null);
-            abort_if($type === null, 422, 'Attachments must be a photo or video.');
+                : (str_starts_with($mime, 'image/') ? 'photo' : 'file');
 
             $path = $file->store('chat-media', 'public');
             $attributes += [

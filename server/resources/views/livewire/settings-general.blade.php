@@ -53,6 +53,17 @@
             </div>
         </div>
 
+        <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 20px;">
+            <h3 style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 16px;">Dispatch</h3>
+            <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                <input wire:model="dispatchServiceIcons" type="checkbox" style="margin-top: 3px; width: 16px; height: 16px;" />
+                <span>
+                    <span style="display: block; font-size: 13px; font-weight: 600; color: #111827;">Service Icons</span>
+                    <span style="display: block; font-size: 12px; color: #6b7280; margin-top: 2px;">Show each service's icon on Dispatch job cards and map pins (where an icon has been uploaded).</span>
+                </span>
+            </label>
+        </div>
+
         <button wire:click="save" type="button" style="padding: 10px 24px; font-size: 14px; font-weight: 600; color: #fff; background: #c9092f; border: none; border-radius: 8px; cursor: pointer;">
             Save Settings
         </button>

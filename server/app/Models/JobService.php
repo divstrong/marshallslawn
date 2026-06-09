@@ -12,10 +12,12 @@ class JobService extends Model
         'service_id',
         'description',
         'sort_order',
+        'completed_at',
     ];
 
     protected $casts = [
         'sort_order' => 'integer',
+        'completed_at' => 'datetime',
     ];
 
     public function job(): BelongsTo

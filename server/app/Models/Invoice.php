@@ -79,10 +79,27 @@ class Invoice extends Model
         return $this->hasMany(InvoiceCredit::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     public function recalculateTotal(): void
     {
         $this->credits_total = $this->credits()->sum('amount');
         $this->total = $this->subtotal + $this->tax - $this->credits_total;
         $this->save();
+    }
+
+    /** Total received against this invoice. */
+    public function amountPaid(): float
+    {
+        return (float) $this->payments()->sum('amount');
+    }
+
+    /** Outstanding balance after credits and payments. */
+    public function balanceDue(): float
+    {
+        return round((float) $this->total - $this->amountPaid(), 2);
     }
 }

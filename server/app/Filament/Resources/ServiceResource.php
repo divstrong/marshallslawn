@@ -49,6 +49,21 @@ class ServiceResource extends Resource
                 ->maxLength(255),
             Forms\Components\TextInput::make('service_mode')
                 ->maxLength(255),
+            Forms\Components\Select::make('service_group')
+                ->label('Service Group')
+                ->helperText('Drives the Spraying / Mowing / Mulching filters on the Dispatch board.')
+                ->options(Service::GROUPS)
+                ->native(false),
+            Forms\Components\FileUpload::make('icon_path')
+                ->label('Icon')
+                ->helperText('Optional. Shown on Dispatch job cards & map pins when "Service Icons" is enabled.')
+                ->image()
+                ->disk('public')
+                ->directory('service-icons')
+                ->imageResizeMode('contain')
+                ->imageResizeTargetWidth(128)
+                ->imageResizeTargetHeight(128)
+                ->maxSize(2048),
             Forms\Components\Toggle::make('is_active')
                 ->default(true),
             Forms\Components\Toggle::make('track_chemicals')
@@ -72,9 +87,19 @@ class ServiceResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\ImageColumn::make('icon_path')
+                    ->label('Icon')
+                    ->disk('public')
+                    ->square()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('service_group')
+                    ->label('Group')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => Service::GROUPS[$state] ?? $state)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('code')
                     ->searchable()
                     ->toggleable(),
@@ -99,7 +124,11 @@ class ServiceResource extends Resource
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([])
+            ->filters([
+                Tables\Filters\SelectFilter::make('service_group')
+                    ->label('Group')
+                    ->options(Service::GROUPS),
+            ])
             ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\EditAction::make(),

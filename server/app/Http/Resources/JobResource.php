@@ -38,8 +38,17 @@ class JobResource extends JsonResource
             'property' => $this->whenLoaded('property', fn () => $this->property
                 ? new PropertyResource($this->property)
                 : null),
+            'services' => $this->whenLoaded('jobServices', fn () => $this->jobServices->map(fn ($jobService) => [
+                'id' => $jobService->id,
+                'name' => $jobService->service?->name ?? 'Service',
+                'description' => $jobService->description ?: $jobService->service?->description,
+                'completed' => $jobService->completed_at !== null,
+                'completed_at' => $jobService->completed_at?->toIso8601String(),
+            ])->values()),
             'messages' => MessageResource::collection($this->whenLoaded('messages')),
             'media' => JobMediaResource::collection($this->whenLoaded('media')),
+            // Set by JobController@show for spray jobs near a mowing visit (issue #12).
+            'mowing_conflict' => $this->mowing_conflict ?? null,
         ];
     }
 }

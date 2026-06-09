@@ -5,6 +5,8 @@ namespace App\Livewire;
 use App\Models\ChatMessage;
 use App\Models\Crew;
 use App\Models\RouteStop;
+use App\Models\Service;
+use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -44,6 +46,14 @@ class DispatchBoard extends Component
     #[Url(as: 'status')]
     public ?string $statusFilter = null;
 
+    /**
+     * Selected service-group filters (Spraying / Mowing / Mulching). Empty = show all.
+     *
+     * @var array<int, string>
+     */
+    #[Url(as: 'services')]
+    public array $serviceGroups = [];
+
     public ?int $selectedStopId = null;
 
     public ?int $selectedJobId = null;
@@ -52,6 +62,9 @@ class DispatchBoard extends Component
 
     /** Stop id awaiting Skip confirmation in the modal. */
     public ?int $confirmSkipStopId = null;
+
+    /** Whether the job services/notes modal is open. */
+    public bool $showServicesModal = false;
 
     /** Right-side chat panel state. */
     public bool $chatPanelOpen = false;
@@ -87,6 +100,13 @@ class DispatchBoard extends Component
         return $map;
     }
 
+    /** Whether the "Service Icons" admin toggle is enabled. */
+    #[Computed]
+    public function serviceIconsEnabled(): bool
+    {
+        return Setting::bool('dispatch_service_icons');
+    }
+
     #[Computed]
     public function stops(): array
     {
@@ -96,8 +116,9 @@ class DispatchBoard extends Component
             ->with([
                 'property:id,address,city,state,zip,latitude,longitude',
                 'customer:id,first_name,last_name,company_name,phone,email',
-                'service:id,name,category',
+                'service:id,name,category,icon_path,service_group',
                 'job:id,title,priority',
+                'job.jobServices.service:id,name,icon_path,service_group',
                 'route:id,name,route_date,crew_id',
                 'route.crew:id,name',
             ])
@@ -112,7 +133,7 @@ class DispatchBoard extends Component
             ->orderBy('sort_order')
             ->get();
 
-        return $rows->map(function ($stop) use ($crewMap) {
+        $rows = $rows->map(function ($stop) use ($crewMap) {
             $crewId = (int) ($stop->route?->crew_id ?? 0);
             $color = $crewMap[$crewId]['color'] ?? '#6b7280';
 
@@ -122,8 +143,22 @@ class DispatchBoard extends Component
                     ?: ($customer->company_name ?? '—'))
                 : '—';
 
+            // Services on a stop come from its explicit service, plus any services
+            // attached to the underlying job (drives the icon + group filters).
+            $services = collect();
+            if ($stop->service) {
+                $services->push($stop->service);
+            }
+            foreach ($stop->job?->jobServices ?? [] as $js) {
+                if ($js->service) {
+                    $services->push($js->service);
+                }
+            }
+            $meta = $this->serviceMeta($services);
+
             return [
                 'id' => (int) $stop->id,
+                'job_id' => $stop->job_id ? (int) $stop->job_id : null,
                 'lat' => (float) $stop->property->latitude,
                 'lng' => (float) $stop->property->longitude,
                 'sort_order' => (int) $stop->sort_order,
@@ -138,10 +173,44 @@ class DispatchBoard extends Component
                 'address' => $stop->property?->address ?? '—',
                 'city' => $stop->property?->city,
                 'service_name' => $stop->service?->name,
+                'service_groups' => $meta['groups'],
+                'icon_url' => $meta['icon_url'],
                 'job_title' => $stop->job?->title,
                 'notes' => $stop->notes,
             ];
-        })->all();
+        });
+
+        if (! empty($this->serviceGroups)) {
+            $rows = $rows->filter(fn ($s) => array_intersect($s['service_groups'], $this->serviceGroups) !== []);
+        }
+
+        return $rows->values()->all();
+    }
+
+    /**
+     * Derive the distinct service groups and a representative icon from a set of services.
+     *
+     * @param  \Illuminate\Support\Collection<int, Service>  $services
+     * @return array{groups: array<int, string>, icon_url: ?string}
+     */
+    private function serviceMeta($services): array
+    {
+        $groups = [];
+        $iconUrl = null;
+
+        foreach ($services as $service) {
+            if (! empty($service->service_group)) {
+                $groups[$service->service_group] = true;
+            }
+            if ($iconUrl === null && ! empty($service->icon_path)) {
+                $iconUrl = $service->iconUrl();
+            }
+        }
+
+        return [
+            'groups' => array_keys($groups),
+            'icon_url' => $iconUrl,
+        ];
     }
 
     #[Computed]
@@ -157,19 +226,26 @@ class DispatchBoard extends Component
             ->with([
                 'customer:id,first_name,last_name,company_name,phone,email',
                 'property:id,address,city,state,zip,latitude,longitude',
-                'recurringTemplate.service:id,name',
+                'jobServices.service:id,name,icon_path,service_group',
+                'recurringTemplate.service:id,name,icon_path,service_group',
             ])
             ->whereDate('scheduled_date', $this->date)
             ->whereNotIn('id', $assignedJobIds)
             ->whereHas('property', fn ($q) => $q->whereNotNull('latitude')->whereNotNull('longitude'))
             ->get();
 
-        return $rows->map(function ($job) {
+        $rows = $rows->map(function ($job) {
             $customer = $job->customer;
             $customerName = $customer
                 ? (trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''))
                     ?: ($customer->company_name ?? '—'))
                 : '—';
+
+            $services = $job->jobServices->pluck('service')->filter();
+            if ($services->isEmpty() && $job->recurringTemplate?->service) {
+                $services = collect([$job->recurringTemplate->service]);
+            }
+            $meta = $this->serviceMeta($services);
 
             return [
                 'id' => (int) $job->id,
@@ -183,11 +259,19 @@ class DispatchBoard extends Component
                 'customer_phone' => $customer?->phone,
                 'address' => $job->property?->address ?? '—',
                 'city' => $job->property?->city,
-                'service_name' => $job->recurringTemplate?->service?->name,
+                'service_name' => $services->first()?->name ?? $job->recurringTemplate?->service?->name,
+                'service_groups' => $meta['groups'],
+                'icon_url' => $meta['icon_url'],
                 'job_title' => $job->title,
                 'sort_order' => null,
             ];
-        })->all();
+        });
+
+        if (! empty($this->serviceGroups)) {
+            $rows = $rows->filter(fn ($j) => array_intersect($j['service_groups'], $this->serviceGroups) !== []);
+        }
+
+        return $rows->values()->all();
     }
 
     #[Computed]
@@ -445,6 +529,7 @@ class DispatchBoard extends Component
                 'body' => $message->body,
                 'attachment_type' => $message->attachment_type,
                 'attachment_url' => $message->attachmentUrl(),
+                'attachment_name' => $message->attachment_name,
                 'time' => $message->created_at?->format('M j, g:i A'),
             ])
             ->all();
@@ -504,13 +589,7 @@ class DispatchBoard extends Component
         $mime = (string) $file->getMimeType();
         $type = str_starts_with($mime, 'video/')
             ? 'video'
-            : (str_starts_with($mime, 'image/') ? 'photo' : null);
-
-        if ($type === null) {
-            $this->chatAttachment = null;
-
-            return;
-        }
+            : (str_starts_with($mime, 'image/') ? 'photo' : 'file');
 
         $path = $file->store('chat-media', 'public');
 
@@ -548,6 +627,22 @@ class DispatchBoard extends Component
         } else {
             $this->crewIds = [...$crewIds, $id];
         }
+        $this->emitStopsUpdated();
+    }
+
+    public function toggleServiceGroup(string $group): void
+    {
+        if (! array_key_exists($group, Service::GROUPS)) {
+            return;
+        }
+
+        if (in_array($group, $this->serviceGroups, true)) {
+            $this->serviceGroups = array_values(array_filter($this->serviceGroups, fn ($g) => $g !== $group));
+        } else {
+            $this->serviceGroups = [...$this->serviceGroups, $group];
+        }
+
+        unset($this->stops, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary);
         $this->emitStopsUpdated();
     }
 
@@ -603,6 +698,65 @@ class DispatchBoard extends Component
         $this->emitStopsUpdated();
     }
 
+    /** The job behind the current selection (a route stop or an unrouted job). */
+    #[Computed]
+    public function activeJob(): ?array
+    {
+        $jobId = $this->selectedJobId;
+
+        if (! $jobId && $this->selectedStopId) {
+            foreach ($this->stops as $stop) {
+                if ($stop['id'] === $this->selectedStopId) {
+                    $jobId = $stop['job_id'];
+                    break;
+                }
+            }
+        }
+
+        if (! $jobId) {
+            return null;
+        }
+
+        $job = \App\Models\Job::query()
+            ->with(['customer', 'property', 'jobServices.service'])
+            ->find($jobId);
+
+        if (! $job) {
+            return null;
+        }
+
+        $customer = $job->customer;
+        $customerName = $customer
+            ? (trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''))
+                ?: ($customer->company_name ?? '—'))
+            : '—';
+
+        return [
+            'id' => (int) $job->id,
+            'title' => $job->title,
+            'customer_name' => $customerName,
+            'customer_phone' => $customer?->phone,
+            'address' => $job->property?->address ?? '—',
+            'city' => $job->property?->city,
+            'notes' => $job->notes,
+            'services' => $job->jobServices->map(fn ($jobService) => [
+                'name' => $jobService->service?->name ?? 'Service',
+                'description' => $jobService->description ?: $jobService->service?->description,
+                'completed' => $jobService->completed_at !== null,
+            ])->all(),
+        ];
+    }
+
+    public function openServicesModal(): void
+    {
+        $this->showServicesModal = true;
+    }
+
+    public function closeServicesModal(): void
+    {
+        $this->showServicesModal = false;
+    }
+
     /** Open the Skip-confirmation modal for the currently selected stop. */
     public function requestSkip(?int $id = null): void
     {
@@ -631,10 +785,21 @@ class DispatchBoard extends Component
         }
 
         if ($stop->job_id) {
+            $job = \App\Models\Job::find($stop->job_id);
+            $originalDate = $job?->scheduled_date?->toDateString();
+
+            // Mass update bypasses model events (so the observer won't double-notify);
+            // we alert the crew's foreman + spray techs explicitly with the pre-skip
+            // date, since it's cleared here (issue #14).
             \App\Models\Job::where('id', $stop->job_id)->update([
                 'status' => 'skipped',
                 'scheduled_date' => null,
             ]);
+
+            if ($job) {
+                $job->status = 'skipped';
+                app(\App\Services\JobNotifier::class)->notifySkippedOrCancelled($job, 'skipped', $originalDate);
+            }
         }
 
         $stop->delete();
@@ -659,6 +824,7 @@ class DispatchBoard extends Component
             unroutedJobs: $this->unroutedJobs,
             foremen: $this->foremanPins,
             crewColors: $this->crewColorMap,
+            serviceIcons: $this->serviceIconsEnabled,
         );
     }
 

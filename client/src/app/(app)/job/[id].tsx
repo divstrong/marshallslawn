@@ -29,7 +29,7 @@ import { useApiResource } from '@/hooks/use-async';
 import { api } from '@/lib/api';
 import { formatDateLong, formatDuration, formatTime } from '@/lib/format';
 import { openMaps, openPhone } from '@/lib/links';
-import type { Job } from '@/lib/types';
+import type { Job, JobServiceLine } from '@/lib/types';
 
 function pad(value: number): string {
   return String(value).padStart(2, '0');
@@ -57,6 +57,14 @@ export default function JobDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+  const [services, setServices] = useState<JobServiceLine[]>([]);
+
+  const canToggleServices = employee?.role === 'foreman' || employee?.role === 'spray_tech';
+
+  // Keep a local copy of the job's services so check-offs feel instant.
+  useEffect(() => {
+    setServices(job?.services ?? []);
+  }, [job]);
 
   // Tick for the live job timer.
   useEffect(() => {
@@ -87,6 +95,24 @@ export default function JobDetailScreen() {
       }
     },
     [jobId, reload, t],
+  );
+
+  const toggleService = useCallback(
+    async (svc: JobServiceLine) => {
+      if (!canToggleServices) return;
+      const next = !svc.completed;
+      // Optimistic flip.
+      setServices((prev) => prev.map((s) => (s.id === svc.id ? { ...s, completed: next } : s)));
+      try {
+        await api.toggleJobService(jobId, svc.id);
+      } catch (e) {
+        setServices((prev) =>
+          prev.map((s) => (s.id === svc.id ? { ...s, completed: !next } : s)),
+        );
+        Alert.alert(t('job.services'), e instanceof Error ? e.message : t('common.somethingWrong'));
+      }
+    },
+    [canToggleServices, jobId, t],
   );
 
   const submitNote = useCallback(async () => {
@@ -121,11 +147,13 @@ export default function JobDetailScreen() {
           contentContainerStyle={styles.body}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
+          {job.mowing_conflict ? <MowingConflictBanner conflict={job.mowing_conflict} /> : null}
+
           <JobTimerCard
             job={job}
             now={now}
             busy={busy}
-            isForeman={employee?.role === 'foreman'}
+            isForeman={employee?.role === 'foreman' || employee?.role === 'spray_tech'}
             onStart={() => runAction('start')}
             onComplete={() =>
               Alert.alert(t('job.completeTitle'), t('job.completeMsg'), [
@@ -186,6 +214,41 @@ export default function JobDetailScreen() {
             </View>
           ) : null}
 
+          {/* Services */}
+          <View style={styles.section}>
+            <SectionLabel>{t('job.services')}</SectionLabel>
+            <Card style={styles.gap}>
+              {services.length > 0 ? (
+                services.map((service, index) => (
+                  <Pressable
+                    key={service.id}
+                    onPress={() => toggleService(service)}
+                    disabled={!canToggleServices}
+                    style={[styles.serviceRow, index > 0 && styles.noteRowDivider]}
+                  >
+                    <Icon
+                      name={service.completed ? 'checkbox' : 'square-outline'}
+                      size={24}
+                      color={service.completed ? AppColors.success : AppColors.textFaint}
+                    />
+                    <View style={styles.serviceBody}>
+                      <Text
+                        style={[styles.cardHeading, service.completed && styles.serviceDone]}
+                      >
+                        {service.name}
+                      </Text>
+                      {service.description ? (
+                        <Text style={styles.bodyText}>{service.description}</Text>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                ))
+              ) : (
+                <Text style={styles.cardMuted}>{t('job.noServices')}</Text>
+              )}
+            </Card>
+          </View>
+
           {/* Photos */}
           <View style={styles.section}>
             <SectionLabel>{t('job.photos')}</SectionLabel>
@@ -229,6 +292,29 @@ export default function JobDetailScreen() {
           </View>
         </ScrollView>
       )}
+    </View>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Spray Tech mowing-conflict banner (issue #12)                              */
+/* -------------------------------------------------------------------------- */
+
+function MowingConflictBanner({
+  conflict,
+}: {
+  conflict: NonNullable<Job['mowing_conflict']>;
+}) {
+  const { t } = useLanguage();
+  return (
+    <View style={styles.conflictBanner}>
+      <Icon name="warning" size={22} color={AppColors.warning} />
+      <View style={styles.conflictTextWrap}>
+        <Text style={styles.conflictTitle}>{t('job.mowingConflictTitle')}</Text>
+        <Text style={styles.conflictBody}>
+          {t('job.mowingConflictBody', { date: formatDateLong(conflict.scheduled_date) })}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -362,6 +448,30 @@ const styles = StyleSheet.create({
   gap: {
     gap: Spacing.two,
   },
+  conflictBanner: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    alignItems: 'flex-start',
+    backgroundColor: AppColors.warningSoft,
+    borderWidth: 1,
+    borderColor: AppColors.warning,
+    borderRadius: Radius.md,
+    padding: Spacing.three,
+  },
+  conflictTextWrap: {
+    flex: 1,
+  },
+  conflictTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: AppColors.text,
+  },
+  conflictBody: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    marginTop: 2,
+    lineHeight: 18,
+  },
   timerCard: {
     gap: Spacing.three,
   },
@@ -460,6 +570,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: AppColors.brand,
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
+  serviceBody: {
+    flex: 1,
+  },
+  serviceDone: {
+    textDecorationLine: 'line-through',
+    color: AppColors.textMuted,
   },
   noteRow: {
     paddingBottom: Spacing.two,

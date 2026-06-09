@@ -20,13 +20,14 @@ class EditInvoice extends EditRecord
             Actions\Action::make('view_public')
                 ->label('View Public')
                 ->icon('heroicon-o-eye')
+                ->color('gray')
                 ->url(fn () => $this->record->share_token ? $this->record->getPublicUrl() : null)
                 ->openUrlInNewTab()
                 ->visible(fn () => (bool) $this->record->share_token),
             Actions\Action::make('send')
                 ->label('Send Invoice')
                 ->icon('heroicon-o-envelope')
-                ->color('success')
+                ->color('gray')
                 ->form([
                     Forms\Components\TextInput::make('email')
                         ->label('Recipient Email')
@@ -71,5 +72,15 @@ class EditInvoice extends EditRecord
     protected function afterSave(): void
     {
         $this->record->recalculateTotal();
+
+        // Once payments cover the balance, mark the invoice paid automatically.
+        if ($this->record->amountPaid() > 0
+            && $this->record->balanceDue() <= 0
+            && in_array($this->record->status, ['draft', 'sent', 'overdue', 'payment_plan'], true)) {
+            $this->record->update([
+                'status' => 'paid',
+                'paid_at' => $this->record->paid_at ?? now()->toDateString(),
+            ]);
+        }
     }
 }

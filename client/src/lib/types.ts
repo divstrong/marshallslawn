@@ -3,7 +3,7 @@
  * classes on the server.
  */
 
-export type Role = 'foreman' | 'field' | 'estimator';
+export type Role = 'foreman' | 'spray_tech' | 'field' | 'estimator';
 
 export interface Capabilities {
   can_see_routes: boolean;
@@ -88,8 +88,25 @@ export interface Job {
   crew: { id: number; name: string | null } | null;
   customer: Customer | null;
   property: Property | null;
+  services?: JobServiceLine[];
   messages: JobMessage[];
   media: JobMedia[];
+  /** Set by the API when a mowing job is scheduled near this spray job (Spray Tech). */
+  mowing_conflict?: MowingConflict | null;
+}
+
+export interface JobServiceLine {
+  id: number;
+  name: string;
+  description: string | null;
+  completed: boolean;
+  completed_at?: string | null;
+}
+
+export interface MowingConflict {
+  scheduled_date: string;
+  days_away: number;
+  title: string | null;
 }
 
 export interface SchedulePayload {
@@ -161,7 +178,7 @@ export interface QuoteLineItemDraft {
 }
 
 export interface ChatAttachment {
-  type: 'photo' | 'video';
+  type: 'photo' | 'video' | 'file';
   url: string;
   name: string | null;
 }

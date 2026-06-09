@@ -5,12 +5,14 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\InvoiceResource\Pages;
 use App\Mail\ShareInvoiceMail;
 use App\Models\Invoice;
-use App\Models\InvoiceCredit;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -39,13 +41,15 @@ class InvoiceResource extends Resource
                 ->tabs([
                     Tab::make('General')
                         ->icon('heroicon-o-information-circle')
+                        ->columns(2)
                         ->schema([
                             Forms\Components\Select::make('customer_id')
                                 ->relationship('customer', 'last_name')
                                 ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->first_name} {$record->last_name}" . ($record->company_name ? " ({$record->company_name})" : ''))
                                 ->searchable()
                                 ->preload()
-                                ->required(),
+                                ->required()
+                                ->columnSpanFull(),
                             Forms\Components\TextInput::make('invoice_number')
                                 ->label('Invoice #')
                                 ->disabled()
@@ -66,11 +70,15 @@ class InvoiceResource extends Resource
                                 ->numeric()
                                 ->prefix('$')
                                 ->default(0)
-                                ->required(),
+                                ->required()
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcTotal($get, $set)),
                             Forms\Components\TextInput::make('tax')
                                 ->numeric()
                                 ->prefix('$')
-                                ->default(0),
+                                ->default(0)
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcTotal($get, $set)),
                             Forms\Components\TextInput::make('credits_total')
                                 ->label('Credits Applied')
                                 ->numeric()
@@ -86,11 +94,10 @@ class InvoiceResource extends Resource
                                 ->label('Issued Date'),
                             Forms\Components\DatePicker::make('due_at')
                                 ->label('Due Date'),
-                            Forms\Components\DatePicker::make('paid_at')
-                                ->label('Paid Date'),
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
                             Section::make('Payment Plan')
+                                ->columnSpanFull()
                                 ->schema([
                                     Forms\Components\Placeholder::make('plan_monthly')
                                         ->label('Monthly Payment')
@@ -115,41 +122,27 @@ class InvoiceResource extends Resource
                         ->badge(fn (?Invoice $record): ?string => $record?->credits()->count() ?: null)
                         ->hidden(fn (?Invoice $record): bool => ! $record?->exists)
                         ->schema([
-                            Forms\Components\Repeater::make('credits')
-                                ->relationship()
-                                ->schema([
-                                    Forms\Components\TextInput::make('code')
-                                        ->label('Credit Code')
-                                        ->maxLength(255),
-                                    Forms\Components\TextInput::make('description')
-                                        ->required()
-                                        ->maxLength(255),
-                                    Forms\Components\TextInput::make('amount')
-                                        ->numeric()
-                                        ->prefix('$')
-                                        ->required(),
-                                    Forms\Components\Placeholder::make('applied_by_name')
-                                        ->label('Applied By')
-                                        ->content(fn (?InvoiceCredit $record): string => $record?->appliedBy?->name ?? '-'),
-                                    Forms\Components\Placeholder::make('created_at_display')
-                                        ->label('Applied At')
-                                        ->content(fn (?InvoiceCredit $record): string => $record?->created_at?->format('M d, Y g:i A') ?? '-'),
-                                ])
-                                ->columns(3)
-                                ->defaultItems(0)
-                                ->addActionLabel('Add Credit')
-                                ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
-                                    $data['applied_by'] = auth()->id();
-                                    return $data;
-                                })
-                                ->visible(fn () => auth()->user()?->isAdmin()),
-                            Forms\Components\Placeholder::make('credits_readonly')
-                                ->label('')
-                                ->content('Only administrators can add or manage credits.')
-                                ->visible(fn () => ! auth()->user()?->isAdmin()),
+                            View::make('filament.resources.invoice.credits-tab'),
+                        ]),
+                    Tab::make('Payments')
+                        ->icon('heroicon-o-banknotes')
+                        ->badge(fn (?Invoice $record): ?string => $record?->payments()->count() ?: null)
+                        ->hidden(fn (?Invoice $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.invoice.payments-tab'),
                         ]),
                 ]),
         ]);
+    }
+
+    /** Live-update the Total as subtotal/tax are entered: subtotal + tax - credits. */
+    protected static function recalcTotal(Get $get, Set $set): void
+    {
+        $total = (float) ($get('subtotal') ?? 0)
+            + (float) ($get('tax') ?? 0)
+            - (float) ($get('credits_total') ?? 0);
+
+        $set('total', number_format($total, 2, '.', ''));
     }
 
     public static function table(Table $table): Table

@@ -2,7 +2,10 @@
     $crews = $this->crews;
     $selectedCrew = $this->selectedCrew;
     $stops = $this->routeStops;
-    $jobs = $this->unassignedJobs;
+    $unassigned = $this->unassignedJobs;
+    $waiting = $this->waitingListJobs;
+    $queue = $this->queue === 'waiting' ? 'waiting' : 'unassigned';
+    $jobs = $queue === 'waiting' ? $waiting : $unassigned;
     $route = $this->route;
 @endphp
 
@@ -136,6 +139,13 @@
             display: inline-flex; align-items: center;
         }
         .sch-page .sch-card-body { flex: 1; min-width: 0; }
+        .sch-page .sch-card-move {
+            flex-shrink: 0; cursor: pointer; white-space: nowrap;
+            border: 1px solid var(--d-border); border-radius: 6px;
+            background: var(--d-card-bg); color: var(--d-muted);
+            font-size: 11px; font-weight: 600; padding: 4px 8px;
+        }
+        .sch-page .sch-card-move:hover { border-color: var(--d-accent); color: var(--d-accent); }
         .sch-page .sch-card-title { font-size: 13px; font-weight: 500; }
         .sch-page .sch-card-meta { font-size: 12px; color: var(--d-muted); margin-top: 2px; }
         .sch-page .sch-tag {
@@ -234,19 +244,35 @@
                 <div class="sch-grid">
                     <div class="sch-col">
                         <div class="sch-col-header">
-                            <div class="sch-col-title">Unassigned Jobs</div>
                             @php
-                                $skippedCount = collect($jobs)->where('is_skipped', true)->count();
-                                $todayCount = count($jobs) - $skippedCount;
                                 $dateLabel = \Carbon\Carbon::parse($this->date)->format('D, M j');
+                                $tabActive = 'background: var(--d-accent, #dc2626); color: #fff; border-color: var(--d-accent, #dc2626);';
                             @endphp
+                            <div class="sch-tabs" style="display:flex; gap:6px; margin-bottom:6px;">
+                                <button type="button" wire:click="setQueue('unassigned')" class="d-btn"
+                                    @if ($queue === 'unassigned') style="{{ $tabActive }}" @endif>
+                                    Unassigned ({{ count($unassigned) }})
+                                </button>
+                                <button type="button" wire:click="setQueue('waiting')" class="d-btn"
+                                    @if ($queue === 'waiting') style="{{ $tabActive }}" @endif>
+                                    Waiting List ({{ count($waiting) }})
+                                </button>
+                            </div>
                             <div class="sch-col-sub">
-                                @if (count($jobs) === 0)
-                                    No jobs scheduled for {{ $dateLabel }}
+                                @if ($queue === 'waiting')
+                                    Future jobs held back from the near-term pile. Drag onto a route, or send back to Unassigned.
                                 @else
-                                    {{ $todayCount }} {{ \Illuminate\Support\Str::plural('job', $todayCount) }} on {{ $dateLabel }}
-                                    @if ($skippedCount > 0)
-                                        · <span style="color: rgb(153, 27, 27); font-weight: 600;">{{ $skippedCount }} skipped</span>
+                                    @php
+                                        $skippedCount = collect($unassigned)->where('is_skipped', true)->count();
+                                        $todayCount = count($unassigned) - $skippedCount;
+                                    @endphp
+                                    @if (count($unassigned) === 0)
+                                        No jobs scheduled for {{ $dateLabel }}
+                                    @else
+                                        {{ $todayCount }} {{ \Illuminate\Support\Str::plural('job', $todayCount) }} on {{ $dateLabel }}
+                                        @if ($skippedCount > 0)
+                                            · <span style="color: rgb(153, 27, 27); font-weight: 600;">{{ $skippedCount }} skipped</span>
+                                        @endif
                                     @endif
                                 @endif
                             </div>
@@ -266,6 +292,9 @@
                                             @if ($job['is_skipped'] ?? false)
                                                 <span class="sch-tag skipped">Skipped — needs reschedule</span>
                                             @endif
+                                            @if ($queue === 'waiting' && ! empty($job['scheduled_date']))
+                                                <span class="sch-tag">{{ \Carbon\Carbon::parse($job['scheduled_date'])->format('M j') }}</span>
+                                            @endif
                                             @if ($job['service_name'])
                                                 <span class="sch-tag">{{ $job['service_name'] }}</span>
                                             @endif
@@ -274,10 +303,19 @@
                                             @endif
                                         </div>
                                     </div>
+                                    @if ($queue === 'waiting')
+                                        <button type="button" wire:click="moveToUnassigned({{ $job['id'] }})" class="sch-card-move" title="Move to Unassigned for {{ $dateLabel }}">↑ Unassign</button>
+                                    @else
+                                        <button type="button" wire:click="moveToWaitingList({{ $job['id'] }})" class="sch-card-move" title="Move to the Waiting List">→ Wait</button>
+                                    @endif
                                 </div>
                             @empty
                                 <div class="sch-list-empty">
-                                    Drop stops here to remove them from the route.
+                                    @if ($queue === 'waiting')
+                                        The waiting list is empty. Use "→ Wait" on an unassigned job to park it here.
+                                    @else
+                                        Drop stops here to remove them from the route.
+                                    @endif
                                 </div>
                             @endforelse
                         </div>

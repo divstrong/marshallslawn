@@ -10,6 +10,8 @@
     $selected = $this->selectedStop;
     $selectedJob = $this->selectedUnroutedJob;
     $selectedForeman = $this->selectedForeman;
+    $serviceIcons = $this->serviceIconsEnabled;
+    $serviceGroups = \App\Models\Service::GROUPS;
 @endphp
 
 <div>
@@ -271,6 +273,7 @@
             foremen: @js($foremen),
             crewColors: @js($crewColors),
             apiKey: @js($mapsApiKey ?? ''),
+            serviceIcons: @js($serviceIcons),
         })"
         x-init="init()"
     >
@@ -354,6 +357,33 @@
                         <option value="completed">Completed</option>
                         <option value="skipped">Skipped</option>
                     </select>
+
+                    <button
+                        type="button"
+                        wire:click="openServicesModal"
+                        class="d-chip"
+                        title="Show services, notes &amp; details for the selected job"
+                    >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                        Services
+                    </button>
+                </div>
+
+                {{-- Service-group filters (issue #15): show only jobs offering these services. --}}
+                <div class="d-row-wrap" style="margin-top: 8px;">
+                    <span class="d-label" style="align-self:center;">Services</span>
+                    @foreach (['spraying', 'mowing', 'mulching'] as $group)
+                        @php $isGroupActive = in_array($group, $this->serviceGroups, true); @endphp
+                        <button
+                            type="button"
+                            wire:click="toggleServiceGroup('{{ $group }}')"
+                            class="d-chip {{ $isGroupActive ? 'is-active' : '' }}"
+                            @if ($isGroupActive) style="background: var(--d-accent); color: #fff; border-color: var(--d-accent);" @endif
+                        >{{ $serviceGroups[$group] }}</button>
+                    @endforeach
+                    @if (! empty($this->serviceGroups))
+                        <button type="button" wire:click="$set('serviceGroups', [])" class="d-btn" style="height:28px;padding:0 10px;font-size:12px;">Clear</button>
+                    @endif
                 </div>
             </div>
 
@@ -573,9 +603,12 @@
                                     class="d-list-item {{ $selected && $selected['id'] === $stop['id'] ? 'is-active' : '' }}"
                                 >
                                     <span class="d-stop-num" style="background-color: {{ $stop['color'] }}">{{ $stop['sort_order'] }}</span>
+                                    @if ($serviceIcons && ! empty($stop['icon_url']))
+                                        <img src="{{ $stop['icon_url'] }}" alt="" style="width:22px;height:22px;border-radius:4px;object-fit:contain;flex-shrink:0;">
+                                    @endif
                                     <div class="d-list-main">
                                         <div class="d-truncate">{{ $stop['customer_name'] }}</div>
-                                        <div class="d-truncate d-muted" style="font-size: 12px;">{{ $stop['address'] }}</div>
+                                        <div class="d-truncate d-muted" style="font-size: 12px;">{{ $stop['address'] }}{{ $stop['service_name'] ? ' · ' . $stop['service_name'] : '' }}</div>
                                     </div>
                                     @if ($stop['status'] === 'completed')
                                         <span class="d-status-dot completed">✓</span>
@@ -595,6 +628,9 @@
                                     class="d-list-item {{ $selectedJob && $selectedJob['id'] === $job['id'] ? 'is-active' : '' }}"
                                 >
                                     <span class="d-stop-num" style="background-color: {{ $job['color'] }}">?</span>
+                                    @if ($serviceIcons && ! empty($job['icon_url']))
+                                        <img src="{{ $job['icon_url'] }}" alt="" style="width:22px;height:22px;border-radius:4px;object-fit:contain;flex-shrink:0;">
+                                    @endif
                                     <div class="d-list-main">
                                         <div class="d-truncate">{{ $job['customer_name'] }}</div>
                                         <div class="d-truncate d-muted" style="font-size: 12px;">{{ $job['address'] }} · unrouted</div>
@@ -663,6 +699,12 @@
                             @if ($msg['attachment_url'])
                                 @if ($msg['attachment_type'] === 'video')
                                     <video src="{{ $msg['attachment_url'] }}" controls style="max-width:240px;border-radius:8px;display:block;margin-bottom:6px;"></video>
+                                @elseif ($msg['attachment_type'] === 'file')
+                                    <a href="{{ $msg['attachment_url'] }}" target="_blank" rel="noopener" download
+                                       style="display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;border-radius:8px;background:rgba(15,23,42,0.06);text-decoration:none;color:inherit;max-width:240px;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                                        <span class="d-truncate" style="font-size:12px;font-weight:600;">{{ $msg['attachment_name'] ?: 'Download file' }}</span>
+                                    </a>
                                 @else
                                     <a href="{{ $msg['attachment_url'] }}" target="_blank" rel="noopener">
                                         <img src="{{ $msg['attachment_url'] }}" alt="attachment" style="max-width:240px;border-radius:8px;display:block;margin-bottom:6px;">
@@ -682,9 +724,9 @@
                 <div class="d-chat-footer">
                     <div wire:loading wire:target="chatAttachment" class="d-muted" style="font-size:11px;margin-bottom:6px;">Uploading attachment…</div>
                     <form wire:submit="sendChat" style="display:flex;gap:6px;align-items:center;">
-                        <label title="Attach photo or video" style="height:36px;width:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--d-border);border-radius:8px;cursor:pointer;color:var(--d-muted);">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 15l-5-5L5 21"/></svg>
-                            <input type="file" wire:model="chatAttachment" accept="image/*,video/*" style="display:none;">
+                        <label title="Attach a photo, video, or file" style="height:36px;width:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--d-border);border-radius:8px;cursor:pointer;color:var(--d-muted);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                            <input type="file" wire:model="chatAttachment" style="display:none;">
                         </label>
                         <input
                             type="text"
@@ -698,6 +740,68 @@
                 </div>
             @endif
         </aside>
+
+        {{-- Job services / notes modal --}}
+        @if ($showServicesModal)
+            @php $job = $this->activeJob; @endphp
+            <div class="d-modal-backdrop" wire:click.self="closeServicesModal">
+                <div class="d-modal" role="dialog" aria-modal="true" aria-labelledby="services-modal-title" style="max-width:520px;">
+                    <div class="d-row" style="justify-content:space-between; align-items:flex-start;">
+                        <div class="d-modal-title" id="services-modal-title">Job details</div>
+                        <button type="button" wire:click="closeServicesModal" class="d-btn" style="height:28px; padding:0 10px; font-size:12px;">Close</button>
+                    </div>
+
+                    @if (! $job)
+                        <div class="d-modal-body">Select a job on the map or list to see its services, notes, and customer details.</div>
+                    @else
+                        <div class="d-modal-body" style="display:flex; flex-direction:column; gap:14px;">
+                            @if ($job['title'])
+                                <div style="font-weight:700; font-size:15px;">{{ $job['title'] }}</div>
+                            @endif
+
+                            <div>
+                                <div class="d-label">Customer</div>
+                                <div class="d-field-val">{{ $job['customer_name'] }}</div>
+                                @if ($job['customer_phone'])
+                                    <a href="tel:{{ $job['customer_phone'] }}" class="d-link" style="font-size:12px;">{{ $job['customer_phone'] }}</a>
+                                @endif
+                            </div>
+
+                            <div>
+                                <div class="d-label">Property</div>
+                                <div class="d-field-val">{{ $job['address'] }}{{ $job['city'] ? ', ' . $job['city'] : '' }}</div>
+                            </div>
+
+                            <div>
+                                <div class="d-label">Services</div>
+                                @if (! empty($job['services']))
+                                    <ul style="margin:6px 0 0; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:6px;">
+                                        @foreach ($job['services'] as $svc)
+                                            <li style="display:flex; align-items:flex-start; gap:8px;">
+                                                <span style="flex-shrink:0; color:{{ $svc['completed'] ? '#16a34a' : '#9ca3af' }};">{{ $svc['completed'] ? '✓' : '○' }}</span>
+                                                <span>
+                                                    <span style="font-weight:600;{{ $svc['completed'] ? 'text-decoration:line-through; opacity:.7;' : '' }}">{{ $svc['name'] }}</span>
+                                                    @if ($svc['description'])
+                                                        <span class="d-muted" style="display:block; font-size:12px;">{{ $svc['description'] }}</span>
+                                                    @endif
+                                                </span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <div class="d-muted" style="font-size:13px;">No services listed for this job.</div>
+                                @endif
+                            </div>
+
+                            <div>
+                                <div class="d-label">Notes</div>
+                                <div class="d-field-val" style="white-space:pre-wrap;">{{ $job['notes'] ?: '—' }}</div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
 
         {{-- Skip confirmation modal --}}
         @if ($this->confirmSkipStopId && $selected)
@@ -731,6 +835,7 @@
                         markers: [],
                         bounds: null,
                         crewColors: initial.crewColors,
+                        serviceIcons: !!initial.serviceIcons,
 
                         init() {
                             if (!initial.apiKey) return;
@@ -740,8 +845,9 @@
                             });
 
                             window.addEventListener('dispatch:stops-updated', (e) => {
-                                const { stops = [], unroutedJobs = [], foremen = [], crewColors } = e.detail || {};
+                                const { stops = [], unroutedJobs = [], foremen = [], crewColors, serviceIcons } = e.detail || {};
                                 if (crewColors) this.crewColors = crewColors;
+                                if (typeof serviceIcons !== 'undefined') this.serviceIcons = !!serviceIcons;
                                 this.refreshMarkers([...stops, ...unroutedJobs], foremen);
                             });
                         },
@@ -795,12 +901,25 @@
                                 const isJob = p.kind === 'job';
                                 const opacity = p.status === 'completed' ? 0.5 : (p.status === 'skipped' ? 0.4 : 1);
                                 const labelText = isJob ? '?' : String(p.sort_order ?? '');
-                                const marker = new google.maps.Marker({
+
+                                // When "Service Icons" is enabled and this job's service has an
+                                // uploaded icon, drop the service icon as the map pin (issue #8/#15).
+                                const markerOpts = {
                                     position: { lat: p.lat, lng: p.lng },
                                     map: this.map,
                                     title: `${p.customer_name} — ${p.address}`,
-                                    label: { text: labelText, color: '#fff', fontSize: '11px', fontWeight: '600' },
-                                    icon: {
+                                };
+
+                                if (this.serviceIcons && p.icon_url) {
+                                    markerOpts.icon = {
+                                        url: p.icon_url,
+                                        scaledSize: new google.maps.Size(34, 34),
+                                        anchor: new google.maps.Point(17, 34),
+                                    };
+                                    markerOpts.opacity = opacity;
+                                } else {
+                                    markerOpts.label = { text: labelText, color: '#fff', fontSize: '11px', fontWeight: '600' };
+                                    markerOpts.icon = {
                                         path: 'M12 2C7.58 2 4 5.58 4 10c0 5.25 7 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8z',
                                         fillColor: p.color,
                                         fillOpacity: opacity,
@@ -809,8 +928,10 @@
                                         scale: isJob ? 1.4 : 1.7,
                                         anchor: new google.maps.Point(12, 23),
                                         labelOrigin: new google.maps.Point(12, 10),
-                                    },
-                                });
+                                    };
+                                }
+
+                                const marker = new google.maps.Marker(markerOpts);
                                 marker.addListener('click', () => {
                                     if (isJob) this.$wire.selectJob(p.id);
                                     else this.$wire.selectStop(p.id);

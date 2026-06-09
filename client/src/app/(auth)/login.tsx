@@ -19,8 +19,13 @@ import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/language';
 import type { Role } from '@/lib/types';
 
-const DEV_ROLES: { role: Role; labelKey: string; icon: 'calendar' | 'briefcase' | 'document-text' }[] = [
+const DEV_ROLES: {
+  role: Role;
+  labelKey: string;
+  icon: 'calendar' | 'briefcase' | 'document-text' | 'water';
+}[] = [
   { role: 'foreman', labelKey: 'login.roleForeman', icon: 'calendar' },
+  { role: 'spray_tech', labelKey: 'login.roleSprayTech', icon: 'water' },
   { role: 'field', labelKey: 'login.roleField', icon: 'briefcase' },
   { role: 'estimator', labelKey: 'login.roleEstimator', icon: 'document-text' },
 ];

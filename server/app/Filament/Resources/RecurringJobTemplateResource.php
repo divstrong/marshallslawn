@@ -21,6 +21,10 @@ class RecurringJobTemplateResource extends Resource
 
     protected static ?string $model = RecurringJobTemplate::class;
 
+    // Recurring series are created from the Jobs form now (Type = Recurring),
+    // so this resource is no longer surfaced in the navigation.
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-path';
 
     protected static string | \UnitEnum | null $navigationGroup = 'Operations';

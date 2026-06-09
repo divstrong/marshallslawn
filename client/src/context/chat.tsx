@@ -18,7 +18,11 @@ import { Platform } from 'react-native';
 import { PUSH_TOKEN_STORAGE_KEY } from '@/constants/config';
 import { useAuth } from '@/context/auth';
 import { api } from '@/lib/api';
-import { addChatNotificationListeners, registerForPushNotifications } from '@/lib/notifications';
+import {
+  addChatNotificationListeners,
+  addJobNotificationListeners,
+  registerForPushNotifications,
+} from '@/lib/notifications';
 import { setItem } from '@/lib/storage';
 
 interface ChatContextValue {
@@ -32,7 +36,9 @@ const POLL_INTERVAL_MS = 25_000;
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { employee, status } = useAuth();
-  const hasChat = status === 'authenticated' && employee?.role === 'foreman';
+  const hasChat =
+    status === 'authenticated' &&
+    (employee?.role === 'foreman' || employee?.role === 'spray_tech');
 
   const [unread, setUnread] = useState(0);
 
@@ -92,6 +98,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return addChatNotificationListeners({
       onTap: () => router.navigate('/chat'),
       onReceive: () => refreshRef.current(),
+    });
+  }, []);
+
+  // Tapping a job alert (skipped / canceled job) opens that job's detail.
+  useEffect(() => {
+    return addJobNotificationListeners({
+      onTap: (jobId) => router.navigate(jobId ? `/job/${jobId}` : '/jobs'),
     });
   }, []);
 

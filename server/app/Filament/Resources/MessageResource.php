@@ -18,6 +18,9 @@ class MessageResource extends Resource
 
     protected static ?string $model = Message::class;
 
+    // Replaced by the Communication > Messages page (employee chat center).
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-envelope';
 
     protected static string | \UnitEnum | null $navigationGroup = 'Communication';

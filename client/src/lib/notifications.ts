@@ -67,6 +67,13 @@ export async function registerForPushNotifications(): Promise<string | null> {
       lightColor: Brand[500],
       vibrationPattern: [0, 250, 250, 250],
     });
+    // Job alerts (skipped / canceled jobs) — issue #14.
+    await Notifications.setNotificationChannelAsync('alerts', {
+      name: 'Job alerts',
+      importance: Notifications.AndroidImportance.HIGH,
+      lightColor: Brand[500],
+      vibrationPattern: [0, 250, 250, 250],
+    });
   }
 
   const existing = await Notifications.getPermissionsAsync();
@@ -117,5 +124,31 @@ export function addChatNotificationListeners(handlers: {
   return () => {
     tap.remove();
     received.remove();
+  };
+}
+
+/**
+ * Subscribe to job-alert notification taps (skipped / canceled jobs — issue #14).
+ * Calls `onTap` with the job id. Returns a cleanup function; a no-op when push
+ * isn't available.
+ */
+export function addJobNotificationListeners(handlers: {
+  onTap: (jobId: number | null) => void;
+}): () => void {
+  const Notifications = loadNotifications();
+  if (!Notifications) {
+    return () => {};
+  }
+
+  const tap = Notifications.addNotificationResponseReceivedListener((response) => {
+    const data = response.notification.request.content.data;
+    if (data?.type === 'job') {
+      const jobId = typeof data.job_id === 'number' ? data.job_id : Number(data.job_id) || null;
+      handlers.onTap(jobId);
+    }
+  });
+
+  return () => {
+    tap.remove();
   };
 }
