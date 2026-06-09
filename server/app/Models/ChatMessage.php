@@ -53,8 +53,11 @@ class ChatMessage extends Model
                 return;
             }
 
-            $preview = $message->body
-                ?: ($message->attachment_type === 'video' ? 'Sent a video' : 'Sent a photo');
+            $preview = $message->body ?: match ($message->attachment_type) {
+                'video' => 'Sent a video',
+                'file' => 'Sent a file',
+                default => 'Sent a photo',
+            };
 
             app(\App\Services\ExpoPushService::class)->sendToEmployee(
                 $employee,
