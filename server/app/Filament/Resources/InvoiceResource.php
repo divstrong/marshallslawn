@@ -40,13 +40,15 @@ class InvoiceResource extends Resource
                 ->tabs([
                     Tab::make('General')
                         ->icon('heroicon-o-information-circle')
+                        ->columns(2)
                         ->schema([
                             Forms\Components\Select::make('customer_id')
                                 ->relationship('customer', 'last_name')
                                 ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->first_name} {$record->last_name}" . ($record->company_name ? " ({$record->company_name})" : ''))
                                 ->searchable()
                                 ->preload()
-                                ->required(),
+                                ->required()
+                                ->columnSpanFull(),
                             Forms\Components\TextInput::make('invoice_number')
                                 ->label('Invoice #')
                                 ->disabled()
@@ -92,6 +94,7 @@ class InvoiceResource extends Resource
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
                             Section::make('Payment Plan')
+                                ->columnSpanFull()
                                 ->schema([
                                     Forms\Components\Placeholder::make('plan_monthly')
                                         ->label('Monthly Payment')
