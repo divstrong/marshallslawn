@@ -9,3 +9,6 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('jobs:generate-recurring')->dailyAt('01:00');
+
+// Cap any job timer left running past the 12-hour daily maximum.
+Schedule::command('jobs:autostop-timers')->hourly();

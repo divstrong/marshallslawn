@@ -5,9 +5,9 @@ namespace App\Filament\Resources;
 use App\Filament\Concerns\ChecksResourceAccess;
 use App\Filament\Resources\TimeLogResource\Pages;
 use App\Models\Job;
-use Carbon\CarbonInterface;
 use Filament\Actions;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -135,6 +135,21 @@ class TimeLogResource extends Resource
             ])
             ->defaultPaginationPageOption(50)
             ->actions([
+                Actions\Action::make('stopTimer')
+                    ->label('Stop')
+                    ->icon('heroicon-o-stop-circle')
+                    ->color('warning')
+                    ->visible(fn (Job $record): bool => $record->isTimerRunning())
+                    ->requiresConfirmation()
+                    ->modalHeading('Stop this job timer?')
+                    ->modalDescription('Sets the finish time to now (capped at 12 hours from start) and marks the job completed. Use this if a crew left the timer running by accident.')
+                    ->action(function (Job $record): void {
+                        $record->stopTimer();
+                        Notification::make()
+                            ->title('Timer stopped')
+                            ->success()
+                            ->send();
+                    }),
                 Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -164,6 +179,10 @@ class TimeLogResource extends Resource
 
         $end = $job->finished_at ?? now();
         $minutes = (int) abs($job->started_at->diffInMinutes($end));
+        // A still-running timer never displays more than the daily maximum.
+        if (! $job->finished_at) {
+            $minutes = min($minutes, Job::MAX_TIMER_HOURS * 60);
+        }
 
         $hours = intdiv($minutes, 60);
         $mins = $minutes % 60;
