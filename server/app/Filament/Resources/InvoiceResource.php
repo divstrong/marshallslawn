@@ -89,8 +89,6 @@ class InvoiceResource extends Resource
                                 ->label('Issued Date'),
                             Forms\Components\DatePicker::make('due_at')
                                 ->label('Due Date'),
-                            Forms\Components\DatePicker::make('paid_at')
-                                ->label('Paid Date'),
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
                             Section::make('Payment Plan')
