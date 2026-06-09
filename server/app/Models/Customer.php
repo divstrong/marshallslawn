@@ -34,7 +34,18 @@ class Customer extends Model
         'list_id',
         'source',
         'notes',
+        'tags',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'tags' => 'array',
+        ];
+    }
 
     public function properties(): HasMany
     {

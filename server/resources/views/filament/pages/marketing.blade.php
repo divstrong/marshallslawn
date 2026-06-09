@@ -1,5 +1,3 @@
 <x-filament-panels::page>
-    <div class="text-center py-12">
-        <p class="text-lg text-gray-500 dark:text-gray-400">Marketing campaigns coming soon</p>
-    </div>
+    @livewire(\App\Livewire\MarketingCampaigns::class)
 </x-filament-panels::page>

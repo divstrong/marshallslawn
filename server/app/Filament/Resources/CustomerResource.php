@@ -78,6 +78,10 @@ class CustomerResource extends Resource
                                 ->label('Legacy ID')
                                 ->disabled()
                                 ->maxLength(255),
+                            Forms\Components\TagsInput::make('tags')
+                                ->label('Tags')
+                                ->helperText('Used to target marketing campaigns (e.g. "weekly-mow", "commercial", "vip").')
+                                ->columnSpanFull(),
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
                         ]),
@@ -111,6 +115,10 @@ class CustomerResource extends Resource
                     ->sortable(['last_name']),
                 Tables\Columns\TextColumn::make('city')
                     ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('tags')
+                    ->badge()
+                    ->separator(',')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),

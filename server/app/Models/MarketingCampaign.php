@@ -14,9 +14,24 @@ class MarketingCampaign extends Model
      *
      * @var list<string>
      */
+    /**
+     * Available HTML email templates (marketing campaign builder).
+     *
+     * @var array<string, string>
+     */
+    public const TEMPLATES = [
+        'announcement' => 'Announcement',
+        'promotion' => 'Promotion',
+        'newsletter' => 'Newsletter',
+    ];
+
     protected $fillable = [
         'name',
         'subject',
+        'template',
+        'content',
+        'recipient_tags',
+        'recipient_customer_ids',
         'html_content',
         'status',
         'scheduled_at',
@@ -34,6 +49,9 @@ class MarketingCampaign extends Model
     protected function casts(): array
     {
         return [
+            'content' => 'array',
+            'recipient_tags' => 'array',
+            'recipient_customer_ids' => 'array',
             'scheduled_at' => 'datetime',
             'sent_at' => 'datetime',
             'recipient_count' => 'integer',

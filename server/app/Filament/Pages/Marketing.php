@@ -13,4 +13,9 @@ class Marketing extends Page
     protected static ?int $navigationSort = 3;
 
     protected string $view = 'filament.pages.marketing';
+
+    public function getMaxContentWidth(): \Filament\Support\Enums\Width
+    {
+        return \Filament\Support\Enums\Width::Full;
+    }
 }
