@@ -357,16 +357,6 @@
                         <option value="completed">Completed</option>
                         <option value="skipped">Skipped</option>
                     </select>
-
-                    <button
-                        type="button"
-                        wire:click="openServicesModal"
-                        class="d-chip"
-                        title="Show services, notes &amp; details for the selected job"
-                    >
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-                        Services
-                    </button>
                 </div>
 
                 {{-- Service-group filters (issue #15): show only jobs offering these services. --}}
@@ -467,7 +457,10 @@
                                     <span class="d-dot" style="background-color: #9ca3af"></span>
                                     <span class="d-card-title">Unrouted job</span>
                                 </div>
-                                <button type="button" wire:click="clearSelection" class="d-btn" style="height: 28px; padding: 0 8px; font-size: 12px;">Close</button>
+                                <div class="d-row" style="gap:6px;">
+                                    <button type="button" wire:click="openServicesModal" class="d-btn" style="height: 28px; padding: 0 10px; font-size: 12px;" title="Services, notes &amp; details for this job">Services</button>
+                                    <button type="button" wire:click="clearSelection" class="d-btn" style="height: 28px; padding: 0 8px; font-size: 12px;">Close</button>
+                                </div>
                             </div>
                             <div class="d-field">
                                 <div class="d-label">Customer</div>
@@ -504,6 +497,7 @@
                                     <span class="d-card-title">Stop #{{ $selected['sort_order'] }}</span>
                                 </div>
                                 <div class="d-row" style="gap:6px;">
+                                    <button type="button" wire:click="openServicesModal" class="d-btn" style="height: 28px; padding: 0 10px; font-size: 12px;" title="Services, notes &amp; details for this job">Services</button>
                                     <button
                                         type="button"
                                         wire:click="requestSkip({{ $selected['id'] }})"
