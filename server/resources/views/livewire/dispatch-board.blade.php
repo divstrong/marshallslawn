@@ -357,6 +357,16 @@
                         <option value="completed">Completed</option>
                         <option value="skipped">Skipped</option>
                     </select>
+
+                    <button
+                        type="button"
+                        wire:click="openServicesModal"
+                        class="d-chip"
+                        title="Show services, notes &amp; details for the selected job"
+                    >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                        Services
+                    </button>
                 </div>
 
                 {{-- Service-group filters (issue #15): show only jobs offering these services. --}}
@@ -730,6 +740,68 @@
                 </div>
             @endif
         </aside>
+
+        {{-- Job services / notes modal --}}
+        @if ($showServicesModal)
+            @php $job = $this->activeJob; @endphp
+            <div class="d-modal-backdrop" wire:click.self="closeServicesModal">
+                <div class="d-modal" role="dialog" aria-modal="true" aria-labelledby="services-modal-title" style="max-width:520px;">
+                    <div class="d-row" style="justify-content:space-between; align-items:flex-start;">
+                        <div class="d-modal-title" id="services-modal-title">Job details</div>
+                        <button type="button" wire:click="closeServicesModal" class="d-btn" style="height:28px; padding:0 10px; font-size:12px;">Close</button>
+                    </div>
+
+                    @if (! $job)
+                        <div class="d-modal-body">Select a job on the map or list to see its services, notes, and customer details.</div>
+                    @else
+                        <div class="d-modal-body" style="display:flex; flex-direction:column; gap:14px;">
+                            @if ($job['title'])
+                                <div style="font-weight:700; font-size:15px;">{{ $job['title'] }}</div>
+                            @endif
+
+                            <div>
+                                <div class="d-label">Customer</div>
+                                <div class="d-field-val">{{ $job['customer_name'] }}</div>
+                                @if ($job['customer_phone'])
+                                    <a href="tel:{{ $job['customer_phone'] }}" class="d-link" style="font-size:12px;">{{ $job['customer_phone'] }}</a>
+                                @endif
+                            </div>
+
+                            <div>
+                                <div class="d-label">Property</div>
+                                <div class="d-field-val">{{ $job['address'] }}{{ $job['city'] ? ', ' . $job['city'] : '' }}</div>
+                            </div>
+
+                            <div>
+                                <div class="d-label">Services</div>
+                                @if (! empty($job['services']))
+                                    <ul style="margin:6px 0 0; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:6px;">
+                                        @foreach ($job['services'] as $svc)
+                                            <li style="display:flex; align-items:flex-start; gap:8px;">
+                                                <span style="flex-shrink:0; color:{{ $svc['completed'] ? '#16a34a' : '#9ca3af' }};">{{ $svc['completed'] ? '✓' : '○' }}</span>
+                                                <span>
+                                                    <span style="font-weight:600;{{ $svc['completed'] ? 'text-decoration:line-through; opacity:.7;' : '' }}">{{ $svc['name'] }}</span>
+                                                    @if ($svc['description'])
+                                                        <span class="d-muted" style="display:block; font-size:12px;">{{ $svc['description'] }}</span>
+                                                    @endif
+                                                </span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <div class="d-muted" style="font-size:13px;">No services listed for this job.</div>
+                                @endif
+                            </div>
+
+                            <div>
+                                <div class="d-label">Notes</div>
+                                <div class="d-field-val" style="white-space:pre-wrap;">{{ $job['notes'] ?: '—' }}</div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
 
         {{-- Skip confirmation modal --}}
         @if ($this->confirmSkipStopId && $selected)

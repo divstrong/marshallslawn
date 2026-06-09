@@ -63,6 +63,9 @@ class DispatchBoard extends Component
     /** Stop id awaiting Skip confirmation in the modal. */
     public ?int $confirmSkipStopId = null;
 
+    /** Whether the job services/notes modal is open. */
+    public bool $showServicesModal = false;
+
     /** Right-side chat panel state. */
     public bool $chatPanelOpen = false;
 
@@ -155,6 +158,7 @@ class DispatchBoard extends Component
 
             return [
                 'id' => (int) $stop->id,
+                'job_id' => $stop->job_id ? (int) $stop->job_id : null,
                 'lat' => (float) $stop->property->latitude,
                 'lng' => (float) $stop->property->longitude,
                 'sort_order' => (int) $stop->sort_order,
@@ -692,6 +696,65 @@ class DispatchBoard extends Component
 
         unset($this->stops, $this->selectedStop, $this->summary);
         $this->emitStopsUpdated();
+    }
+
+    /** The job behind the current selection (a route stop or an unrouted job). */
+    #[Computed]
+    public function activeJob(): ?array
+    {
+        $jobId = $this->selectedJobId;
+
+        if (! $jobId && $this->selectedStopId) {
+            foreach ($this->stops as $stop) {
+                if ($stop['id'] === $this->selectedStopId) {
+                    $jobId = $stop['job_id'];
+                    break;
+                }
+            }
+        }
+
+        if (! $jobId) {
+            return null;
+        }
+
+        $job = \App\Models\Job::query()
+            ->with(['customer', 'property', 'jobServices.service'])
+            ->find($jobId);
+
+        if (! $job) {
+            return null;
+        }
+
+        $customer = $job->customer;
+        $customerName = $customer
+            ? (trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''))
+                ?: ($customer->company_name ?? '—'))
+            : '—';
+
+        return [
+            'id' => (int) $job->id,
+            'title' => $job->title,
+            'customer_name' => $customerName,
+            'customer_phone' => $customer?->phone,
+            'address' => $job->property?->address ?? '—',
+            'city' => $job->property?->city,
+            'notes' => $job->notes,
+            'services' => $job->jobServices->map(fn ($jobService) => [
+                'name' => $jobService->service?->name ?? 'Service',
+                'description' => $jobService->description ?: $jobService->service?->description,
+                'completed' => $jobService->completed_at !== null,
+            ])->all(),
+        ];
+    }
+
+    public function openServicesModal(): void
+    {
+        $this->showServicesModal = true;
+    }
+
+    public function closeServicesModal(): void
+    {
+        $this->showServicesModal = false;
     }
 
     /** Open the Skip-confirmation modal for the currently selected stop. */
