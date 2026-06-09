@@ -42,6 +42,8 @@ class JobResource extends JsonResource
                 'id' => $jobService->id,
                 'name' => $jobService->service?->name ?? 'Service',
                 'description' => $jobService->description ?: $jobService->service?->description,
+                'completed' => $jobService->completed_at !== null,
+                'completed_at' => $jobService->completed_at?->toIso8601String(),
             ])->values()),
             'messages' => MessageResource::collection($this->whenLoaded('messages')),
             'media' => JobMediaResource::collection($this->whenLoaded('media')),

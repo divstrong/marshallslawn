@@ -99,6 +99,8 @@ export interface JobServiceLine {
   id: number;
   name: string;
   description: string | null;
+  completed: boolean;
+  completed_at?: string | null;
 }
 
 export interface MowingConflict {

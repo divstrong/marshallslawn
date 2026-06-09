@@ -39,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/jobs/{job}/start', [JobController::class, 'start']);
     Route::post('/jobs/{job}/complete', [JobController::class, 'complete']);
     Route::post('/jobs/{job}/notes', [JobController::class, 'addNote']);
+    Route::post('/jobs/{job}/services/{jobService}/toggle', [JobController::class, 'toggleService']);
     Route::post('/jobs/{job}/media', [JobController::class, 'storeMedia']);
     Route::delete('/jobs/{job}/media/{media}', [JobController::class, 'destroyMedia']);
 

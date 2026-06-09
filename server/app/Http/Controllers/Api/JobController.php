@@ -9,6 +9,7 @@ use App\Http\Resources\MessageResource;
 use App\Models\Employee;
 use App\Models\Job;
 use App\Models\JobMedia;
+use App\Models\JobService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -167,6 +168,26 @@ class JobController extends Controller
         ]);
 
         return new MessageResource($message);
+    }
+
+    /**
+     * POST /api/jobs/{job}/services/{jobService}/toggle — check/uncheck a job
+     * service as completed. Foreman / spray tech only.
+     */
+    public function toggleService(Request $request, Job $job, JobService $jobService): JsonResponse
+    {
+        $this->authorizeForeman($request->user(), $job);
+        abort_unless($jobService->job_id === $job->id, 404);
+
+        $jobService->update([
+            'completed_at' => $jobService->completed_at ? null : now(),
+        ]);
+
+        return response()->json(['data' => [
+            'id' => $jobService->id,
+            'completed' => $jobService->completed_at !== null,
+            'completed_at' => $jobService->completed_at?->toIso8601String(),
+        ]]);
     }
 
     /**
