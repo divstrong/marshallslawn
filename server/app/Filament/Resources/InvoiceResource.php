@@ -6,6 +6,7 @@ use App\Filament\Resources\InvoiceResource\Pages;
 use App\Mail\ShareInvoiceMail;
 use App\Models\Invoice;
 use App\Models\InvoiceCredit;
+use App\Models\Payment;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
@@ -146,6 +147,53 @@ class InvoiceResource extends Resource
                             Forms\Components\Placeholder::make('credits_readonly')
                                 ->label('')
                                 ->content('Only administrators can add or manage credits.')
+                                ->visible(fn () => ! auth()->user()?->isAdmin()),
+                        ]),
+                    Tab::make('Payments')
+                        ->icon('heroicon-o-banknotes')
+                        ->badge(fn (?Invoice $record): ?string => $record?->payments()->count() ?: null)
+                        ->hidden(fn (?Invoice $record): bool => ! $record?->exists)
+                        ->schema([
+                            Forms\Components\Placeholder::make('payment_summary')
+                                ->label('Summary')
+                                ->content(fn (?Invoice $record): string => $record
+                                    ? 'Invoice total $' . number_format((float) $record->total, 2)
+                                        . '   ·   Paid $' . number_format($record->amountPaid(), 2)
+                                        . '   ·   Balance due $' . number_format($record->balanceDue(), 2)
+                                    : '-'),
+                            Forms\Components\Repeater::make('payments')
+                                ->relationship()
+                                ->schema([
+                                    Forms\Components\TextInput::make('amount')
+                                        ->numeric()
+                                        ->prefix('$')
+                                        ->required(),
+                                    Forms\Components\Select::make('method')
+                                        ->options(Payment::METHODS)
+                                        ->default('card')
+                                        ->required(),
+                                    Forms\Components\DatePicker::make('paid_at')
+                                        ->label('Paid Date')
+                                        ->default(now())
+                                        ->required(),
+                                    Forms\Components\TextInput::make('reference')
+                                        ->label('Reference')
+                                        ->placeholder('Check #, transaction id…')
+                                        ->maxLength(255),
+                                    Forms\Components\Placeholder::make('recorded_by_name')
+                                        ->label('Recorded By')
+                                        ->content(fn (?Payment $record): string => $record?->recordedBy?->name ?? '-'),
+                                    Forms\Components\Textarea::make('notes')
+                                        ->rows(2)
+                                        ->columnSpanFull(),
+                                ])
+                                ->columns(3)
+                                ->defaultItems(0)
+                                ->addActionLabel('Record Payment')
+                                ->visible(fn () => auth()->user()?->isAdmin()),
+                            Forms\Components\Placeholder::make('payments_readonly')
+                                ->label('')
+                                ->content('Only administrators can record or manage payments.')
                                 ->visible(fn () => ! auth()->user()?->isAdmin()),
                         ]),
                 ]),
