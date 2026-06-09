@@ -104,8 +104,9 @@ class JobResource extends Resource
                                 ->helperText('Applied to the job(s). Required for a recurring series.')
                                 ->columnSpanFull(),
                             Fieldset::make('Recurrence')
-                                ->visible(fn (Get $get): bool => $get('job_type') === 'recurring')
-                                ->visibleOn('create')
+                                // Only on the create form, and only when Recurring is chosen.
+                                ->visible(fn (Get $get, string $operation): bool => $operation === 'create'
+                                    && $get('job_type') === 'recurring')
                                 ->columns(2)
                                 ->schema([
                                     Forms\Components\Select::make('recur_frequency')
