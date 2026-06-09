@@ -18,6 +18,7 @@ class SeedTestJobs extends Command
     protected $signature = 'jobs:seed-test
                             {--per-day=50 : Number of jobs to create per day}
                             {--days=7 : Number of days starting today}
+                            {--week : Seed from today through the end of this week (overrides --days)}
                             {--crews=5 : Number of crews to distribute jobs across (uses first N by id)}
                             {--pool=150 : Size of the unique property pool to sample from}
                             {--unrouted-pct=0 : Percent of jobs to leave unrouted (0-100)}
@@ -30,6 +31,11 @@ class SeedTestJobs extends Command
     {
         $perDay = max(1, (int) $this->option('per-day'));
         $days = max(1, (int) $this->option('days'));
+
+        // --week: today through the end of the current week (Sunday), inclusive.
+        if ($this->option('week')) {
+            $days = (int) Carbon::today()->diffInDays(Carbon::today()->endOfWeek()->startOfDay()) + 1;
+        }
         $crewLimit = max(1, (int) $this->option('crews'));
         $poolTarget = max($perDay * 2, (int) $this->option('pool'));
         $unroutedPct = max(0, min(100, (int) $this->option('unrouted-pct')));
