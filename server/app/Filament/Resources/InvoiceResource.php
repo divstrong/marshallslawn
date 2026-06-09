@@ -12,6 +12,8 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -69,11 +71,15 @@ class InvoiceResource extends Resource
                                 ->numeric()
                                 ->prefix('$')
                                 ->default(0)
-                                ->required(),
+                                ->required()
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcTotal($get, $set)),
                             Forms\Components\TextInput::make('tax')
                                 ->numeric()
                                 ->prefix('$')
-                                ->default(0),
+                                ->default(0)
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcTotal($get, $set)),
                             Forms\Components\TextInput::make('credits_total')
                                 ->label('Credits Applied')
                                 ->numeric()
@@ -199,6 +205,16 @@ class InvoiceResource extends Resource
                         ]),
                 ]),
         ]);
+    }
+
+    /** Live-update the Total as subtotal/tax are entered: subtotal + tax - credits. */
+    protected static function recalcTotal(Get $get, Set $set): void
+    {
+        $total = (float) ($get('subtotal') ?? 0)
+            + (float) ($get('tax') ?? 0)
+            - (float) ($get('credits_total') ?? 0);
+
+        $set('total', number_format($total, 2, '.', ''));
     }
 
     public static function table(Table $table): Table
