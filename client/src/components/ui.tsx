@@ -5,6 +5,7 @@
 
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -185,6 +186,72 @@ export function Button({
         </>
       )}
     </Pressable>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Confirm modal                                                              */
+/* -------------------------------------------------------------------------- */
+
+interface ConfirmModalProps {
+  visible: boolean;
+  title: string;
+  message?: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  confirmVariant?: ButtonVariant;
+  confirmIcon?: IconName;
+  loading?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+/** Themed replacement for Alert.alert confirmations. */
+export function ConfirmModal({
+  visible,
+  title,
+  message,
+  confirmLabel,
+  cancelLabel,
+  confirmVariant = 'danger',
+  confirmIcon,
+  loading = false,
+  onConfirm,
+  onCancel,
+}: ConfirmModalProps) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={loading ? undefined : onCancel}
+    >
+      <Pressable style={styles.confirmBackdrop} onPress={loading ? undefined : onCancel}>
+        {/* Inner press is swallowed so taps on the card don't dismiss. */}
+        <Pressable style={styles.confirmCard} onPress={() => {}}>
+          <Text style={styles.confirmTitle}>{title}</Text>
+          {message ? <Text style={styles.confirmMessage}>{message}</Text> : null}
+          <View style={styles.confirmActions}>
+            <Button
+              label={cancelLabel}
+              variant="secondary"
+              onPress={onCancel}
+              disabled={loading}
+              style={styles.confirmButton}
+            />
+            <Button
+              label={confirmLabel}
+              variant={confirmVariant}
+              icon={confirmIcon}
+              loading={loading}
+              onPress={onConfirm}
+              style={styles.confirmButton}
+            />
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -491,5 +558,38 @@ const styles = StyleSheet.create({
   retry: {
     marginTop: Spacing.three,
     paddingHorizontal: Spacing.five,
+  },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.five,
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: AppColors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    gap: Spacing.two,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: AppColors.text,
+  },
+  confirmMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: AppColors.textSecondary,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: Spacing.three,
+    marginTop: Spacing.three,
+  },
+  confirmButton: {
+    flex: 1,
   },
 });

@@ -13,7 +13,15 @@ import {
 } from 'react-native';
 
 import { Icon, type IconName } from '@/components/icon';
-import { Badge, Button, Card, Divider, ScreenHeader, SectionLabel } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  ConfirmModal,
+  Divider,
+  ScreenHeader,
+  SectionLabel,
+} from '@/components/ui';
 import { APP_VERSION } from '@/constants/config';
 import { AppColors, Brand, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
@@ -28,6 +36,7 @@ export default function SettingsScreen() {
   const { t, language, setLanguage } = useLanguage();
   const tracking = useLocationTracking();
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutVisible, setSignOutVisible] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
 
   if (!employee) {
@@ -44,18 +53,9 @@ export default function SettingsScreen() {
     employee.role_label,
   );
 
-  const confirmSignOut = () => {
-    Alert.alert(t('settings.signOut'), t('settings.signOutConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('settings.signOut'),
-        style: 'destructive',
-        onPress: async () => {
-          setSigningOut(true);
-          await signOut();
-        },
-      },
-    ]);
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await signOut();
   };
 
   const applyAvatar = async (run: () => Promise<unknown>) => {
@@ -278,10 +278,23 @@ export default function SettingsScreen() {
           icon="log-out-outline"
           variant="danger"
           loading={signingOut}
-          onPress={confirmSignOut}
+          onPress={() => setSignOutVisible(true)}
           style={styles.signOut}
         />
       </ScrollView>
+
+      <ConfirmModal
+        visible={signOutVisible}
+        title={t('settings.signOut')}
+        message={t('settings.signOutConfirm')}
+        confirmLabel={t('settings.signOut')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="danger"
+        confirmIcon="log-out-outline"
+        loading={signingOut}
+        onConfirm={handleSignOut}
+        onCancel={() => setSignOutVisible(false)}
+      />
     </View>
   );
 }
