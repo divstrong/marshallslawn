@@ -25,6 +25,17 @@ class MarketingCampaign extends Model
         'newsletter' => 'Newsletter',
     ];
 
+    /**
+     * Templates currently offered in the campaign builder. Promotion and
+     * Newsletter remain implemented but hidden for now; add them back here to
+     * re-enable. Existing campaigns still render/label via TEMPLATES.
+     *
+     * @var array<string, string>
+     */
+    public const ACTIVE_TEMPLATES = [
+        'announcement' => 'Announcement',
+    ];
+
     protected $fillable = [
         'name',
         'subject',

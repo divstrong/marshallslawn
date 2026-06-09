@@ -98,7 +98,7 @@
                     <div>
                         <label class="mc-label">Template</label>
                         <div style="display:flex; gap:10px;">
-                            @foreach (\App\Models\MarketingCampaign::TEMPLATES as $key => $label)
+                            @foreach (\App\Models\MarketingCampaign::ACTIVE_TEMPLATES as $key => $label)
                                 <div class="mc-tpl {{ $template === $key ? 'on' : '' }}" wire:click="setTemplate('{{ $key }}')">
                                     <div style="font-weight:700; font-size:13px;">{{ $label }}</div>
                                 </div>
