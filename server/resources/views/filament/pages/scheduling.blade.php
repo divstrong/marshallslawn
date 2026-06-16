@@ -2,10 +2,11 @@
     $crews = $this->crews;
     $selectedCrew = $this->selectedCrew;
     $stops = $this->routeStops;
-    $unassigned = $this->unassignedJobs;
-    $waiting = $this->waitingListJobs;
     $queue = $this->queue === 'waiting' ? 'waiting' : 'unassigned';
-    $jobs = $queue === 'waiting' ? $waiting : $unassigned;
+    // Only the active queue is fully hydrated; the inactive tab just shows a count.
+    $jobs = $this->activeJobs;
+    $unassignedCount = $this->unassignedCount;
+    $waitingCount = $this->waitingCount;
     $route = $this->route;
 @endphp
 
@@ -251,11 +252,11 @@
                             <div class="sch-tabs" style="display:flex; gap:6px; margin-bottom:6px;">
                                 <button type="button" wire:click="setQueue('unassigned')" class="d-btn"
                                     @if ($queue === 'unassigned') style="{{ $tabActive }}" @endif>
-                                    Unassigned ({{ count($unassigned) }})
+                                    Unassigned ({{ $unassignedCount }})
                                 </button>
                                 <button type="button" wire:click="setQueue('waiting')" class="d-btn"
                                     @if ($queue === 'waiting') style="{{ $tabActive }}" @endif>
-                                    Waiting List ({{ count($waiting) }})
+                                    Waiting List ({{ $waitingCount }})
                                 </button>
                             </div>
                             <div class="sch-col-sub">
@@ -263,10 +264,11 @@
                                     Future jobs held back from the near-term pile. Drag onto a route, or send back to Unassigned.
                                 @else
                                     @php
-                                        $skippedCount = collect($unassigned)->where('is_skipped', true)->count();
-                                        $todayCount = count($unassigned) - $skippedCount;
+                                        // When this tab is active, $jobs IS the unassigned list.
+                                        $skippedCount = collect($jobs)->where('is_skipped', true)->count();
+                                        $todayCount = $unassignedCount - $skippedCount;
                                     @endphp
-                                    @if (count($unassigned) === 0)
+                                    @if ($unassignedCount === 0)
                                         No jobs scheduled for {{ $dateLabel }}
                                     @else
                                         {{ $todayCount }} {{ \Illuminate\Support\Str::plural('job', $todayCount) }} on {{ $dateLabel }}
@@ -279,7 +281,7 @@
                         </div>
                         <div wire:ignore.self id="sch-unassigned" class="sch-list" data-list="unassigned">
                             @forelse ($jobs as $job)
-                                <div class="sch-card {{ ($job['is_skipped'] ?? false) ? 'is-skipped' : '' }}" data-job-id="{{ $job['id'] }}">
+                                <div wire:key="job-{{ $job['id'] }}" class="sch-card {{ ($job['is_skipped'] ?? false) ? 'is-skipped' : '' }}" data-job-id="{{ $job['id'] }}">
                                     <span class="sch-card-handle">
                                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
                                     </span>
@@ -334,7 +336,7 @@
                         </div>
                         <div wire:ignore.self id="sch-assigned" class="sch-list" data-list="assigned">
                             @forelse ($stops as $stop)
-                                <div class="sch-card" data-stop-id="{{ $stop['id'] }}">
+                                <div wire:key="stop-{{ $stop['id'] }}" class="sch-card" data-stop-id="{{ $stop['id'] }}">
                                     <span class="sch-card-num">{{ $stop['sort_order'] }}</span>
                                     <div class="sch-card-body">
                                         <div class="sch-card-title d-truncate">{{ $stop['title'] ?: $stop['customer_name'] }}</div>
@@ -376,6 +378,8 @@
                 return {
                     $wire,
                     sortables: [],
+                    boundAssigned: null,
+                    boundUnassigned: null,
 
                     init() {
                         this.bindSortables();
@@ -387,11 +391,24 @@
                     },
 
                     bindSortables() {
-                        this.sortables.forEach((s) => { try { s.destroy(); } catch (e) {} });
-                        this.sortables = [];
-
                         const assigned = document.getElementById('sch-assigned');
                         const unassigned = document.getElementById('sch-unassigned');
+
+                        // The list containers persist across morphs (Livewire only patches their
+                        // children), so the Sortable instances stay valid. Only (re)bind when the
+                        // containers themselves change — e.g. after a crew is first selected and the
+                        // grid mounts. This avoids destroying/recreating Sortable on every update,
+                        // which was fighting the drop animation and causing the lag.
+                        if (assigned === this.boundAssigned
+                            && unassigned === this.boundUnassigned
+                            && this.sortables.length) {
+                            return;
+                        }
+
+                        this.sortables.forEach((s) => { try { s.destroy(); } catch (e) {} });
+                        this.sortables = [];
+                        this.boundAssigned = assigned;
+                        this.boundUnassigned = unassigned;
 
                         if (assigned && typeof Sortable !== 'undefined') {
                             this.sortables.push(new Sortable(assigned, {

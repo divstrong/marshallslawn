@@ -32,6 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('/')
             ->login()
+            ->passwordReset()
             ->brandLogo(asset('img/logo.png'))
             ->brandLogoHeight('4rem')
             ->sidebarCollapsibleOnDesktop()
@@ -80,14 +81,6 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->renderHook(
-                PanelsRenderHook::USER_MENU_BEFORE,
-                fn () => new HtmlString('
-                    <a href="/mobile" target="_blank" class="text-sm font-medium text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition">
-                        Mobile View
-                    </a>
-                '),
-            )
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn () => new HtmlString('

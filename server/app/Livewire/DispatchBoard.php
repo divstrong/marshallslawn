@@ -7,6 +7,7 @@ use App\Models\Crew;
 use App\Models\RouteStop;
 use App\Models\Service;
 use App\Models\Setting;
+use App\Services\GeocodingService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -433,11 +434,89 @@ class DispatchBoard extends Component
                 : '—';
             return [
                 'id' => (int) $stop->id,
+                'property_id' => $stop->property?->id,
                 'customer_name' => $name,
                 'address' => $stop->property?->address ?? '(no address)',
                 'route_name' => $stop->route?->name,
             ];
         })->all();
+    }
+
+    /** Inline status message for the geocode "Fix" actions (no Filament toasts in this layout). */
+    public ?string $geocodeNotice = null;
+
+    /**
+     * Geocode the property behind a single unmapped stop on demand — the in-app
+     * equivalent of `php artisan properties:geocode --missing` for one record.
+     */
+    public function geocodeStopProperty(int $stopId): void
+    {
+        $stop = RouteStop::with('property')->find($stopId);
+        $property = $stop?->property;
+
+        if (! $property) {
+            $this->geocodeNotice = 'That stop has no property address to locate.';
+            return;
+        }
+
+        try {
+            $ok = app(GeocodingService::class)->geocodeProperty($property);
+        } catch (\Throwable $e) {
+            $ok = false;
+        }
+
+        if ($ok) {
+            $this->geocodeNotice = null;
+            $this->refreshAfterGeocode();
+        } else {
+            $this->geocodeNotice = "Couldn't locate \"{$property->address}\". Check the address is valid and that the Maps API key is configured.";
+        }
+    }
+
+    /** Geocode every unmapped property for the current day/crew filter in one click. */
+    public function geocodeAllUnmapped(): void
+    {
+        $stops = RouteStop::with('property')
+            ->whereHas('route', function ($q) {
+                $q->whereDate('route_date', $this->date);
+                if (! empty($this->crewIds)) {
+                    $q->whereIn('crew_id', $this->crewIds);
+                }
+            })
+            ->whereHas('property', fn ($p) => $p->whereNull('latitude')->orWhereNull('longitude'))
+            ->get();
+
+        $geocoder = app(GeocodingService::class);
+        $located = 0;
+        $failed = 0;
+        $seen = [];
+
+        foreach ($stops as $stop) {
+            $property = $stop->property;
+            if (! $property || isset($seen[$property->id])) {
+                continue;
+            }
+            $seen[$property->id] = true;
+
+            try {
+                $geocoder->geocodeProperty($property) ? $located++ : $failed++;
+            } catch (\Throwable $e) {
+                $failed++;
+            }
+        }
+
+        $this->geocodeNotice = $failed > 0
+            ? "Located {$located}; {$failed} couldn't be geocoded — check those addresses."
+            : null;
+
+        $this->refreshAfterGeocode();
+    }
+
+    /** Recompute map data after coordinates change so pins/lists refresh immediately. */
+    private function refreshAfterGeocode(): void
+    {
+        unset($this->stops, $this->unroutedJobs, $this->unmappedStops, $this->summary, $this->selectedStop, $this->foremanPins);
+        $this->emitStopsUpdated();
     }
 
     #[Computed]
