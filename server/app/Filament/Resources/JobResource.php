@@ -52,7 +52,17 @@ class JobResource extends Resource
                             Forms\Components\Select::make('estimate_id')
                                 ->relationship('estimate', 'estimate_number')
                                 ->searchable()
-                                ->preload(),
+                                ->preload()
+                                ->live(),
+                            // Optional direct price — only when no estimate is attached (issue #23).
+                            Forms\Components\TextInput::make('price')
+                                ->label('Price')
+                                ->numeric()
+                                ->minValue(0)
+                                ->prefix('$')
+                                ->placeholder('0.00')
+                                ->helperText('Optional. Set a direct price for this job when no estimate is assigned.')
+                                ->visible(fn (Get $get): bool => blank($get('estimate_id'))),
                             Forms\Components\Select::make('crew_id')
                                 ->relationship('crew', 'name')
                                 ->searchable()
@@ -219,6 +229,11 @@ class JobResource extends Resource
                     ->formatStateUsing(fn (?string $state) => $state === 'recurring' ? 'Recurring' : 'One Time')
                     ->color(fn (?string $state) => $state === 'recurring' ? 'info' : 'gray')
                     ->toggleable(),
+                Tables\Columns\TextColumn::make('price')
+                    ->money('USD')
+                    ->placeholder('—')
+                    ->toggleable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
                 Tables\Columns\TextColumn::make('priority')
