@@ -72,6 +72,16 @@ class DispatchBoard extends Component
     #[Url(as: 'gps')]
     public bool $showGps = true;
 
+    /**
+     * Crews the user has hidden from the board (persisted per-user, issue #24).
+     *
+     * @var array<int, int>
+     */
+    public array $hiddenCrewIds = [];
+
+    /** Board layout: 'map' (map + side list) or 'list' (full-width job cards). */
+    public string $viewMode = 'map';
+
     /** Composer state for the foreman chat panel. */
     public string $chatBody = '';
 
@@ -83,6 +93,11 @@ class DispatchBoard extends Component
         abort_unless($user && $user->hasAccessTo('Dispatch'), 403);
 
         $this->date ??= now()->toDateString();
+
+        // Restore this user's saved crew visibility + view mode (issue #24).
+        $prefs = $user->dispatch_preferences ?? [];
+        $this->hiddenCrewIds = array_values(array_map('intval', $prefs['hidden_crews'] ?? []));
+        $this->viewMode = ($prefs['view_mode'] ?? 'map') === 'list' ? 'list' : 'map';
     }
 
     #[Computed]
@@ -617,6 +632,70 @@ class DispatchBoard extends Component
         $this->selectedJobId = null;
         $this->selectedForemanId = null;
         $this->chatPanelOpen = false;
+    }
+
+    /**
+     * Crews currently shown on the board (all crews minus the user's hidden set).
+     * Drives which crew filter chips render (issue #24).
+     */
+    #[Computed]
+    public function visibleCrews(): array
+    {
+        $hidden = array_map('intval', $this->hiddenCrewIds);
+
+        return array_filter(
+            $this->crewColorMap(),
+            fn ($crew) => ! in_array((int) $crew['id'], $hidden, true),
+        );
+    }
+
+    /** Show/hide a crew on the board and remember the choice for this user. */
+    public function toggleCrewVisibility(int $id): void
+    {
+        $hidden = array_map('intval', $this->hiddenCrewIds);
+
+        if (in_array($id, $hidden, true)) {
+            $this->hiddenCrewIds = array_values(array_filter($hidden, fn ($cid) => $cid !== $id));
+        } else {
+            $this->hiddenCrewIds = [...$hidden, $id];
+            // A hidden crew also drops out of the active crew filter.
+            $this->crewIds = array_values(array_filter(
+                array_map('intval', $this->crewIds),
+                fn ($cid) => $cid !== $id,
+            ));
+        }
+
+        unset($this->visibleCrews);
+        $this->persistDispatchPrefs();
+        $this->emitStopsUpdated();
+    }
+
+    public function setViewMode(string $mode): void
+    {
+        $this->viewMode = $mode === 'list' ? 'list' : 'map';
+        $this->persistDispatchPrefs();
+
+        $this->dispatch('dispatch:view-changed', mode: $this->viewMode);
+        if ($this->viewMode === 'map') {
+            // Re-feed the markers so the map can (re)build with current data.
+            $this->emitStopsUpdated();
+        }
+    }
+
+    /** Persist crew visibility + view mode onto the authenticated user. */
+    private function persistDispatchPrefs(): void
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return;
+        }
+
+        $user->forceFill([
+            'dispatch_preferences' => [
+                'hidden_crews' => array_values(array_map('intval', $this->hiddenCrewIds)),
+                'view_mode' => $this->viewMode,
+            ],
+        ])->save();
     }
 
     public function toggleCrew(int $id): void

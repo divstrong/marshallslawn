@@ -85,7 +85,16 @@
         }
         @media (min-width: 1024px) {
             .dispatch-page .d-grid { grid-template-columns: 3fr 1fr; }
+            /* List view (issue #24): no map — job cards fill the full width. */
+            .dispatch-page .d-grid.is-list { grid-template-columns: 1fr; }
         }
+        [x-cloak] { display: none !important; }
+        /* Roomier, more detailed cards in List view. */
+        .dispatch-page .d-grid.is-list .d-list-scroll { max-height: none; }
+        .dispatch-page .d-grid.is-list .d-list-item { padding: 14px 16px; font-size: 15px; }
+        .dispatch-page .d-grid.is-list .d-list-item .d-truncate { white-space: normal; }
+        .dispatch-page .d-list-extra { font-size: 13px; color: var(--d-muted); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .dispatch-page .d-list-extra span { background: var(--d-hover); padding: 1px 8px; border-radius: 9999px; }
         .dispatch-page .d-map-wrap {
             position: relative; min-height: calc(100vh - 200px); border-radius: 12px;
             border: 1px solid var(--d-border); background: rgb(243, 244, 246); overflow: hidden;
@@ -318,7 +327,7 @@
                     <div class="d-divider"></div>
 
                     <div class="d-row-wrap">
-                        @foreach ($crewColors as $crewId => $crew)
+                        @foreach ($this->visibleCrews as $crewId => $crew)
                             @php
                                 $crewIds = array_map('intval', $this->crewIds);
                                 $isActive = in_array($crewId, $crewIds, true);
@@ -335,9 +344,50 @@
                                 {{ $crew['name'] }}
                             </button>
                         @endforeach
+
+                        {{-- Crew visibility manager (issue #24): show/hide which crew chips appear. --}}
+                        <div x-data="{ open: false }" style="position: relative;">
+                            <button type="button" @click="open = !open" class="d-btn" style="height:28px;padding:0 10px;font-size:12px;display:inline-flex;align-items:center;gap:4px;" title="Choose which crews are visible">
+                                <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                                Crews
+                            </button>
+                            <div x-show="open" x-cloak @click.outside="open = false" style="position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:200px;background:var(--d-card-bg);border:1px solid var(--d-border);border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);padding:8px;">
+                                <div class="d-label" style="padding:4px 8px;">Visible crews</div>
+                                @foreach ($crewColors as $cId => $c)
+                                    <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-size:13px;border-radius:6px;">
+                                        <input
+                                            type="checkbox"
+                                            wire:click="toggleCrewVisibility({{ $cId }})"
+                                            @checked(! in_array((int) $cId, array_map('intval', $this->hiddenCrewIds), true))
+                                            style="width:16px;height:16px;accent-color:var(--d-accent);"
+                                        >
+                                        <span class="d-dot" style="background-color: {{ $c['color'] }}"></span>
+                                        {{ $c['name'] }}
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
 
                     <div class="d-spacer"></div>
+
+                    {{-- Map / List view toggle (issue #24). --}}
+                    <div class="d-row" style="gap:0;border:1px solid var(--d-border);border-radius:8px;overflow:hidden;">
+                        <button
+                            type="button"
+                            wire:click="setViewMode('map')"
+                            class="d-btn"
+                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'map' ? 'background: var(--d-accent); color:#fff;' : '' }}"
+                            title="Map view"
+                        >Map</button>
+                        <button
+                            type="button"
+                            wire:click="setViewMode('list')"
+                            class="d-btn"
+                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'list' ? 'background: var(--d-accent); color:#fff;' : '' }}"
+                            title="List view"
+                        >List</button>
+                    </div>
 
                     <button
                         type="button"
@@ -378,7 +428,8 @@
             </div>
 
             {{-- Map + side panel --}}
-            <div class="d-grid">
+            <div class="d-grid {{ $this->viewMode === 'list' ? 'is-list' : '' }}">
+                @if ($this->viewMode === 'map')
                 <div class="d-map-wrap">
                     @if (! $mapsApiKey)
                         <div class="d-map-empty">
@@ -393,6 +444,7 @@
                         <div wire:ignore id="dispatch-map" class="d-map-host"></div>
                     @endif
                 </div>
+                @endif
 
                 <div class="d-stack">
                     @if ($selectedForeman)
@@ -603,6 +655,15 @@
                                     <div class="d-list-main">
                                         <div class="d-truncate">{{ $stop['customer_name'] }}</div>
                                         <div class="d-truncate d-muted" style="font-size: 12px;">{{ $stop['address'] }}{{ $stop['service_name'] ? ' · ' . $stop['service_name'] : '' }}</div>
+                                        @if ($this->viewMode === 'list')
+                                            <div class="d-list-extra">
+                                                @if ($stop['crew_name'])<span>{{ $stop['crew_name'] }}</span>@endif
+                                                @if ($stop['city'])<span>{{ $stop['city'] }}</span>@endif
+                                                <span>{{ ucfirst(str_replace('_', ' ', $stop['status'])) }}</span>
+                                                @if ($stop['customer_phone'])<span>{{ $stop['customer_phone'] }}</span>@endif
+                                                @if (! empty($stop['job_title']))<span>{{ $stop['job_title'] }}</span>@endif
+                                            </div>
+                                        @endif
                                     </div>
                                     @if ($stop['status'] === 'completed')
                                         <span class="d-status-dot completed">✓</span>
@@ -830,19 +891,37 @@
                         bounds: null,
                         crewColors: initial.crewColors,
                         serviceIcons: !!initial.serviceIcons,
+                        lastPins: initial.pins || [],
+                        lastForemen: initial.foremen || [],
 
                         init() {
                             if (!initial.apiKey) return;
 
                             this.loadMapsApi(initial.apiKey).then(() => {
-                                this.buildMap(initial.pins, initial.foremen || []);
+                                // Only build now if the map element is present (map view).
+                                this.buildMap(this.lastPins, this.lastForemen);
                             });
 
                             window.addEventListener('dispatch:stops-updated', (e) => {
                                 const { stops = [], unroutedJobs = [], foremen = [], crewColors, serviceIcons } = e.detail || {};
                                 if (crewColors) this.crewColors = crewColors;
                                 if (typeof serviceIcons !== 'undefined') this.serviceIcons = !!serviceIcons;
-                                this.refreshMarkers([...stops, ...unroutedJobs], foremen);
+                                this.lastPins = [...stops, ...unroutedJobs];
+                                this.lastForemen = foremen;
+                                this.refreshMarkers(this.lastPins, this.lastForemen);
+                            });
+
+                            // Build (or resize) the map when switching back to Map view (issue #24).
+                            window.addEventListener('dispatch:view-changed', (e) => {
+                                if ((e.detail || {}).mode !== 'map') return;
+                                setTimeout(() => {
+                                    if (!window.google || !window.google.maps) return;
+                                    if (!this.map) {
+                                        this.buildMap(this.lastPins, this.lastForemen);
+                                    } else {
+                                        google.maps.event.trigger(this.map, 'resize');
+                                    }
+                                }, 80);
                             });
                         },
 
