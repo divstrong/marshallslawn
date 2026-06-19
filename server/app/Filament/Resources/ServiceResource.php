@@ -113,6 +113,12 @@ class ServiceResource extends Resource
                 Tables\Columns\TextColumn::make('category')
                     ->badge()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('options_count')
+                    ->label('Options')
+                    ->counts('options')
+                    ->badge()
+                    ->placeholder('0')
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
                 Tables\Columns\IconColumn::make('track_chemicals')
@@ -142,7 +148,9 @@ class ServiceResource extends Resource
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            ServiceResource\RelationManagers\OptionsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

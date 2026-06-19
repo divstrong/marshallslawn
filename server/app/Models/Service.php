@@ -71,6 +71,18 @@ class Service extends Model
         return $this->hasMany(EstimateLineItem::class);
     }
 
+    /** Selectable variations of this service, e.g. "Hand Laid" vs "Machine Blown" (issue #21). */
+    public function options(): HasMany
+    {
+        return $this->hasMany(ServiceOption::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    /** Active options only, for selection UIs. */
+    public function activeOptions(): HasMany
+    {
+        return $this->options()->where('is_active', true);
+    }
+
     /**
      * Public URL for the optional service icon, or null when none is set.
      */
