@@ -109,6 +109,70 @@
                     @endif
                 </div>
             </div>
+
+            {{-- Included Packages (issue #20) --}}
+            <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">Included Packages</label>
+
+                @if(count($packageSubPackages) > 0)
+                    <div style="display: grid; grid-template-columns: 1fr 80px 100px 40px; gap: 8px; padding: 0 0 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase;">Package</span>
+                        <span style="font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; text-align: center;">Qty</span>
+                        <span style="font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; text-align: right;">Price</span>
+                        <span></span>
+                    </div>
+                @endif
+
+                @foreach($packageSubPackages as $i => $sp)
+                    <div wire:key="pkg-sub-{{ $i }}" style="display: grid; grid-template-columns: 1fr 80px 100px 40px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #f3f4f6;">
+                        <span style="font-size: 14px; color: #111827;">{{ $sp['name'] }}</span>
+                        <input
+                            wire:model.blur="packageSubPackages.{{ $i }}.quantity"
+                            type="number"
+                            min="1"
+                            step="1"
+                            style="padding: 7px 6px; font-size: 14px; border: 1px solid #e5e7eb; border-radius: 6px; text-align: center; width: 100%; box-sizing: border-box;"
+                        />
+                        <span style="font-size: 13px; color: #6b7280; text-align: right;">
+                            ${{ number_format((float) $sp['price'] * (int) ($sp['quantity'] ?? 1), 2) }}
+                        </span>
+                        <button
+                            wire:click="removeSubPackage({{ $i }})"
+                            type="button"
+                            style="color: #dc2626; border: none; background: none; cursor: pointer; font-size: 16px; padding: 4px;"
+                        >&times;</button>
+                    </div>
+                @endforeach
+
+                @if(count($packageSubPackages) === 0)
+                    <p style="font-size: 13px; color: #9ca3af; text-align: center; padding: 16px 0;">No packages bundled yet. Search below to nest another package.</p>
+                @endif
+
+                <div style="margin-top: 12px; position: relative;">
+                    <input
+                        wire:model.live.debounce.300ms="packageSearch"
+                        wire:focus="$set('showPackageDropdown', true)"
+                        type="text"
+                        placeholder="Search packages to bundle..."
+                        style="width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; box-sizing: border-box;"
+                    />
+                    @if($showPackageDropdown && $this->packageResults->count() > 0)
+                        <div style="position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto;">
+                            @foreach($this->packageResults as $pkg)
+                                <button
+                                    wire:click="addSubPackage({{ $pkg->id }})"
+                                    type="button"
+                                    style="width: 100%; text-align: left; padding: 10px 14px; border: none; background: none; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between;"
+                                    onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'"
+                                >
+                                    <span style="font-weight: 500; color: #111827;">{{ $pkg->name }}</span>
+                                    <span style="color: #6b7280;">${{ number_format((float) $pkg->price, 2) }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
 
         {{-- RIGHT: Sidebar --}}
@@ -140,7 +204,7 @@
                 </div>
 
                 {{-- Pricing comparison --}}
-                @if(count($packageServices) > 0)
+                @if(count($packageServices) > 0 || count($packageSubPackages) > 0)
                     <div style="padding-top: 12px; border-top: 1px solid #e5e7eb;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                             <span style="font-size: 13px; color: #6b7280;">Individual Total</span>
