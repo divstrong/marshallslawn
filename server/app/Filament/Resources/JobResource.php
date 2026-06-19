@@ -68,14 +68,8 @@ class JobResource extends Resource
                                 ->searchable()
                                 ->preload(),
                             Forms\Components\Select::make('status')
-                                ->options([
-                                    'pending' => 'Pending',
-                                    'scheduled' => 'Scheduled',
-                                    'in_progress' => 'In Progress',
-                                    'completed' => 'Completed',
-                                    'skipped' => 'Skipped',
-                                    'cancelled' => 'Cancelled',
-                                ])
+                                ->options(fn (): array => \App\Models\JobStatus::options())
+                                ->default('pending')
                                 ->required(),
                             Forms\Components\Select::make('priority')
                                 ->options([
@@ -235,7 +229,9 @@ class JobResource extends Resource
                     ->toggleable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): ?string => \App\Models\JobStatus::options()[$state] ?? $state)
+                    ->color(fn (?string $state): string => \App\Models\JobStatus::colorMap()[$state] ?? 'gray'),
                 Tables\Columns\TextColumn::make('priority')
                     ->badge()
                     ->color(fn (?string $state) => match ($state) {
@@ -252,14 +248,7 @@ class JobResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'scheduled' => 'Scheduled',
-                        'in_progress' => 'In Progress',
-                        'completed' => 'Completed',
-                        'skipped' => 'Skipped',
-                        'cancelled' => 'Cancelled',
-                    ]),
+                    ->options(fn (): array => \App\Models\JobStatus::options()),
                 Tables\Filters\SelectFilter::make('priority')
                     ->label('Priority')
                     ->options([
