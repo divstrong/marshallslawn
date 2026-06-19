@@ -35,6 +35,11 @@ class Settings extends Page
                         ->schema([
                             View::make('livewire.settings-general-embed'),
                         ]),
+                    Tab::make('Terms')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            View::make('livewire.settings-terms-embed'),
+                        ]),
                     Tab::make('Roles')
                         ->icon('heroicon-o-shield-check')
                         ->schema([

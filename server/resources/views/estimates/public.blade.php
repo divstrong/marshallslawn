@@ -171,7 +171,7 @@
                     <div style="margin-top: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
                         <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Terms & Conditions</div>
                         <div style="font-size: 13px; color: #374151; line-height: 1.5; max-height: 120px; overflow-y: auto; margin-bottom: 12px;">
-                            By accepting this estimate, you authorize Marshall's Lawn & Landscape to perform the selected services at the prices listed above. Payment is due upon completion unless other arrangements have been made. Pricing is valid through the date shown above. Marshall's Lawn & Landscape reserves the right to adjust scheduling based on weather conditions. Cancellations must be made at least 24 hours in advance. The customer is responsible for ensuring access to the property on scheduled service dates.
+                            {!! nl2br(e(\App\Models\Setting::get('estimate_terms', \App\Livewire\SettingsTerms::DEFAULT_ESTIMATE_TERMS))) !!}
                         </div>
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: #111827;">
                             <input type="checkbox" id="terms-check" style="width: 18px; height: 18px; accent-color: #059669;" />

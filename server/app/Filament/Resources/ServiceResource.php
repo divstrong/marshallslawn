@@ -71,10 +71,16 @@ class ServiceResource extends Resource
             Forms\Components\Toggle::make('show_in_snow')
                 ->default(false),
             Forms\Components\Textarea::make('invoice_description')
+                ->label('Invoice Terms')
+                ->helperText('Qualifier text shown to the customer on invoices for this service.')
                 ->columnSpanFull(),
             Forms\Components\Textarea::make('estimate_description')
+                ->label('Estimate Terms')
+                ->helperText('Qualifier text shown to the customer on estimates for this service.')
                 ->columnSpanFull(),
             Forms\Components\Textarea::make('description')
+                ->label('Internal Description')
+                ->helperText('Used on dispatch cards and the crew app — not shown to customers.')
                 ->columnSpanFull(),
             Forms\Components\TextInput::make('legacy_id')
                 ->label('Legacy ID')
