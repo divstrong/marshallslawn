@@ -173,6 +173,14 @@
         .dispatch-page .d-warning-sub { font-size: 12px; margin-top: 4px; opacity: 0.85; }
         .dispatch-page .d-warning ul { margin-top: 12px; font-size: 12px; list-style: none; padding: 0; }
         .dispatch-page .d-warning li + li { margin-top: 4px; }
+        .dispatch-page .d-btn-fix {
+            flex-shrink: 0; height: 24px; padding: 0 10px; font-size: 11px; font-weight: 600;
+            border-radius: 6px; cursor: pointer;
+            background: rgb(120, 53, 15); color: #fff; border: 1px solid transparent;
+        }
+        .dispatch-page .d-btn-fix:hover { opacity: 0.9; }
+        .dispatch-page .d-btn-fix:disabled { opacity: 0.6; cursor: default; }
+        .dark .dispatch-page .d-btn-fix { background: rgb(245, 158, 11); color: rgb(30, 20, 5); }
         .dispatch-page .d-warning code {
             font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
             font-size: 11px; padding: 1px 4px; border-radius: 4px;
@@ -701,14 +709,39 @@
 
                     @if (! empty($unmapped))
                         <div class="d-warning">
-                            <div class="d-card-title">{{ count($unmapped) }} {{ \Illuminate\Support\Str::plural('stop', count($unmapped)) }} without coordinates</div>
-                            <div class="d-warning-sub">Properties need a valid address to appear on the map. Run <code>php artisan properties:geocode --missing</code>.</div>
+                            <div class="d-row" style="justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                <div class="d-card-title">{{ count($unmapped) }} {{ \Illuminate\Support\Str::plural('stop', count($unmapped)) }} without coordinates</div>
+                                <button type="button"
+                                    wire:click="geocodeAllUnmapped"
+                                    wire:loading.attr="disabled"
+                                    wire:target="geocodeAllUnmapped"
+                                    class="d-btn d-btn-fix">
+                                    <span wire:loading.remove wire:target="geocodeAllUnmapped">Fix all</span>
+                                    <span wire:loading wire:target="geocodeAllUnmapped">Locating…</span>
+                                </button>
+                            </div>
+                            <div class="d-warning-sub">These addresses aren't on the map yet. Click <strong>Fix</strong> to look up coordinates from the address on file.</div>
+                            @if ($geocodeNotice)
+                                <div class="d-warning-sub" style="margin-top: 8px; font-weight: 600;">{{ $geocodeNotice }}</div>
+                            @endif
                             <ul>
                                 @foreach (array_slice($unmapped, 0, 5) as $row)
-                                    <li>• {{ $row['customer_name'] }} — {{ $row['address'] }}</li>
+                                    <li class="d-row" style="justify-content: space-between; gap: 8px;">
+                                        <span class="d-truncate">• {{ $row['customer_name'] }} — {{ $row['address'] }}</span>
+                                        @if ($row['property_id'])
+                                            <button type="button"
+                                                wire:click="geocodeStopProperty({{ $row['id'] }})"
+                                                wire:loading.attr="disabled"
+                                                wire:target="geocodeStopProperty({{ $row['id'] }})"
+                                                class="d-btn d-btn-fix">
+                                                <span wire:loading.remove wire:target="geocodeStopProperty({{ $row['id'] }})">Fix</span>
+                                                <span wire:loading wire:target="geocodeStopProperty({{ $row['id'] }})">…</span>
+                                            </button>
+                                        @endif
+                                    </li>
                                 @endforeach
                                 @if (count($unmapped) > 5)
-                                    <li style="opacity: 0.7;">… and {{ count($unmapped) - 5 }} more</li>
+                                    <li style="opacity: 0.7;">… and {{ count($unmapped) - 5 }} more (use “Fix all”)</li>
                                 @endif
                             </ul>
                         </div>

@@ -9,6 +9,7 @@ use App\Models\Job;
 use App\Models\Property;
 use App\Models\Route;
 use App\Models\RouteStop;
+use App\Services\GeocodingService;
 use Carbon\Carbon;
 use Filament\Actions;
 use Filament\Forms;
@@ -16,6 +17,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
@@ -164,6 +166,18 @@ class Scheduling extends Page
                         return $job;
                     });
 
+                    // Make the job mappable straight away: if the chosen property has no
+                    // coordinates on file yet, look them up now so it lands on Dispatch
+                    // without a manual geocode step. Non-fatal if it fails.
+                    $property = Property::find($data['property_id']);
+                    if ($property && ($property->latitude === null || $property->longitude === null)) {
+                        try {
+                            app(GeocodingService::class)->geocodeProperty($property);
+                        } catch (\Throwable $e) {
+                            // Leave it for the Dispatch "Fix" button / geocode command.
+                        }
+                    }
+
                     Notification::make()
                         ->title('Job created')
                         ->body($addToRoute
@@ -255,78 +269,83 @@ class Scheduling extends Page
             ->all();
     }
 
-    #[Computed]
-    public function unassignedJobs(): array
+    /**
+     * Near-term "Unassigned" pile: jobs scheduled for the selected day that aren't
+     * yet on that day's route, plus any skipped job not currently on any route.
+     *
+     * Uses correlated NOT EXISTS subqueries (whereDoesntHave) rather than plucking
+     * every route-stop id into PHP and building a giant whereNotIn — cheaper per
+     * render and it scales as the route_stops table grows.
+     */
+    private function unassignedJobsQuery(): Builder
     {
-        // Jobs assigned to a route on the currently selected day — drop these from the pile.
-        $todayRouteJobIds = RouteStop::query()
-            ->whereHas('route', fn ($r) => $r->whereDate('route_date', $this->date))
-            ->whereNotNull('job_id')
-            ->pluck('job_id')
-            ->all();
-
-        // Jobs assigned to ANY route (any day) — skipped jobs leave the pile as soon as
-        // they're put back on a route somewhere, even a future day.
-        $anyRouteJobIds = RouteStop::query()
-            ->whereNotNull('job_id')
-            ->pluck('job_id')
-            ->all();
-
         return Job::query()
-            ->with([
-                'customer:id,first_name,last_name,company_name',
-                'property:id,address,city,state,latitude,longitude',
-                'recurringTemplate.service:id,name',
-            ])
             // Waiting-list jobs live in their own queue, not the near-term pile.
             ->where('waiting_list', false)
-            ->where(function ($q) use ($todayRouteJobIds, $anyRouteJobIds) {
-                // Jobs scheduled for the selected day that aren't already on today's route…
-                $q->where(function ($qq) use ($todayRouteJobIds) {
+            ->where(function ($q) {
+                // Scheduled for the selected day and not already on that day's route…
+                $q->where(function ($qq) {
                     $qq->whereDate('scheduled_date', $this->date)
-                       ->whereNotIn('id', $todayRouteJobIds);
+                       ->whereDoesntHave('routeStops', fn ($r) => $r
+                           ->whereHas('route', fn ($rr) => $rr->whereDate('route_date', $this->date)));
                 })
-                // …plus any skipped job waiting to be re-assigned.
-                ->orWhere(function ($qq) use ($anyRouteJobIds) {
+                // …plus any skipped job not currently on any route (even a future day).
+                ->orWhere(function ($qq) {
                     $qq->where('status', 'skipped')
-                       ->whereNotIn('id', $anyRouteJobIds);
+                       ->whereDoesntHave('routeStops');
                 });
-            })
-            // Skipped jobs surface first so they're easy to grab and re-assign.
-            ->orderByRaw("CASE WHEN status = 'skipped' THEN 0 ELSE 1 END")
-            ->orderBy('id')
-            ->get()
-            ->map(fn ($j) => $this->jobToArray($j))
-            ->all();
+            });
     }
 
     /**
-     * The "Waiting List" queue — future jobs the user is holding back from the
-     * near-term Unassigned pile (issue #16). Not date-scoped, and excludes any job
-     * already placed on a route.
+     * The "Waiting List" queue — future jobs held back from the near-term pile
+     * (issue #16). Not date-scoped, and excludes any job already on a route.
+     */
+    private function waitingJobsQuery(): Builder
+    {
+        return Job::query()
+            ->where('waiting_list', true)
+            ->whereDoesntHave('routeStops');
+    }
+
+    #[Computed]
+    public function unassignedCount(): int
+    {
+        return $this->unassignedJobsQuery()->count();
+    }
+
+    #[Computed]
+    public function waitingCount(): int
+    {
+        return $this->waitingJobsQuery()->count();
+    }
+
+    /**
+     * The fully-hydrated cards for the queue currently on screen only. Building one
+     * list per render (instead of both) halves the eager-loading + array mapping
+     * work on every drag — the inactive tab just needs its count.
      */
     #[Computed]
-    public function waitingListJobs(): array
+    public function activeJobs(): array
     {
-        $anyRouteJobIds = RouteStop::query()
-            ->whereNotNull('job_id')
-            ->pluck('job_id')
-            ->all();
-
-        return Job::query()
+        $query = ($this->queue === 'waiting' ? $this->waitingJobsQuery() : $this->unassignedJobsQuery())
             ->with([
                 'customer:id,first_name,last_name,company_name',
                 'property:id,address,city,state,latitude,longitude',
                 'recurringTemplate.service:id,name',
-            ])
-            ->where('waiting_list', true)
-            ->whereNotIn('id', $anyRouteJobIds)
-            ->orderByRaw('scheduled_date IS NULL') // dated jobs first
-            ->orderBy('scheduled_date')
-            ->orderBy('id')
-            ->get()
-            ->map(fn ($j) => $this->jobToArray($j))
-            ->all();
+            ]);
+
+        if ($this->queue === 'waiting') {
+            $query->orderByRaw('scheduled_date IS NULL') // dated jobs first
+                ->orderBy('scheduled_date')
+                ->orderBy('id');
+        } else {
+            // Skipped jobs surface first so they're easy to grab and re-assign.
+            $query->orderByRaw("CASE WHEN status = 'skipped' THEN 0 ELSE 1 END")
+                ->orderBy('id');
+        }
+
+        return $query->get()->map(fn ($j) => $this->jobToArray($j))->all();
     }
 
     public function moveToWaitingList(int $jobId): void
@@ -484,7 +503,7 @@ class Scheduling extends Page
 
     private function clearComputed(): void
     {
-        unset($this->route, $this->routeStops, $this->unassignedJobs, $this->waitingListJobs, $this->selectedCrew);
+        unset($this->route, $this->routeStops, $this->activeJobs, $this->unassignedCount, $this->waitingCount, $this->selectedCrew);
     }
 
     private function stopToArray(RouteStop $stop): array

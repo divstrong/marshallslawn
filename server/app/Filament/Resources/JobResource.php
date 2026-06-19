@@ -42,13 +42,37 @@ class JobResource extends Resource
                         ->schema([
                             Forms\Components\Select::make('customer_id')
                                 ->relationship('customer', 'last_name')
-                                ->searchable()
+                                ->getOptionLabelFromRecordUsing(function ($record): string {
+                                    $name = trim("{$record->first_name} {$record->last_name}");
+
+                                    return $name !== ''
+                                        ? $name
+                                        : ($record->company_name ?: "Customer #{$record->id}");
+                                })
+                                ->searchable(['first_name', 'last_name', 'company_name'])
                                 ->preload()
+                                ->optionsLimit(50)
+                                ->live()
+                                // Changing the customer invalidates any property picked for the old one.
+                                ->afterStateUpdated(fn (Set $set) => $set('property_id', null))
                                 ->required(),
                             Forms\Components\Select::make('property_id')
-                                ->relationship('property', 'address')
-                                ->searchable()
-                                ->preload(),
+                                ->relationship(
+                                    name: 'property',
+                                    titleAttribute: 'address',
+                                    modifyQueryUsing: fn ($query, Get $get) => $query
+                                        ->where('customer_id', $get('customer_id')),
+                                )
+                                ->getOptionLabelFromRecordUsing(fn ($record): string => trim(
+                                    $record->address.($record->city ? ", {$record->city}" : '')
+                                ))
+                                ->searchable(['address', 'city', 'zip'])
+                                ->preload()
+                                // Locked until a customer is chosen; then only their properties show.
+                                ->disabled(fn (Get $get): bool => blank($get('customer_id')))
+                                ->placeholder(fn (Get $get): string => blank($get('customer_id'))
+                                    ? 'Select a customer first'
+                                    : 'Select a property'),
                             Forms\Components\Select::make('estimate_id')
                                 ->relationship('estimate', 'estimate_number')
                                 ->searchable()
