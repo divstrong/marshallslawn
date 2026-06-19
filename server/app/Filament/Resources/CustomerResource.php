@@ -92,12 +92,33 @@ class CustomerResource extends Resource
                         ->schema([
                             View::make('filament.resources.customer.properties-tab'),
                         ]),
+                    Tab::make('Jobs')
+                        ->icon('heroicon-o-clipboard-document-list')
+                        ->badge(fn (?Customer $record): ?string => $record?->jobs()->count() ?: null)
+                        ->hidden(fn (?Customer $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.customer.jobs-tab'),
+                        ]),
+                    Tab::make('Estimates')
+                        ->icon('heroicon-o-calculator')
+                        ->badge(fn (?Customer $record): ?string => $record?->estimates()->count() ?: null)
+                        ->hidden(fn (?Customer $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.customer.estimates-tab'),
+                        ]),
                     Tab::make('Invoices')
                         ->icon('heroicon-o-document-text')
                         ->badge(fn (?Customer $record): ?string => $record?->invoices()->count() ?: null)
                         ->hidden(fn (?Customer $record): bool => ! $record?->exists)
                         ->schema([
                             View::make('filament.resources.customer.invoices-tab'),
+                        ]),
+                    Tab::make('Payments')
+                        ->icon('heroicon-o-banknotes')
+                        ->badge(fn (?Customer $record): ?string => $record?->payments()->count() ?: null)
+                        ->hidden(fn (?Customer $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.customer.payments-tab'),
                         ]),
                 ]),
         ]);
