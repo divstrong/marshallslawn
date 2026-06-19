@@ -84,11 +84,26 @@ class Invoice extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function lineItems(): HasMany
+    {
+        return $this->hasMany(InvoiceLineItem::class)->orderBy('sort_order');
+    }
+
     public function recalculateTotal(): void
     {
         $this->credits_total = $this->credits()->sum('amount');
         $this->total = $this->subtotal + $this->tax - $this->credits_total;
         $this->save();
+    }
+
+    /**
+     * Drive the invoice subtotal from its line items, then recompute the total
+     * (factoring tax and credits) (issue #30).
+     */
+    public function recalculateFromLineItems(): void
+    {
+        $this->subtotal = $this->lineItems()->sum('total');
+        $this->recalculateTotal();
     }
 
     /** Total received against this invoice. */

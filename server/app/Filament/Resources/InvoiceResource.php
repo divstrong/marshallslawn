@@ -117,6 +117,13 @@ class InvoiceResource extends Resource
                                 ->columns(4)
                                 ->visible(fn (?Invoice $record) => $record?->is_payment_plan),
                         ]),
+                    Tab::make('Line Items')
+                        ->icon('heroicon-o-list-bullet')
+                        ->badge(fn (?Invoice $record): ?string => $record?->lineItems()->count() ?: null)
+                        ->hidden(fn (?Invoice $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.invoice.line-items-tab'),
+                        ]),
                     Tab::make('Credits')
                         ->icon('heroicon-o-receipt-percent')
                         ->badge(fn (?Invoice $record): ?string => $record?->credits()->count() ?: null)
