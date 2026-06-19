@@ -25,6 +25,7 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'role_id',
+        'dispatch_preferences',
     ];
 
     public function role(): BelongsTo
@@ -71,6 +72,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'dispatch_preferences' => 'array',
         ];
     }
 }
