@@ -45,6 +45,11 @@ class Settings extends Page
                         ->schema([
                             View::make('livewire.permission-manager-embed'),
                         ]),
+                    Tab::make('Job Status')
+                        ->icon('heroicon-o-flag')
+                        ->schema([
+                            View::make('livewire.job-status-manager-embed'),
+                        ]),
                 ]),
         ]);
     }
