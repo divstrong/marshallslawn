@@ -258,6 +258,23 @@
                                     Waiting List ({{ count($waiting) }})
                                 </button>
                             </div>
+                            @if ($queue === 'waiting')
+                                @php $wlFilters = $this->waitingListFilters; @endphp
+                                @if (count($wlFilters) > 0)
+                                    <div class="sch-wl-filters" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px;">
+                                        <button type="button" wire:click="setWaitingFilter(null)" class="d-btn"
+                                            @if (! $this->waitingFilterId) style="{{ $tabActive }}" @endif>
+                                            All
+                                        </button>
+                                        @foreach ($wlFilters as $f)
+                                            <button type="button" wire:click="setWaitingFilter({{ $f['id'] }})" class="d-btn"
+                                                @if ((int) $this->waitingFilterId === $f['id']) style="{{ $tabActive }}" @endif>
+                                                {{ $f['label'] }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            @endif
                             <div class="sch-col-sub">
                                 @if ($queue === 'waiting')
                                     Future jobs held back from the near-term pile. Drag onto a route, or send back to Unassigned.

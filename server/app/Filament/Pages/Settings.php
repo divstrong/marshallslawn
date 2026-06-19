@@ -45,6 +45,11 @@ class Settings extends Page
                         ->schema([
                             View::make('livewire.permission-manager-embed'),
                         ]),
+                    Tab::make('Waiting List')
+                        ->icon('heroicon-o-queue-list')
+                        ->schema([
+                            View::make('livewire.waiting-list-filter-manager-embed'),
+                        ]),
                 ]),
         ]);
     }
