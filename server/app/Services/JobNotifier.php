@@ -56,8 +56,31 @@ class JobNotifier
         $date = $scheduledDate ?? $job->scheduled_date?->toDateString();
         $when = $date ? Carbon::parse($date)->format('D, M j') : 'an upcoming day';
 
-        $title = 'Job ' . $verb;
-        $body = ($job->title ?: 'A job') . ' (' . $when . ') was ' . $verb . '.';
+        // Build the placeholder values an admin can reference in the template (issue #14).
+        $job->loadMissing(['customer', 'property']);
+        $customer = $job->customer;
+        $customerName = $customer
+            ? (trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''))
+                ?: ($customer->company_name ?? 'the customer'))
+            : 'the customer';
+
+        $vars = [
+            'customer_name' => $customerName,
+            'client_name' => $customerName,
+            'job_title' => $job->title ?: 'A job',
+            'scheduled_date' => $when,
+            'crew_name' => $crew->name,
+            'status' => $verb,
+            'address' => $job->property?->address ?? '',
+            'city' => $job->property?->city ?? '',
+        ];
+
+        // Prefer the admin-managed template; fall back to built-in copy when it's
+        // missing or disabled.
+        $rendered = \App\Models\NotificationTemplate::render('job_' . $status, $vars);
+        $title = $rendered['title'] ?? ('Job ' . $verb);
+        $body = $rendered['body'] ?? (($job->title ?: 'A job') . ' (' . $when . ') was ' . $verb . '.');
+        $channel = $rendered['channel'] ?? 'alerts';
 
         foreach ($recipients as $employee) {
             $this->push->sendToEmployee(
@@ -65,7 +88,7 @@ class JobNotifier
                 $title,
                 $body,
                 ['type' => 'job', 'job_id' => $job->id, 'status' => $status],
-                'alerts',
+                $channel,
             );
         }
     }
