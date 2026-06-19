@@ -44,6 +44,10 @@ class Scheduling extends Page
     #[Url(as: 'queue')]
     public string $queue = 'unassigned';
 
+    /** Optional service filter applied to the Waiting List queue (issue #26). */
+    #[Url(as: 'wlf')]
+    public ?int $waitingFilterId = null;
+
     public function mount(): void
     {
         $this->date ??= now()->toDateString();
@@ -55,6 +59,12 @@ class Scheduling extends Page
     public function setQueue(string $queue): void
     {
         $this->queue = $queue === 'waiting' ? 'waiting' : 'unassigned';
+    }
+
+    public function setWaitingFilter(?int $id): void
+    {
+        $this->waitingFilterId = $id ?: null;
+        unset($this->activeJobs, $this->waitingCount);
     }
 
     public function getMaxContentWidth(): \Filament\Support\Enums\Width
@@ -303,9 +313,23 @@ class Scheduling extends Page
      */
     private function waitingJobsQuery(): Builder
     {
+        // Resolve the selected service-group filter (issue #26), if any.
+        $group = null;
+        if ($this->waitingFilterId) {
+            $group = \App\Models\WaitingListFilter::active()
+                ->whereKey($this->waitingFilterId)
+                ->value('service_group');
+        }
+
         return Job::query()
             ->where('waiting_list', true)
-            ->whereDoesntHave('routeStops');
+            ->whereDoesntHave('routeStops')
+            // Limit to jobs whose service (one-time line item or recurring template)
+            // belongs to the selected service group.
+            ->when($group, fn ($q) => $q->where(function ($qq) use ($group) {
+                $qq->whereHas('jobServices.service', fn ($s) => $s->where('service_group', $group))
+                   ->orWhereHas('recurringTemplate.service', fn ($s) => $s->where('service_group', $group));
+            }));
     }
 
     #[Computed]
@@ -346,6 +370,20 @@ class Scheduling extends Page
         }
 
         return $query->get()->map(fn ($j) => $this->jobToArray($j))->all();
+    }
+
+    /**
+     * Active waiting-list service filters (issue #26), surfaced as chips above the
+     * Waiting List queue.
+     *
+     * @return array<int, array{id: int, label: string}>
+     */
+    #[Computed]
+    public function waitingListFilters(): array
+    {
+        return \App\Models\WaitingListFilter::ordered()
+            ->map(fn ($f) => ['id' => (int) $f->id, 'label' => $f->label])
+            ->all();
     }
 
     public function moveToWaitingList(int $jobId): void
