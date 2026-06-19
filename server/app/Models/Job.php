@@ -30,6 +30,7 @@ class Job extends Model
         'customer_id',
         'property_id',
         'estimate_id',
+        'price',
         'recurring_job_template_id',
         'crew_id',
         'title',
@@ -58,6 +59,7 @@ class Job extends Model
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
             'waiting_list' => 'boolean',
+            'price' => 'decimal:2',
         ];
     }
 
