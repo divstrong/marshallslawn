@@ -20,6 +20,7 @@ class SeedTestJobs extends Command
                             {--days=7 : Number of days starting today}
                             {--week : Seed from today through the end of this week (overrides --days)}
                             {--crews=5 : Number of crews to distribute jobs across (uses first N by id)}
+                            {--crew= : Target a single/specific crew by id or name match (overrides --crews)}
                             {--pool=150 : Size of the unique property pool to sample from}
                             {--unrouted-pct=0 : Percent of jobs to leave unrouted (0-100)}
                             {--fresh : Delete existing jobs/routes in the date window before seeding}
@@ -59,7 +60,27 @@ class SeedTestJobs extends Command
         }
 
         // ---- 2. Pick crews ---------------------------------------------------
-        $crews = Crew::orderBy('id')->limit($crewLimit)->get();
+        $crewFilter = trim((string) $this->option('crew'));
+
+        if ($crewFilter !== '') {
+            // Target a specific crew: numeric → by id, otherwise a name match.
+            $crews = Crew::query()
+                ->when(
+                    ctype_digit($crewFilter),
+                    fn ($q) => $q->where('id', (int) $crewFilter),
+                    fn ($q) => $q->where('name', 'LIKE', "%{$crewFilter}%"),
+                )
+                ->orderBy('id')
+                ->get();
+
+            if ($crews->isEmpty()) {
+                $this->error("No crew matches '{$crewFilter}'.");
+                return self::FAILURE;
+            }
+        } else {
+            $crews = Crew::orderBy('id')->limit($crewLimit)->get();
+        }
+
         if ($crews->isEmpty()) {
             $this->error('No crews found.');
             return self::FAILURE;

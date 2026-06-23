@@ -95,6 +95,64 @@
         .dispatch-page .d-grid.is-list .d-list-item .d-truncate { white-space: normal; }
         .dispatch-page .d-list-extra { font-size: 13px; color: var(--d-muted); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px; }
         .dispatch-page .d-list-extra span { background: var(--d-hover); padding: 1px 8px; border-radius: 9999px; }
+        /* List view agenda (Day / Week) — vertically stacked days with per-crew cards. */
+        .dispatch-page .d-agenda { display: flex; flex-direction: column; }
+        .dispatch-page .d-agenda-head {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px; flex-wrap: wrap;
+            font-size: 16px; font-weight: 700; padding: 2px 2px 10px;
+        }
+        .dispatch-page .d-agenda-search {
+            display: inline-flex; align-items: center; gap: 6px;
+            height: 36px; padding: 0 10px; border-radius: 8px;
+            border: 1px solid var(--d-border); background: var(--d-card-bg);
+            min-width: 240px; max-width: 360px; flex: 1 1 240px;
+        }
+        .dispatch-page .d-agenda-search svg { width: 15px; height: 15px; color: var(--d-muted); flex-shrink: 0; }
+        .dispatch-page .d-agenda-search-input {
+            border: 0; outline: 0; background: transparent; color: var(--d-text);
+            font: inherit; font-weight: 400; font-size: 14px; width: 100%; min-width: 0;
+        }
+        .dispatch-page .d-agenda-search-clear {
+            border: 0; background: transparent; color: var(--d-muted);
+            font-size: 18px; line-height: 1; cursor: pointer; padding: 0 2px; flex-shrink: 0;
+        }
+        .dispatch-page .d-agenda-search-clear:hover { color: var(--d-text); }
+        .dispatch-page .d-agenda-day {
+            display: flex; flex-direction: column; gap: 12px;
+            padding: 16px 0; border-top: 1px solid var(--d-border);
+        }
+        .dispatch-page .d-agenda-day:first-of-type { border-top: 0; }
+        .dispatch-page .d-agenda-dayhead { display: flex; align-items: baseline; gap: 8px; }
+        .dispatch-page .d-agenda-weekday {
+            font-size: 11px; font-weight: 600; letter-spacing: 0.05em; color: var(--d-muted);
+        }
+        .dispatch-page .d-agenda-daynum { font-size: 18px; font-weight: 700; line-height: 1.1; }
+        .dispatch-page .d-agenda-day.is-today .d-agenda-daynum,
+        .dispatch-page .d-agenda-day.is-today .d-agenda-weekday { color: var(--d-accent); }
+        .dispatch-page .d-agenda-cards { display: flex; flex-wrap: wrap; gap: 12px; min-width: 0; }
+        .dispatch-page .d-job-card {
+            display: block; width: 250px; max-width: 100%; text-align: left;
+            font: inherit; cursor: pointer;
+            background: var(--d-card-bg); border: 1px solid var(--d-border);
+            border-radius: 12px; padding: 14px; text-decoration: none; color: var(--d-text);
+            transition: box-shadow 120ms, border-color 120ms;
+        }
+        .dispatch-page .d-job-card:hover { border-color: var(--d-muted); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .dispatch-page .d-crew-badge {
+            display: inline-block; font-size: 11px; font-weight: 700;
+            padding: 2px 10px; border-radius: 9999px; margin-bottom: 10px;
+        }
+        .dispatch-page .d-job-card-title { font-size: 14px; font-weight: 600; line-height: 1.35; }
+        .dispatch-page .d-job-card-sub { font-size: 13px; color: var(--d-muted); margin-top: 4px; }
+        .dispatch-page .d-job-card-status {
+            display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--d-muted);
+            margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--d-border);
+        }
+        .dispatch-page .d-agenda-empty { color: var(--d-muted); font-size: 13px; padding: 4px 0; }
+        .dispatch-page .d-dot.scheduled { background: #2563eb; }
+        .dispatch-page .d-dot.complete { background: #16a34a; }
+        .dispatch-page .d-dot.in_progress { background: #d97706; }
         .dispatch-page .d-map-wrap {
             position: relative; min-height: calc(100vh - 200px); border-radius: 12px;
             border: 1px solid var(--d-border); background: rgb(243, 244, 246); overflow: hidden;
@@ -352,6 +410,26 @@
                         >List</button>
                     </div>
 
+                    {{-- Day / Week range toggle — only meaningful in List view. --}}
+                    @if ($this->viewMode === 'list')
+                        <div class="d-row" style="gap:0;border:1px solid var(--d-border);border-radius:8px;overflow:hidden;">
+                            <button
+                                type="button"
+                                wire:click="setListRange('day')"
+                                class="d-btn"
+                                style="height:32px;border:none;border-radius:0;{{ $this->listRange === 'day' ? 'background: var(--d-accent); color:#fff;' : '' }}"
+                                title="Show the selected day"
+                            >Day</button>
+                            <button
+                                type="button"
+                                wire:click="setListRange('week')"
+                                class="d-btn"
+                                style="height:32px;border:none;border-radius:0;{{ $this->listRange === 'week' ? 'background: var(--d-accent); color:#fff;' : '' }}"
+                                title="Show the whole week (Mon–Sat)"
+                            >Week</button>
+                        </div>
+                    @endif
+
                     <button
                         type="button"
                         wire:click="toggleGps"
@@ -435,8 +513,71 @@
                 </div>
             </div>
 
+            @if ($this->viewMode === 'list')
+            {{-- List view: day-by-day agenda of per-crew cards (Day / Week range). --}}
+            <div class="d-bar">
+                <div class="d-agenda">
+                    <div class="d-agenda-head">
+                        <span>{{ $this->listRangeLabel }}</span>
+                        <label class="d-agenda-search">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+                            <input
+                                type="search"
+                                wire:model.live.debounce.300ms="listSearch"
+                                placeholder="Search customer, property, or service…"
+                                class="d-agenda-search-input"
+                                autocomplete="off"
+                            >
+                            @if (trim($this->listSearch) !== '')
+                                <button type="button" wire:click="$set('listSearch', '')" class="d-agenda-search-clear" title="Clear search" aria-label="Clear search">&times;</button>
+                            @endif
+                        </label>
+                    </div>
+                    @forelse ($this->listDays as $day)
+                        <div class="d-agenda-day {{ $day['is_today'] ? 'is-today' : '' }}">
+                            @if ($this->listRange === 'week')
+                                <div class="d-agenda-dayhead">
+                                    <span class="d-agenda-weekday">{{ $day['weekday'] }}</span>
+                                    <span class="d-agenda-daynum">{{ $day['day_num'] }}</span>
+                                </div>
+                            @endif
+                            <div class="d-agenda-cards">
+                                @forelse ($day['jobs'] as $card)
+                                    <button
+                                        type="button"
+                                        wire:click="openStopDetails({{ $card['id'] }})"
+                                        wire:key="job-card-{{ $card['id'] }}"
+                                        class="d-job-card"
+                                        title="View job details"
+                                    >
+                                        <span class="d-crew-badge" style="background: {{ $card['color'] }}1a; color: {{ $card['color'] }};">{{ $card['crew_name'] }}</span>
+                                        <div class="d-job-card-title">{{ $card['customer_name'] }}</div>
+                                        <div class="d-job-card-sub">{{ $card['address'] }}</div>
+                                        @if ($card['service_summary'])
+                                            <div class="d-job-card-sub">{{ $card['service_summary'] }}</div>
+                                        @endif
+                                        <div class="d-job-card-status">
+                                            <span class="d-dot {{ $card['status_kind'] }}"></span>
+                                            {{ $card['status_label'] }}
+                                        </div>
+                                    </button>
+                                @empty
+                                    <div class="d-agenda-empty">No jobs scheduled.</div>
+                                @endforelse
+                            </div>
+                        </div>
+                    @empty
+                        @if (trim($this->listSearch) !== '')
+                            <div class="d-list-empty">No jobs match “{{ $this->listSearch }}” this {{ $this->listRange === 'week' ? 'week' : 'day' }}.</div>
+                        @else
+                            <div class="d-list-empty">No jobs scheduled for this {{ $this->listRange === 'week' ? 'week' : 'day' }}.</div>
+                        @endif
+                    @endforelse
+                </div>
+            </div>
+            @else
             {{-- Map + side panel --}}
-            <div class="d-grid {{ $this->viewMode === 'list' ? 'is-list' : '' }}">
+            <div class="d-grid">
                 @if ($this->viewMode === 'map')
                 <div class="d-map-wrap">
                     @if (! $mapsApiKey)
@@ -748,6 +889,7 @@
                     @endif
                 </div>
             </div>
+            @endif
         </div>
 
         {{-- Right-side chat panel + backdrop. Rendered always so CSS transitions can play. --}}
@@ -880,6 +1022,23 @@
                                     <div class="d-muted" style="font-size:13px;">No services listed for this job.</div>
                                 @endif
                             </div>
+
+                            @if ($job['time_started'])
+                                <div>
+                                    <div class="d-label">Foreman time</div>
+                                    <div class="d-field-val" style="display:flex; flex-direction:column; gap:2px;">
+                                        <span><span class="d-muted">Started:</span> {{ $job['time_started'] }}</span>
+                                        @if ($job['time_running'])
+                                            <span><span class="d-muted">Finished:</span> <span style="color:#d97706;">In progress</span></span>
+                                        @else
+                                            <span><span class="d-muted">Finished:</span> {{ $job['time_finished'] }}</span>
+                                            @if ($job['time_duration'])
+                                                <span><span class="d-muted">Duration:</span> {{ $job['time_duration'] }}</span>
+                                            @endif
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
 
                             <div>
                                 <div class="d-label">Notes</div>

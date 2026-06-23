@@ -173,6 +173,16 @@ export default function ChatScreen() {
         <LoadingState label={t('chat.loading')} />
       ) : error && !data ? (
         <ErrorState message={error} onRetry={reload} />
+      ) : messages.length === 0 ? (
+        // Rendered as a sibling (not the FlatList's ListEmptyComponent) so it
+        // isn't affected by the inverted list's flip transform.
+        <View style={styles.empty}>
+          <EmptyState
+            icon="chatbubbles-outline"
+            title={t('chat.emptyTitle')}
+            message={t('chat.emptyMsg')}
+          />
+        </View>
       ) : (
         <FlatList
           data={messages}
@@ -180,15 +190,6 @@ export default function ChatScreen() {
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => <ChatBubble message={item} onOpenMedia={setViewer} />}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <EmptyState
-                icon="chatbubbles-outline"
-                title={t('chat.emptyTitle')}
-                message={t('chat.emptyMsg')}
-              />
-            </View>
-          }
         />
       )}
 
@@ -298,8 +299,6 @@ const styles = StyleSheet.create({
   },
   empty: {
     flex: 1,
-    // Counter the inverted FlatList flip so the empty state is upright.
-    transform: [{ scaleY: -1 }],
   },
   row: {
     flexDirection: 'row',

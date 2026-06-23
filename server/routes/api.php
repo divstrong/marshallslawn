@@ -36,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Jobs.
     Route::get('/jobs', [JobController::class, 'index']);
     Route::get('/jobs/{job}', [JobController::class, 'show']);
+    Route::get('/jobs/{job}/map', [JobController::class, 'map']);
     Route::post('/jobs/{job}/start', [JobController::class, 'start']);
     Route::post('/jobs/{job}/complete', [JobController::class, 'complete']);
     Route::post('/jobs/{job}/notes', [JobController::class, 'addNote']);

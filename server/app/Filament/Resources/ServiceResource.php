@@ -5,6 +5,9 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ServiceResource\Pages;
 use App\Models\Service;
 use Filament\Forms;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -27,65 +30,85 @@ class ServiceResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\TextInput::make('name')
-                ->required()
-                ->maxLength(255),
-            Forms\Components\TextInput::make('code')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('parent_service')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('full_name')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('category')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('default_price')
-                ->label('Default Rate')
-                ->numeric()
-                ->prefix('$'),
-            Forms\Components\TextInput::make('minimum_amount')
-                ->numeric()
-                ->prefix('$'),
-            Forms\Components\TextInput::make('unit')
-                ->maxLength(255),
-            Forms\Components\TextInput::make('service_mode')
-                ->maxLength(255),
-            Forms\Components\Select::make('service_group')
-                ->label('Service Group')
-                ->helperText('Drives the Spraying / Mowing / Mulching filters on the Dispatch board.')
-                ->options(Service::GROUPS)
-                ->native(false),
-            Forms\Components\FileUpload::make('icon_path')
-                ->label('Icon')
-                ->helperText('Optional. Shown on Dispatch job cards & map pins when "Service Icons" is enabled.')
-                ->image()
-                ->disk('public')
-                ->directory('service-icons')
-                ->imageResizeMode('contain')
-                ->imageResizeTargetWidth(128)
-                ->imageResizeTargetHeight(128)
-                ->maxSize(2048),
-            Forms\Components\Toggle::make('is_active')
-                ->default(true),
-            Forms\Components\Toggle::make('track_chemicals')
-                ->default(false),
-            Forms\Components\Toggle::make('show_in_snow')
-                ->default(false),
-            Forms\Components\Textarea::make('invoice_description')
-                ->label('Invoice Terms')
-                ->helperText('Qualifier text shown to the customer on invoices for this service.')
-                ->columnSpanFull(),
-            Forms\Components\Textarea::make('estimate_description')
-                ->label('Estimate Terms')
-                ->helperText('Qualifier text shown to the customer on estimates for this service.')
-                ->columnSpanFull(),
-            Forms\Components\Textarea::make('description')
-                ->label('Internal Description')
-                ->helperText('Used on dispatch cards and the crew app — not shown to customers.')
-                ->columnSpanFull(),
-            Forms\Components\TextInput::make('legacy_id')
-                ->label('Legacy ID')
-                ->disabled()
-                ->maxLength(255),
+            Tabs::make('Service')
+                ->columnSpanFull()
+                ->tabs([
+                    Tab::make('General')
+                        ->icon('heroicon-o-information-circle')
+                        ->columns(2)
+                        ->schema([
+                            Forms\Components\TextInput::make('name')
+                                ->required()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('code')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('parent_service')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('full_name')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('category')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('default_price')
+                                ->label('Default Rate')
+                                ->numeric()
+                                ->prefix('$'),
+                            Forms\Components\TextInput::make('minimum_amount')
+                                ->numeric()
+                                ->prefix('$'),
+                            Forms\Components\TextInput::make('unit')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('service_mode')
+                                ->maxLength(255),
+                            Forms\Components\Select::make('service_group')
+                                ->label('Service Group')
+                                ->helperText('Drives the Spraying / Mowing / Mulching filters on the Dispatch board.')
+                                ->options(Service::GROUPS)
+                                ->native(false),
+                            Forms\Components\FileUpload::make('icon_path')
+                                ->label('Icon')
+                                ->helperText('Optional. Shown on Dispatch job cards & map pins when "Service Icons" is enabled.')
+                                ->image()
+                                ->disk('public')
+                                ->directory('service-icons')
+                                ->imageResizeMode('contain')
+                                ->imageResizeTargetWidth(128)
+                                ->imageResizeTargetHeight(128)
+                                ->maxSize(2048),
+                            Forms\Components\Toggle::make('is_active')
+                                ->default(true),
+                            Forms\Components\Toggle::make('track_chemicals')
+                                ->default(false),
+                            Forms\Components\Toggle::make('show_in_snow')
+                                ->default(false),
+                        ]),
+                    Tab::make('Terms')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            Forms\Components\Textarea::make('invoice_description')
+                                ->label('Invoice Terms')
+                                ->helperText('Qualifier text shown to the customer on invoices for this service.')
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('estimate_description')
+                                ->label('Estimate Terms')
+                                ->helperText('Qualifier text shown to the customer on estimates for this service.')
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('description')
+                                ->label('Internal Description')
+                                ->helperText('Used on dispatch cards and the crew app — not shown to customers.')
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('legacy_id')
+                                ->label('Legacy ID')
+                                ->disabled()
+                                ->maxLength(255),
+                        ]),
+                    Tab::make('Options')
+                        ->icon('heroicon-o-adjustments-horizontal')
+                        ->badge(fn (?Service $record): ?string => $record?->options()->count() ?: null)
+                        ->hidden(fn (?Service $record): bool => ! $record?->exists)
+                        ->schema([
+                            View::make('filament.resources.service.options-tab'),
+                        ]),
+                ]),
         ]);
     }
 
@@ -154,9 +177,10 @@ class ServiceResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            ServiceResource\RelationManagers\OptionsRelationManager::class,
-        ];
+        // Options are managed inside the "Options" tab on the edit form
+        // (embedded via filament.resources.service.options-tab), so they
+        // no longer render as a separate relation manager below the form.
+        return [];
     }
 
     public static function getPages(): array

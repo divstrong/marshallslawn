@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ServiceGroup;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -129,6 +130,30 @@ class Job extends Model
     public function jobServices(): HasMany
     {
         return $this->hasMany(JobService::class)->orderBy('sort_order');
+    }
+
+    /**
+     * High-level service bucket for the dashboard "Job Service Mix" — one of
+     * the {@see ServiceGroup} constants (spraying / mulching / mowing /
+     * projects).
+     *
+     * Prefers the group of a linked service (checked in Spray → Mulch →
+     * Mowing priority so a multi-service job lands in its most specific
+     * bucket) and falls back to keyword-matching the title + description when
+     * no service is linked — the case for most jobs until tags are imported.
+     */
+    public function serviceGroup(): string
+    {
+        foreach ([ServiceGroup::SPRAYING, ServiceGroup::MULCHING, ServiceGroup::MOWING] as $bucket) {
+            foreach ($this->jobServices as $jobService) {
+                if ($jobService->service
+                    && ServiceGroup::fromServiceGroup($jobService->service->service_group) === $bucket) {
+                    return $bucket;
+                }
+            }
+        }
+
+        return ServiceGroup::classify(trim($this->title.' '.$this->description));
     }
 
     public function timeLogs(): HasMany

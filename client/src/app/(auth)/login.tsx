@@ -114,7 +114,6 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             placeholder={t('login.passwordPlaceholder')}
             secureTextEntry
-            hint={t('login.demoHint')}
           />
 
           <Button

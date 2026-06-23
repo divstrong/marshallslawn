@@ -83,6 +83,12 @@ class DispatchBoard extends Component
     /** Board layout: 'map' (map + side list) or 'list' (full-width job cards). */
     public string $viewMode = 'map';
 
+    /** List-view range: 'day' (selected day) or 'week' (Mon–Sat of that week). */
+    public string $listRange = 'day';
+
+    /** Free-text filter for the List view (matches customer / property / service). */
+    public string $listSearch = '';
+
     /** Composer state for the foreman chat panel. */
     public string $chatBody = '';
 
@@ -99,6 +105,7 @@ class DispatchBoard extends Component
         $prefs = $user->dispatch_preferences ?? [];
         $this->hiddenCrewIds = array_values(array_map('intval', $prefs['hidden_crews'] ?? []));
         $this->viewMode = ($prefs['view_mode'] ?? 'map') === 'list' ? 'list' : 'map';
+        $this->listRange = ($prefs['list_range'] ?? 'day') === 'week' ? 'week' : 'day';
     }
 
     #[Computed]
@@ -576,6 +583,227 @@ class DispatchBoard extends Component
         ];
     }
 
+    /** The date window the List view covers: [start, end] inclusive. */
+    private function listDateRange(): array
+    {
+        $date = Carbon::parse($this->date);
+
+        if ($this->listRange === 'week') {
+            $start = $date->copy()->startOfWeek(Carbon::MONDAY);
+            return [$start->toDateString(), $start->copy()->addDays(5)->toDateString()]; // Mon–Sat
+        }
+
+        return [$date->toDateString(), $date->toDateString()];
+    }
+
+    /** Header label for the List view (e.g. "Monday, June 23" or "June 23 – 28, 2026"). */
+    #[Computed]
+    public function listRangeLabel(): string
+    {
+        [$start, $end] = $this->listDateRange();
+        $startC = Carbon::parse($start);
+
+        if ($this->listRange !== 'week') {
+            return $startC->format('l, F j, Y');
+        }
+
+        $endC = Carbon::parse($end);
+        $left = $startC->format('M j');
+        $right = $startC->month === $endC->month
+            ? $endC->format('j, Y')
+            : $endC->format('M j, Y');
+
+        return "{$left} – {$right}";
+    }
+
+    /**
+     * Day-by-day agenda for the List view: each day holds one clickable card per
+     * job (route stop), built from real route stops (respecting the active crew /
+     * status / service filters). Crew is shown as a badge so the crew toggles
+     * above act purely as a filter rather than a grouping.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    #[Computed]
+    public function listDays(): array
+    {
+        $crewMap = $this->crewColorMap();
+        [$start, $end] = $this->listDateRange();
+
+        $stops = RouteStop::query()
+            ->with([
+                'customer:id,first_name,last_name,company_name',
+                'property:id,address,city',
+                'service:id,name,service_group',
+                'job:id,title',
+                'job.jobServices.service:id,name,service_group',
+                'route:id,name,route_date,crew_id',
+            ])
+            ->whereHas('route', function ($q) use ($start, $end) {
+                $q->whereDate('route_date', '>=', $start)
+                  ->whereDate('route_date', '<=', $end);
+                if (! empty($this->crewIds)) {
+                    $q->whereIn('crew_id', $this->crewIds);
+                }
+            })
+            ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
+            ->orderBy('sort_order')
+            ->get();
+
+        $hidden = array_map('intval', $this->hiddenCrewIds);
+        $search = trim(mb_strtolower($this->listSearch));
+
+        // Group stops by date; each stop renders as its own job card.
+        $byDay = [];
+        foreach ($stops as $stop) {
+            $crewId = (int) ($stop->route?->crew_id ?? 0);
+            if (in_array($crewId, $hidden, true)) {
+                continue;
+            }
+            if (! empty($this->serviceGroups)
+                && array_intersect($this->stopServiceGroups($stop), $this->serviceGroups) === []) {
+                continue;
+            }
+            if ($search !== '' && ! $this->stopMatchesSearch($stop, $search)) {
+                continue;
+            }
+            $dateKey = $stop->route?->route_date?->toDateString();
+            if (! $dateKey) {
+                continue;
+            }
+            $byDay[$dateKey][] = $stop;
+        }
+
+        // Emit every day in the range (including empty ones) so the week reads
+        // continuously — but while searching, drop empty days so matches read tightly.
+        $days = [];
+        $today = now()->toDateString();
+        $cursor = Carbon::parse($start);
+        $endC = Carbon::parse($end);
+
+        while ($cursor <= $endC) {
+            $dayC = $cursor->copy();
+            $cursor->addDay();
+
+            $dateKey = $dayC->toDateString();
+
+            $jobs = [];
+            foreach ($byDay[$dateKey] ?? [] as $stop) {
+                $jobs[] = $this->buildStopCard($stop, $crewMap);
+            }
+            // Keep each crew's stops together, in route order.
+            usort($jobs, fn ($a, $b) => [$a['crew_id'], $a['sort_order']] <=> [$b['crew_id'], $b['sort_order']]);
+
+            if ($search !== '' && $jobs === []) {
+                continue;
+            }
+
+            $days[] = [
+                'date' => $dateKey,
+                'weekday' => strtoupper($dayC->format('D')),
+                'day_num' => $dayC->format('j'),
+                'is_today' => $dateKey === $today,
+                'jobs' => $jobs,
+            ];
+        }
+
+        return $days;
+    }
+
+    /** Does a stop match the List-view search box (customer / property / service)? */
+    private function stopMatchesSearch(RouteStop $stop, string $needle): bool
+    {
+        $parts = [];
+
+        if ($c = $stop->customer) {
+            $parts[] = $c->first_name;
+            $parts[] = $c->last_name;
+            $parts[] = $c->company_name;
+        }
+        if ($p = $stop->property) {
+            $parts[] = $p->address;
+            $parts[] = $p->city;
+        }
+        if ($stop->service?->name) {
+            $parts[] = $stop->service->name;
+        }
+        foreach ($stop->job?->jobServices ?? [] as $js) {
+            $parts[] = $js->service?->name;
+        }
+
+        $haystack = mb_strtolower(implode(' ', array_filter($parts)));
+
+        return str_contains($haystack, $needle);
+    }
+
+    /** Distinct service groups attached to a stop (its own service + the job's services). */
+    private function stopServiceGroups(RouteStop $stop): array
+    {
+        $groups = [];
+        if ($stop->service?->service_group) {
+            $groups[$stop->service->service_group] = true;
+        }
+        foreach ($stop->job?->jobServices ?? [] as $js) {
+            if ($js->service?->service_group) {
+                $groups[$js->service->service_group] = true;
+            }
+        }
+        return array_keys($groups);
+    }
+
+    /**
+     * Build a single clickable job card from one route stop.
+     */
+    private function buildStopCard(RouteStop $stop, array $crewMap): array
+    {
+        $c = $stop->customer;
+        $customerName = $c
+            ? (trim(($c->first_name ?? '') . ' ' . ($c->last_name ?? '')) ?: ($c->company_name ?? '—'))
+            : '—';
+
+        $services = [];
+        if ($stop->service?->name) {
+            $services[$stop->service->name] = true;
+        }
+        foreach ($stop->job?->jobServices ?? [] as $js) {
+            if ($js->service?->name) {
+                $services[$js->service->name] = true;
+            }
+        }
+
+        $crewId = (int) ($stop->route?->crew_id ?? 0);
+        [$statusLabel, $statusKind] = $this->stopStatusBadge((string) $stop->status);
+
+        return [
+            'id' => (int) $stop->id,
+            'job_id' => $stop->job_id ? (int) $stop->job_id : null,
+            'crew_id' => $crewId,
+            'sort_order' => (int) $stop->sort_order,
+            'crew_name' => $crewMap[$crewId]['name'] ?? 'Unassigned',
+            'color' => $crewMap[$crewId]['color'] ?? '#6b7280',
+            'customer_name' => $customerName,
+            'address' => $stop->property?->address ?? '—',
+            'service_summary' => implode(' · ', array_slice(array_keys($services), 0, 2)),
+            'status_label' => $statusLabel,
+            'status_kind' => $statusKind,
+        ];
+    }
+
+    /**
+     * Map a raw route-stop status to a [label, css-kind] badge pair.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function stopStatusBadge(string $status): array
+    {
+        return match ($status) {
+            'completed' => ['Complete', 'complete'],
+            'in_progress' => ['In progress', 'in_progress'],
+            'skipped' => ['Skipped', 'scheduled'],
+            default => ['Scheduled', 'scheduled'],
+        };
+    }
+
     public function selectStop(int $id): void
     {
         $this->selectedStopId = $id;
@@ -761,6 +989,14 @@ class DispatchBoard extends Component
         }
     }
 
+    /** Switch the List view between a single day and the full week (Mon–Sat). */
+    public function setListRange(string $range): void
+    {
+        $this->listRange = $range === 'week' ? 'week' : 'day';
+        unset($this->listDays, $this->listRangeLabel);
+        $this->persistDispatchPrefs();
+    }
+
     /** Persist crew visibility + view mode onto the authenticated user. */
     private function persistDispatchPrefs(): void
     {
@@ -773,6 +1009,7 @@ class DispatchBoard extends Component
             'dispatch_preferences' => [
                 'hidden_crews' => array_values(array_map('intval', $this->hiddenCrewIds)),
                 'view_mode' => $this->viewMode,
+                'list_range' => $this->listRange,
             ],
         ])->save();
     }
@@ -863,12 +1100,16 @@ class DispatchBoard extends Component
         $jobId = $this->selectedJobId;
 
         if (! $jobId && $this->selectedStopId) {
+            // Prefer the already-loaded map stops; fall back to the stop record so
+            // the modal also works for List-view cards (whose stops aren't in the
+            // map collection when the property lacks coordinates).
             foreach ($this->stops as $stop) {
                 if ($stop['id'] === $this->selectedStopId) {
                     $jobId = $stop['job_id'];
                     break;
                 }
             }
+            $jobId ??= RouteStop::whereKey($this->selectedStopId)->value('job_id');
         }
 
         if (! $jobId) {
@@ -889,6 +1130,16 @@ class DispatchBoard extends Component
                 ?: ($customer->company_name ?? '—'))
             : '—';
 
+        // Foreman job timer (set via the mobile start/complete endpoints). Only
+        // surfaced when the foreman has actually logged a start.
+        $durationLabel = null;
+        if ($job->started_at && $job->finished_at) {
+            $minutes = $job->started_at->diffInMinutes($job->finished_at);
+            $hours = intdiv($minutes, 60);
+            $mins = $minutes % 60;
+            $durationLabel = $hours > 0 ? "{$hours}h {$mins}m" : "{$mins}m";
+        }
+
         return [
             'id' => (int) $job->id,
             'title' => $job->title,
@@ -902,11 +1153,22 @@ class DispatchBoard extends Component
                 'description' => $jobService->description ?: $jobService->service?->description,
                 'completed' => $jobService->completed_at !== null,
             ])->all(),
+            'time_started' => $job->started_at?->format('M j, g:i A'),
+            'time_finished' => $job->finished_at?->format('M j, g:i A'),
+            'time_duration' => $durationLabel,
+            'time_running' => $job->started_at !== null && $job->finished_at === null,
         ];
     }
 
     public function openServicesModal(): void
     {
+        $this->showServicesModal = true;
+    }
+
+    /** Select a List-view job card's stop and open its details modal in one click. */
+    public function openStopDetails(int $stopId): void
+    {
+        $this->selectStop($stopId);
         $this->showServicesModal = true;
     }
 

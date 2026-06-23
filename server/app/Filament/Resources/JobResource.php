@@ -227,8 +227,14 @@ class JobResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('scheduled_date')
+                    ->label('Scheduled')
+                    ->date()
+                    ->placeholder('TBD')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('id')
                     ->label('Job #')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('customer.last_name')
                     ->label('Customer')
@@ -240,17 +246,18 @@ class JobResource extends Resource
                     ->badge()
                     ->separator(',')
                     ->limitList(3)
-                    ->expandableLimitedList(),
+                    ->expandableLimitedList()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Type')
                     ->badge()
                     ->formatStateUsing(fn (?string $state) => $state === 'recurring' ? 'Recurring' : 'One Time')
                     ->color(fn (?string $state) => $state === 'recurring' ? 'info' : 'gray')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('price')
                     ->money('USD')
                     ->placeholder('—')
-                    ->toggleable()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -264,10 +271,6 @@ class JobResource extends Resource
                         'low' => 'success',
                         default => 'gray',
                     }),
-                Tables\Columns\TextColumn::make('scheduled_date')
-                    ->date()
-                    ->placeholder('TBD')
-                    ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')

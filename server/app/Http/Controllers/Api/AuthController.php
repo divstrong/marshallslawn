@@ -49,7 +49,7 @@ class AuthController extends Controller
      */
     public function devLogin(Request $request): JsonResponse
     {
-        abort_unless(app()->environment('local') || config('app.debug'), 403, 'Dev login is disabled.');
+        abort_unless(app()->environment('local') || config('app.debug') || config('app.dev_login'), 403, 'Dev login is disabled.');
 
         $data = $request->validate([
             'role' => ['required', 'in:foreman,spray_tech,field,estimator'],

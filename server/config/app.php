@@ -43,6 +43,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Dev Role Login
+    |--------------------------------------------------------------------------
+    |
+    | Enables the mobile app's passwordless dev role switcher (foreman /
+    | spray tech / field / estimator). Always available locally; set
+    | DEV_LOGIN_ENABLED=true to also allow it on a deployed preview build.
+    |
+    */
+
+    'dev_login' => (bool) env('DEV_LOGIN_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |
@@ -65,7 +78,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------

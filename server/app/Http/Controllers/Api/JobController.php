@@ -13,6 +13,7 @@ use App\Models\JobService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -29,7 +30,8 @@ class JobController extends Controller
         /** @var Employee $employee */
         $employee = $request->user();
 
-        $query = Job::query()->with(['property', 'customer', 'crew']);
+        // jobServices feed the app's client-side search (by service name).
+        $query = Job::query()->with(['property', 'customer', 'crew', 'jobServices.service']);
 
         if ($employee->role !== 'estimator') {
             $query->whereIn('crew_id', $employee->crewIds());
@@ -66,6 +68,48 @@ class JobController extends Controller
         $job->mowing_conflict = $this->mowingConflict($job);
 
         return new JobResource($job);
+    }
+
+    /**
+     * GET /api/jobs/{job}/map — a static map thumbnail with a pin at the job's
+     * property. Proxied through the server so the Google Maps key never reaches
+     * the device. Returns the raw image bytes (404 when there's nothing to show).
+     */
+    public function map(Request $request, Job $job)
+    {
+        $this->authorizeView($request->user(), $job);
+
+        $job->loadMissing('property:id,latitude,longitude');
+        $property = $job->property;
+        $key = config('services.google.maps_key');
+
+        abort_if(
+            ! $key || ! $property || $property->latitude === null || $property->longitude === null,
+            404,
+            'No map available for this job.',
+        );
+
+        $lat = (float) $property->latitude;
+        $lng = (float) $property->longitude;
+
+        $params = http_build_query([
+            'center' => "{$lat},{$lng}",
+            'zoom' => 16,
+            'size' => '640x320',
+            'scale' => 2,
+            'maptype' => 'roadmap',
+            'markers' => "color:0xe00a35|{$lat},{$lng}",
+            'key' => $key,
+        ]);
+
+        $response = Http::timeout(8)->get("https://maps.googleapis.com/maps/api/staticmap?{$params}");
+
+        abort_unless($response->successful(), 502, 'Map service unavailable.');
+
+        return response($response->body(), 200, [
+            'Content-Type' => $response->header('Content-Type') ?: 'image/png',
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
     }
 
     /**

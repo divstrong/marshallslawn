@@ -1,7 +1,9 @@
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -28,7 +30,7 @@ import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
 import { api } from '@/lib/api';
 import { formatDateLong, formatDuration, formatTime } from '@/lib/format';
-import { openMaps, openPhone } from '@/lib/links';
+import { openDirections, openMaps, openPhone } from '@/lib/links';
 import type { Job, JobServiceLine } from '@/lib/types';
 
 function pad(value: number): string {
@@ -56,6 +58,7 @@ export default function JobDetailScreen() {
   const [now, setNow] = useState(() => Date.now());
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmComplete, setConfirmComplete] = useState(false);
   const [note, setNote] = useState('');
   const [services, setServices] = useState<JobServiceLine[]>([]);
 
@@ -96,6 +99,11 @@ export default function JobDetailScreen() {
     },
     [jobId, reload, t],
   );
+
+  const confirmCompleteJob = useCallback(async () => {
+    await runAction('complete');
+    setConfirmComplete(false);
+  }, [runAction]);
 
   const toggleService = useCallback(
     async (svc: JobServiceLine) => {
@@ -155,12 +163,7 @@ export default function JobDetailScreen() {
             busy={busy}
             isForeman={employee?.role === 'foreman' || employee?.role === 'spray_tech'}
             onStart={() => runAction('start')}
-            onComplete={() =>
-              Alert.alert(t('job.completeTitle'), t('job.completeMsg'), [
-                { text: t('common.cancel'), style: 'cancel' },
-                { text: t('job.complete'), onPress: () => runAction('complete') },
-              ])
-            }
+            onComplete={() => setConfirmComplete(true)}
           />
 
           <DetailGrid job={job} />
@@ -201,6 +204,32 @@ export default function JobDetailScreen() {
                   <Icon name="navigate-outline" size={16} color={AppColors.brand} />
                   <Text style={styles.linkText}>{t('common.navigate')}</Text>
                 </Pressable>
+              </Card>
+            </View>
+          ) : null}
+
+          {job.property && job.property.latitude != null && job.property.longitude != null ? (
+            <View style={styles.section}>
+              <SectionLabel>{t('job.location')}</SectionLabel>
+              <Card padded={false} style={styles.mapCard}>
+                <Image
+                  source={api.jobMapSource(jobId)}
+                  style={styles.mapImage}
+                  contentFit="cover"
+                  transition={150}
+                />
+                <View style={styles.mapFooter}>
+                  <Text style={styles.cardMuted} numberOfLines={2}>
+                    {job.property.full_address}
+                  </Text>
+                  <Button
+                    label={t('job.directions')}
+                    icon="navigate"
+                    onPress={() =>
+                      openDirections(job.property!.latitude!, job.property!.longitude!)
+                    }
+                  />
+                </View>
               </Card>
             </View>
           ) : null}
@@ -292,7 +321,72 @@ export default function JobDetailScreen() {
           </View>
         </ScrollView>
       )}
+
+      <CompleteJobModal
+        visible={confirmComplete}
+        busy={busy}
+        onCancel={() => setConfirmComplete(false)}
+        onConfirm={confirmCompleteJob}
+      />
     </View>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Complete-job confirmation modal                                            */
+/* -------------------------------------------------------------------------- */
+
+function CompleteJobModal({
+  visible,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  visible: boolean;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useLanguage();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={busy ? undefined : onCancel}
+    >
+      <Pressable style={styles.modalBackdrop} onPress={busy ? undefined : onCancel}>
+        {/* Stop taps on the card from dismissing via the backdrop. */}
+        <Pressable style={styles.modalCard} onPress={() => {}}>
+          <View style={styles.modalIcon}>
+            <Icon name="checkmark-done" size={30} color={AppColors.success} />
+          </View>
+          <Text style={styles.modalTitle}>{t('job.completeTitle')}</Text>
+          <Text style={styles.modalMessage}>{t('job.completeMsg')}</Text>
+          <View style={styles.modalActions}>
+            <View style={styles.modalActionFlex}>
+              <Button
+                label={t('common.cancel')}
+                variant="secondary"
+                onPress={onCancel}
+                disabled={busy}
+              />
+            </View>
+            <View style={styles.modalActionFlex}>
+              <Button
+                label={t('job.complete')}
+                icon="checkmark-done"
+                variant="success"
+                loading={busy}
+                onPress={onConfirm}
+              />
+            </View>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -600,5 +694,63 @@ const styles = StyleSheet.create({
   noteInput: {
     minHeight: 72,
     textAlignVertical: 'top',
+  },
+  mapCard: {
+    overflow: 'hidden',
+  },
+  mapImage: {
+    width: '100%',
+    height: 160,
+    backgroundColor: AppColors.surfaceMuted,
+  },
+  mapFooter: {
+    padding: Spacing.three,
+    gap: Spacing.two,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.four,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: AppColors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.four,
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  modalIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.full,
+    backgroundColor: AppColors.successSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.one,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: AppColors.text,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: AppColors.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+    alignSelf: 'stretch',
+  },
+  modalActionFlex: {
+    flex: 1,
   },
 });

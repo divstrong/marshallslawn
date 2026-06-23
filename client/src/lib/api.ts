@@ -170,6 +170,13 @@ export const api = {
   job(id: number) {
     return request<{ data: Job }>('GET', `/jobs/${id}`).then(unwrap);
   },
+  /** An authenticated image source (uri + bearer header) for a job's static map. */
+  jobMapSource(id: number) {
+    return {
+      uri: buildUrl(`/jobs/${id}/map`),
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+    };
+  },
   startJob(id: number) {
     return request<{ data: Job }>('POST', `/jobs/${id}/start`).then(unwrap);
   },

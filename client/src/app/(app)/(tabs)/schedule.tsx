@@ -4,7 +4,9 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 
 import { Icon } from '@/components/icon';
 import { Card, EmptyState, ErrorState, LoadingState, ScreenHeader, StatusBadge } from '@/components/ui';
+import { WeatherWidget } from '@/components/weather-widget';
 import { AppColors, Radius, Spacing, statusTone } from '@/constants/theme';
+import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
 import { api } from '@/lib/api';
@@ -45,15 +47,24 @@ export default function ScheduleScreen() {
 
   const jobs = data?.jobs ?? [];
   const isToday = date === todayString();
+  const completedCount = jobs.filter((job) => job.status === 'completed').length;
+  const remaining = jobs.length - completedCount;
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader title={t('schedule.title')} subtitle={t('schedule.subtitle')} />
+      <ScreenHeader
+        title={t('schedule.title')}
+        subtitle={t('schedule.jobsRemaining')}
+        right={<Text style={styles.headerCount}>{data ? remaining : '—'}</Text>}
+      />
 
       <ScrollView
         contentContainerStyle={styles.body}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* Current weather for the crew's location */}
+        <WeatherWidget />
+
         {/* Date navigator */}
         <Card style={styles.dateNav} padded={false}>
           <Pressable onPress={() => setDate(shiftDate(date, -1))} hitSlop={8} style={styles.dateArrow}>
@@ -69,15 +80,6 @@ export default function ScheduleScreen() {
             <Icon name="chevron-forward" size={22} color={AppColors.textMuted} />
           </Pressable>
         </Card>
-
-        {/* Job count */}
-        <View style={styles.countCard}>
-          <View>
-            <Text style={styles.countLabel}>{t('schedule.jobsScheduled')}</Text>
-            <Text style={styles.countHint}>{t('schedule.inRouteOrder')}</Text>
-          </View>
-          <Text style={styles.countValue}>{data ? jobs.length : '—'}</Text>
-        </View>
 
         {/* Route timeline */}
         {loading ? (
@@ -116,9 +118,14 @@ interface RouteStopRowProps {
 }
 
 function RouteStopRow({ job, position, isLast, onPress }: RouteStopRowProps) {
+  const { employee } = useAuth();
   const tone = statusTone(job.status);
   const done = job.status === 'completed';
   const address = job.property?.full_address;
+
+  // Crew members (tech / field) get directions from the job detail view's map,
+  // so the address here is plain text and the whole card opens that detail.
+  const linkToMap = employee?.role !== 'spray_tech' && employee?.role !== 'field';
 
   return (
     <View style={styles.stopRow}>
@@ -142,16 +149,25 @@ function RouteStopRow({ job, position, isLast, onPress }: RouteStopRowProps) {
         </View>
         {job.customer ? <Text style={styles.stopCustomer}>{job.customer.name}</Text> : null}
         {address ? (
-          <Pressable
-            onPress={() => openMaps(address)}
-            style={styles.navRow}
-            hitSlop={6}
-          >
-            <Icon name="navigate-outline" size={14} color={AppColors.brand} />
-            <Text style={styles.navText} numberOfLines={1}>
-              {address}
-            </Text>
-          </Pressable>
+          linkToMap ? (
+            <Pressable
+              onPress={() => openMaps(address)}
+              style={styles.navRow}
+              hitSlop={6}
+            >
+              <Icon name="navigate-outline" size={14} color={AppColors.brand} />
+              <Text style={styles.navText} numberOfLines={1}>
+                {address}
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={styles.navRow}>
+              <Icon name="location-outline" size={14} color={AppColors.textFaint} />
+              <Text style={styles.navTextPlain} numberOfLines={1}>
+                {address}
+              </Text>
+            </View>
+          )
         ) : null}
       </Card>
     </View>
@@ -190,28 +206,11 @@ const styles = StyleSheet.create({
     color: AppColors.textFaint,
     marginTop: 2,
   },
-  countCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: AppColors.brand,
-    borderRadius: Radius.lg,
-    padding: Spacing.four,
-  },
-  countLabel: {
+  headerCount: {
     color: AppColors.onBrand,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  countHint: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  countValue: {
-    color: AppColors.onBrand,
-    fontSize: 34,
+    fontSize: 30,
     fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
   timeline: {
     marginTop: Spacing.one,
@@ -274,5 +273,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: AppColors.brand,
     fontWeight: '500',
+  },
+  navTextPlain: {
+    flex: 1,
+    fontSize: 13,
+    color: AppColors.textMuted,
   },
 });

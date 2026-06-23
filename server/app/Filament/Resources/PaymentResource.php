@@ -19,7 +19,7 @@ class PaymentResource extends Resource
 
     protected static ?string $model = Payment::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-banknotes';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-credit-card';
 
     protected static string | \UnitEnum | null $navigationGroup = 'Customers';
 
