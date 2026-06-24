@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
 import { Button, Card, TextField } from '@/components/ui';
+import { API_BASE_URL } from '@/constants/config';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/language';
@@ -148,6 +149,12 @@ export default function LoginScreen() {
             </View>
           </Card>
         ) : null}
+
+        {/* TODO(diagnostic): remove before App Store release. Surfaces the exact
+            API host the build is contacting so connectivity issues are visible. */}
+        <Text style={styles.diagnostic}>
+          API: {API_BASE_URL.replace(/^https?:\/\//, '').split('/')[0]}
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -234,5 +241,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: AppColors.text,
+  },
+  diagnostic: {
+    marginTop: Spacing.five,
+    textAlign: 'center',
+    fontSize: 11,
+    color: AppColors.textFaint,
   },
 });

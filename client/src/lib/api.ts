@@ -60,6 +60,17 @@ async function request<T>(
   options: { query?: Query; body?: unknown } = {},
 ): Promise<T> {
   const url = buildUrl(path, options.query);
+  // host:port only — surfaced in the error so we can see (even in release)
+  // exactly which server the build is contacting.
+  const host = url.replace(/^https?:\/\//, '').split('/')[0];
+
+  const controller = new AbortController();
+  const timedOut = { value: false };
+  const timer = setTimeout(() => {
+    timedOut.value = true;
+    controller.abort();
+  }, 15000);
+
   let response: Response;
   try {
     response = await fetch(url, {
@@ -70,15 +81,18 @@ async function request<T>(
         ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
     });
   } catch (e) {
     if (__DEV__) {
       console.log(`[Marshalls Lawn] ${method} ${url} — fetch failed:`, e);
     }
-    throw new ApiError(
-      __DEV__ ? `Could not reach ${url}` : 'Could not reach the server. Check your connection.',
-      0,
-    );
+    const reason = timedOut.value
+      ? `Timed out reaching ${host} (15s).`
+      : `Couldn't reach the server (${host}). Check your connection.`;
+    throw new ApiError(__DEV__ ? `Could not reach ${url}` : reason, 0);
+  } finally {
+    clearTimeout(timer);
   }
 
   if (response.status === 204) {
