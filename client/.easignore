@@ -1,0 +1,48 @@
+# Files EAS Build should NOT upload. Mirrors .gitignore, and crucially excludes
+# ALL .env files so local dev URLs (e.g. EXPO_PUBLIC_API_URL=http://10.0.2.2…)
+# can never be baked into a cloud build. Release builds fall back to
+# PRODUCTION_API_URL in src/constants/config.ts.
+
+# env files — never ship these in a build
+.env
+.env.*
+.env*.local
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo
+
+app-example
+
+# generated native folders
+/ios
+/android
