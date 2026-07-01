@@ -39,4 +39,22 @@ return [
         'maps_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    /*
+    | Accept Blue (via the Reliable Payments broker) — invoice card/ACH charging.
+    | `mode` gates which endpoint is used so test charges never hit production:
+    | in 'sandbox' mode the SANDBOX_ENDPOINT must be set explicitly, otherwise a
+    | charge is refused rather than falling back to the live endpoint.
+    */
+    'accept_blue' => [
+        'mode' => env('ACCEPT_BLUE_MODE', 'sandbox'), // 'sandbox' | 'live'
+        'endpoint' => env('ACCEPT_BLUE_ENDPOINT'),
+        'sandbox_endpoint' => env('ACCEPT_BLUE_SANDBOX_ENDPOINT'),
+        'api_key' => env('ACCEPT_BLUE_API_KEY'),
+        'source_key' => env('ACCEPT_BLUE_SOURCE_KEY'), // "pin"/source key = Basic auth password
+        'auth_token' => env('ACCEPT_BLUE_AUTH_TOKEN'),  // pre-encoded Basic token (optional shortcut)
+        // Public tokenization key + script for the hosted card fields on the pay page.
+        'tokenization_key' => env('ACCEPT_BLUE_TOKENIZATION_KEY'),
+        'tokenization_src' => env('ACCEPT_BLUE_TOKENIZATION_SRC'),
+    ],
+
 ];
