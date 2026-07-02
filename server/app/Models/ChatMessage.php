@@ -73,8 +73,8 @@ class ChatMessage extends Model
     }
 
     /**
-     * Send a Filament database notification (the top-bar bell) to admin users
-     * for a new incoming message from a foreman.
+     * Send a Filament database notification (the top-bar bell) to the office —
+     * admins and managers — for a new incoming message from a foreman.
      */
     protected function notifyOfficeOfIncomingChat(string $preview): void
     {
@@ -83,8 +83,12 @@ class ChatMessage extends Model
             ? (trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')) ?: ($employee->name ?? 'A crew member'))
             : 'A crew member';
 
-        $admins = User::whereHas('role', fn ($q) => $q->where('is_admin', true))->get();
-        if ($admins->isEmpty()) {
+        // Office staff = admins + managers.
+        $recipients = User::whereHas('role', function ($q) {
+            $q->where('is_admin', true)->orWhere('name', 'manager');
+        })->get();
+
+        if ($recipients->isEmpty()) {
             return;
         }
 
@@ -99,8 +103,8 @@ class ChatMessage extends Model
                     ->markAsRead(),
             ]);
 
-        foreach ($admins as $admin) {
-            $notification->sendToDatabase($admin);
+        foreach ($recipients as $recipient) {
+            $notification->sendToDatabase($recipient);
         }
     }
 
