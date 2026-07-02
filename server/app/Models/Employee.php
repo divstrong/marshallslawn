@@ -76,6 +76,22 @@ class Employee extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        // `name` is a NOT NULL display column derived from first + last name
+        // (the admin form no longer edits it directly). Keep it in sync on save.
+        static::saving(function (Employee $employee): void {
+            $derived = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
+
+            if ($derived !== '') {
+                $employee->name = $derived;
+            } elseif (blank($employee->name)) {
+                // Satisfy the NOT NULL column when no name parts are supplied.
+                $employee->name = $employee->email ?: 'Employee';
+            }
+        });
+    }
+
     public function crews(): HasMany
     {
         return $this->hasMany(Crew::class, 'foreman_id');

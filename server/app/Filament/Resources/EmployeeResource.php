@@ -27,6 +27,23 @@ class EmployeeResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
+    /** The 50 US states, keyed by USPS abbreviation. */
+    private const US_STATES = [
+        'AL' => 'Alabama', 'AK' => 'Alaska', 'AZ' => 'Arizona', 'AR' => 'Arkansas',
+        'CA' => 'California', 'CO' => 'Colorado', 'CT' => 'Connecticut', 'DE' => 'Delaware',
+        'FL' => 'Florida', 'GA' => 'Georgia', 'HI' => 'Hawaii', 'ID' => 'Idaho',
+        'IL' => 'Illinois', 'IN' => 'Indiana', 'IA' => 'Iowa', 'KS' => 'Kansas',
+        'KY' => 'Kentucky', 'LA' => 'Louisiana', 'ME' => 'Maine', 'MD' => 'Maryland',
+        'MA' => 'Massachusetts', 'MI' => 'Michigan', 'MN' => 'Minnesota', 'MS' => 'Mississippi',
+        'MO' => 'Missouri', 'MT' => 'Montana', 'NE' => 'Nebraska', 'NV' => 'Nevada',
+        'NH' => 'New Hampshire', 'NJ' => 'New Jersey', 'NM' => 'New Mexico', 'NY' => 'New York',
+        'NC' => 'North Carolina', 'ND' => 'North Dakota', 'OH' => 'Ohio', 'OK' => 'Oklahoma',
+        'OR' => 'Oregon', 'PA' => 'Pennsylvania', 'RI' => 'Rhode Island', 'SC' => 'South Carolina',
+        'SD' => 'South Dakota', 'TN' => 'Tennessee', 'TX' => 'Texas', 'UT' => 'Utah',
+        'VT' => 'Vermont', 'VA' => 'Virginia', 'WA' => 'Washington', 'WV' => 'West Virginia',
+        'WI' => 'Wisconsin', 'WY' => 'Wyoming',
+    ];
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
@@ -40,9 +57,6 @@ class EmployeeResource extends Resource
                             Forms\Components\TextInput::make('first_name')
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('last_name')
-                                ->maxLength(255),
-                            Forms\Components\TextInput::make('name')
-                                ->required()
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('email')
                                 ->email()
@@ -72,8 +86,10 @@ class EmployeeResource extends Resource
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('city')
                                 ->maxLength(255),
-                            Forms\Components\TextInput::make('state')
-                                ->maxLength(255),
+                            Forms\Components\Select::make('state')
+                                ->options(self::US_STATES)
+                                ->searchable()
+                                ->native(false),
                             Forms\Components\TextInput::make('zip')
                                 ->maxLength(255),
                             Forms\Components\DatePicker::make('hire_date'),
@@ -97,12 +113,11 @@ class EmployeeResource extends Resource
                             Forms\Components\TextInput::make('emergency_contact_phone')
                                 ->tel()
                                 ->maxLength(255),
-                            Forms\Components\TextInput::make('division')
-                                ->maxLength(255),
-                            Forms\Components\TextInput::make('legacy_id')
+                            Forms\Components\Placeholder::make('legacy_id')
                                 ->label('Legacy ID')
-                                ->disabled()
-                                ->maxLength(255),
+                                ->content(fn (?Employee $record): string => $record?->legacy_id ?: '—')
+                                // Import-only data — only shown for records that have one.
+                                ->visible(fn (?Employee $record): bool => filled($record?->legacy_id)),
                         ]),
                     Tab::make('Notes')
                         ->icon('heroicon-o-pencil-square')
@@ -143,8 +158,6 @@ class EmployeeResource extends Resource
                         : null),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
-                Tables\Columns\TextColumn::make('division')
-                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('hire_date')
                     ->date()
                     ->sortable(),
