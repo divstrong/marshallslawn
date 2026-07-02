@@ -22,12 +22,14 @@ class Dashboard extends BaseDashboard
         return $schema->schema([
             Select::make('period')
                 ->options([
-                    'this_year'    => 'This Year',
+                    'today'        => 'Today',
+                    'this_week'    => 'This Week',
                     'this_month'   => 'This Month',
                     'this_quarter' => 'This Quarter',
-                    'last_year'    => 'Last Year',
+                    'this_year'    => 'This Year',
                     'last_month'   => 'Last Month',
                     'last_quarter' => 'Last Quarter',
+                    'last_year'    => 'Last Year',
                     'custom'       => 'Custom Range',
                 ])
                 ->default('this_year')

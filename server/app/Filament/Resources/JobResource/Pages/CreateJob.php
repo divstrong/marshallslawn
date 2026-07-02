@@ -130,8 +130,12 @@ class CreateJob extends CreateRecord
             JobService::create([
                 'job_id' => $job->id,
                 'service_id' => $serviceId,
+                // Snapshot the service's rate as the approved line price (crew revenue).
+                'price' => (float) (Service::whereKey($serviceId)->value('default_price') ?? 0),
                 'sort_order' => $order++,
             ]);
         }
+
+        $job->recalculateJobTotal();
     }
 }

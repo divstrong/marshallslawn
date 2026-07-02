@@ -35,18 +35,24 @@
 
         {{-- Lines --}}
         @if (count($lines) > 0)
-            <div style="display: grid; grid-template-columns: 1fr 40px; gap: 8px; padding: 0 0 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">
+            <div style="display: grid; grid-template-columns: 1fr 110px 40px; gap: 8px; padding: 0 0 8px; border-bottom: 1px solid #e5e7eb; margin-bottom: 8px;">
                 <span style="font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase;">Description</span>
+                <span style="font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; text-align: right;">Price</span>
                 <span></span>
             </div>
 
             @foreach ($lines as $i => $line)
-                <div wire:key="line-{{ $line['id'] }}" style="display: grid; grid-template-columns: 1fr 40px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #f3f4f6;">
+                <div wire:key="line-{{ $line['id'] }}" style="display: grid; grid-template-columns: 1fr 110px 40px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #f3f4f6;">
                     <input
                         wire:model.blur="lines.{{ $i }}.description"
                         type="text"
                         placeholder="{{ $line['service_name'] ?? 'Custom service description' }}"
                         style="padding: 8px 10px; font-size: 14px; border: 1px solid #e5e7eb; border-radius: 6px; width: 100%; box-sizing: border-box;"
+                    />
+                    <input
+                        wire:model.blur="lines.{{ $i }}.price"
+                        type="number" min="0" step="0.01"
+                        style="padding: 8px 10px; font-size: 14px; border: 1px solid #e5e7eb; border-radius: 6px; width: 100%; box-sizing: border-box; text-align: right;"
                     />
                     <button
                         wire:click="removeLine({{ $i }})"
@@ -56,6 +62,13 @@
                     >&times;</button>
                 </div>
             @endforeach
+
+            {{-- Job Total --}}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 2px solid #e5e7eb;">
+                <span style="font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Job Total</span>
+                <span style="font-size: 18px; font-weight: 700; color: #111827;">${{ number_format((float) $this->jobTotal, 2) }}</span>
+            </div>
+            <p style="font-size: 11px; color: #9ca3af; margin-top: 4px; text-align: right;">Counts toward the crew's revenue when the job is completed.</p>
         @else
             <div style="padding: 24px 0; text-align: center; color: #9ca3af; font-size: 13px; border-bottom: 1px dashed #e5e7eb;">
                 No services attached yet. Search below to add one.
@@ -82,9 +95,7 @@
                                 onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'"
                             >
                                 <span style="font-weight: 500; color: #111827;">{{ $svc->name }}</span>
-                                @if ($svc->category)
-                                    <span style="font-size: 11px; color: #9ca3af;">{{ $svc->category }}</span>
-                                @endif
+                                <span style="font-size: 12px; color: #6b7280;">${{ number_format((float) $svc->default_price, 2) }}</span>
                             </button>
                         @endforeach
                     </div>

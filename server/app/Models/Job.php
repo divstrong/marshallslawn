@@ -32,6 +32,7 @@ class Job extends Model
         'property_id',
         'estimate_id',
         'price',
+        'job_total',
         'recurring_job_template_id',
         'crew_id',
         'title',
@@ -61,7 +62,27 @@ class Job extends Model
             'finished_at' => 'datetime',
             'waiting_list' => 'boolean',
             'price' => 'decimal:2',
+            'job_total' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Recompute and persist the "Job Total" — the sum of the job's approved
+     * service lines. Jobs with no service lines fall back to their direct price
+     * (issue: crew revenue). Each completed job's total counts toward its crew's
+     * revenue on the dashboard leaderboard.
+     */
+    public function recalculateJobTotal(): void
+    {
+        $lineSum = (float) $this->jobServices()->sum('price');
+
+        if ($lineSum <= 0 && $this->price !== null) {
+            $lineSum = (float) $this->price;
+        }
+
+        // Persist without firing model events (avoids recursion via observers).
+        $this->newQuery()->whereKey($this->getKey())->update(['job_total' => $lineSum]);
+        $this->job_total = $lineSum;
     }
 
     /**
