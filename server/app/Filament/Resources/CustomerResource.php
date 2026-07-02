@@ -48,6 +48,14 @@ class CustomerResource extends Resource
                             Forms\Components\TextInput::make('email')
                                 ->email()
                                 ->maxLength(255),
+                            Forms\Components\TextInput::make('password')
+                                ->label('App Password')
+                                ->password()
+                                ->revealable()
+                                ->helperText('Set or reset this customer\'s password for the mobile app. Leave blank to keep unchanged.')
+                                // Model hashes via the "hashed" cast; only save when a value is entered.
+                                ->dehydrated(fn (?string $state): bool => filled($state))
+                                ->maxLength(255),
                             Forms\Components\TextInput::make('phone')
                                 ->tel()
                                 ->maxLength(255),
