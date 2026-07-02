@@ -98,6 +98,7 @@
                                 'customer_jobs' => ['icon' => 'briefcase', 'labelKey' => 'jobs'],
                                 'customer_invoices' => ['icon' => 'document-text', 'labelKey' => 'invoices'],
                                 'customer_payments' => ['icon' => 'banknotes', 'labelKey' => 'payments'],
+                                'customer_chat' => ['icon' => 'chat', 'labelKey' => 'messages'],
                                 'customer_request' => ['icon' => 'plus-circle', 'labelKey' => 'request_service'],
                                 'customer_profile' => ['icon' => 'user', 'labelKey' => 'profile'],
                             ];
@@ -148,6 +149,9 @@
                         @break
                     @case('customer_payments')
                         <livewire:mobile.views.customer-payments-view :device-mode="$deviceMode" wire:key="view-customer-payments" />
+                        @break
+                    @case('customer_chat')
+                        <livewire:mobile.views.customer-chat-view :device-mode="$deviceMode" wire:key="view-customer-chat" />
                         @break
                     @case('customer_profile')
                         <livewire:mobile.views.customer-profile-view :device-mode="$deviceMode" wire:key="view-customer-profile" />
