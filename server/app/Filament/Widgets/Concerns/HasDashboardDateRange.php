@@ -20,6 +20,8 @@ trait HasDashboardDateRange
         $now = Carbon::now();
 
         return match ($period) {
+            'today'        => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            'this_week'    => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
             'this_month'   => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
             'this_quarter' => [$now->copy()->startOfQuarter(), $now->copy()->endOfQuarter()],
             'this_year'    => [$now->copy()->startOfYear(), $now->copy()->endOfYear()],
