@@ -42,31 +42,70 @@ class ChatMessage extends Model
 
     protected static function booted(): void
     {
-        // Notify the foreman whenever the office sends them a message.
         static::created(function (ChatMessage $message): void {
-            if ($message->sender !== self::SENDER_OFFICE) {
-                return;
-            }
-
-            $employee = $message->employee;
-            if (! $employee) {
-                return;
-            }
-
             $preview = $message->body ?: match ($message->attachment_type) {
                 'video' => 'Sent a video',
                 'file' => 'Sent a file',
                 default => 'Sent a photo',
             };
 
-            app(\App\Services\ExpoPushService::class)->sendToEmployee(
-                $employee,
-                'Message from the office',
-                $preview,
-                ['type' => 'chat'],
-                'chat',
-            );
+            // Office -> foreman: push the message to the foreman's app.
+            if ($message->sender === self::SENDER_OFFICE) {
+                if ($employee = $message->employee) {
+                    app(\App\Services\ExpoPushService::class)->sendToEmployee(
+                        $employee,
+                        'Message from the office',
+                        $preview,
+                        ['type' => 'chat'],
+                        'chat',
+                    );
+                }
+
+                return;
+            }
+
+            // Foreman -> office: raise a bell notification for the admins so they
+            // see the incoming chat from the app.
+            if ($message->sender === self::SENDER_FOREMAN) {
+                $message->notifyOfficeOfIncomingChat($preview);
+            }
         });
+    }
+
+    /**
+     * Send a Filament database notification (the top-bar bell) to the office —
+     * admins and managers — for a new incoming message from a foreman.
+     */
+    protected function notifyOfficeOfIncomingChat(string $preview): void
+    {
+        $employee = $this->employee;
+        $name = $employee
+            ? (trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')) ?: ($employee->name ?? 'A crew member'))
+            : 'A crew member';
+
+        // Office staff = admins + managers.
+        $recipients = User::whereHas('role', function ($q) {
+            $q->where('is_admin', true)->orWhere('name', 'manager');
+        })->get();
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        $notification = \Filament\Notifications\Notification::make()
+            ->title('New message from ' . $name)
+            ->body(\Illuminate\Support\Str::limit($preview, 120))
+            ->icon('heroicon-o-chat-bubble-left-right')
+            ->actions([
+                \Filament\Actions\Action::make('open')
+                    ->label('Open chat')
+                    ->url(route('filament.admin.pages.messages'))
+                    ->markAsRead(),
+            ]);
+
+        foreach ($recipients as $recipient) {
+            $notification->sendToDatabase($recipient);
+        }
     }
 
     public function employee(): BelongsTo
