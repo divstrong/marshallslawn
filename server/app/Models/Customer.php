@@ -21,6 +21,7 @@ class Customer extends Model
         'first_name',
         'last_name',
         'email',
+        'password',
         'phone',
         'address',
         'city',
@@ -40,10 +41,20 @@ class Customer extends Model
     /**
      * @return array<string, string>
      */
+    /**
+     * The attributes hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+    ];
+
     protected function casts(): array
     {
         return [
             'tags' => 'array',
+            'password' => 'hashed',
         ];
     }
 

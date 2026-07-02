@@ -4,6 +4,7 @@ namespace App\Livewire\Mobile;
 
 use App\Models\Customer;
 use App\Models\Employee;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
 class MobileLogin extends Component
@@ -104,32 +105,21 @@ class MobileLogin extends Component
             return;
         }
 
-        if ($this->password !== 'password') {
-            session()->flash('error', 'Invalid password. Use "password" for testing.');
-            return;
-        }
-
-        if ($this->selectedUserType === 'employee') {
-            $employee = Employee::find($this->selectedUserId);
-            if (!$employee) {
-                session()->flash('error', 'Employee not found.');
-                return;
-            }
-
-            $role = $employee->role ?: 'field';
-
-            session([
-                'mobile_app_user_id' => $employee->id,
-                'mobile_app_user_type' => 'employee',
-                'mobile_app_user_name' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')) ?: $employee->name,
-                'mobile_app_employee_role' => $role,
-            ]);
-
-            $this->dispatch('user-logged-in');
-        } else {
+        if ($this->selectedUserType === 'customer') {
             $customer = Customer::find($this->selectedUserId);
             if (!$customer) {
                 session()->flash('error', 'Customer not found.');
+                return;
+            }
+
+            // Verify the customer's real app password once set; fall back to the
+            // demo password while none is configured so testing still works.
+            $valid = $customer->password
+                ? Hash::check($this->password, $customer->password)
+                : ($this->password === 'password');
+
+            if (!$valid) {
+                session()->flash('error', 'Invalid password.');
                 return;
             }
 
@@ -141,7 +131,31 @@ class MobileLogin extends Component
             ]);
 
             $this->dispatch('user-logged-in');
+            return;
         }
+
+        // Employees still use the shared demo password.
+        if ($this->password !== 'password') {
+            session()->flash('error', 'Invalid password. Use "password" for testing.');
+            return;
+        }
+
+        $employee = Employee::find($this->selectedUserId);
+        if (!$employee) {
+            session()->flash('error', 'Employee not found.');
+            return;
+        }
+
+        $role = $employee->role ?: 'field';
+
+        session([
+            'mobile_app_user_id' => $employee->id,
+            'mobile_app_user_type' => 'employee',
+            'mobile_app_user_name' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')) ?: $employee->name,
+            'mobile_app_employee_role' => $role,
+        ]);
+
+        $this->dispatch('user-logged-in');
     }
 
     public function logout()
