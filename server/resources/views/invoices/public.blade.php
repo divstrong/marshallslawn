@@ -242,50 +242,43 @@
                                 <button class="pay-tab" onclick="switchPayTab('ach')" id="tab-ach">ACH / Bank</button>
                             </div>
 
+                            @php $tokenizerReady = filled(config('services.accept_blue.tokenization_key')) && filled(config('services.accept_blue.tokenization_src')); @endphp
+
+                            @if(session('error'))
+                                <div class="flash" style="background:#fee2e2;color:#991b1b;">{{ session('error') }}</div>
+                            @endif
+
                             <form id="pay-form" method="POST" action="{{ route('invoice.pay', $invoice->share_token) }}">
                                 @csrf
-                                <input type="hidden" name="payment_method" id="payment-method" value="card">
+                                <input type="hidden" name="payment_type" id="payment-method" value="card">
                                 <input type="hidden" name="payment_plan" id="payment-plan-input" value="0">
+                                {{-- Filled client-side by the Accept Blue hosted tokenizer; the raw card never touches our server. --}}
+                                <input type="hidden" name="source_token" id="source-token" value="">
 
-                                {{-- Credit Card fields --}}
+                                {{-- Credit Card (hosted fields) --}}
                                 <div id="card-fields">
                                     <div class="pay-field">
-                                        <label>Name on Card</label>
-                                        <input type="text" name="card_name" placeholder="John Doe" required>
-                                    </div>
-                                    <div class="pay-field">
-                                        <label>Card Number</label>
-                                        <input type="text" name="card_number" placeholder="4242 4242 4242 4242" maxlength="19" required>
-                                    </div>
-                                    <div class="pay-row">
-                                        <div class="pay-field">
-                                            <label>Expiration</label>
-                                            <input type="text" name="card_exp" placeholder="MM / YY" maxlength="7" required>
-                                        </div>
-                                        <div class="pay-field">
-                                            <label>CVC</label>
-                                            <input type="text" name="card_cvc" placeholder="123" maxlength="4" required>
-                                        </div>
+                                        <label>Card details</label>
+                                        {{-- Accept Blue hosted fields mount into this element. --}}
+                                        <div id="accept-blue-card" style="padding:12px;border:1px solid #d1d5db;border-radius:8px;min-height:44px;"></div>
                                     </div>
                                 </div>
 
-                                {{-- ACH fields --}}
+                                {{-- ACH (hosted fields) --}}
                                 <div id="ach-fields" style="display: none;">
                                     <div class="pay-field">
-                                        <label>Account Holder Name</label>
-                                        <input type="text" name="ach_name" placeholder="John Doe">
-                                    </div>
-                                    <div class="pay-field">
-                                        <label>Routing Number</label>
-                                        <input type="text" name="ach_routing" placeholder="021000021" maxlength="9">
-                                    </div>
-                                    <div class="pay-field">
-                                        <label>Account Number</label>
-                                        <input type="text" name="ach_account" placeholder="000123456789">
+                                        <label>Bank account details</label>
+                                        <div id="accept-blue-ach" style="padding:12px;border:1px solid #d1d5db;border-radius:8px;min-height:44px;"></div>
                                     </div>
                                 </div>
 
-                                <button type="submit" class="btn-pay" id="btn-pay">
+                                @unless($tokenizerReady)
+                                    <div class="flash" style="background:#fef3c7;color:#92400e;">
+                                        Online payment isn't fully configured yet. Add your Accept Blue tokenization key to enable card &amp; ACH payments.
+                                    </div>
+                                @endunless
+
+                                <button type="submit" class="btn-pay" id="btn-pay" @unless($tokenizerReady) disabled style="opacity:.6;cursor:not-allowed;" @endunless>
                                     Pay ${{ number_format($invoice->total, 2) }}
                                 </button>
                             </form>
@@ -357,6 +350,65 @@
                             updatePayButton();
                         });
                     </script>
+
+                    @if($tokenizerReady)
+                        {{-- Accept Blue hosted tokenization: card data is entered in Accept Blue's
+                             iframe fields and exchanged for a one-time token, which is the only thing
+                             submitted to our server (issue #27). --}}
+                        <script src="{{ config('services.accept_blue.tokenization_src') }}"></script>
+                        <script>
+                            (function () {
+                                const cfg = @json(['key' => config('services.accept_blue.tokenization_key')]);
+                                const form = document.getElementById('pay-form');
+                                const tokenInput = document.getElementById('source-token');
+                                const btn = document.getElementById('btn-pay');
+                                let hostedCard = null;
+
+                                // Accept Blue exposes a hosted-tokenization global once its script loads.
+                                // The exact constructor name can vary by account; guard for it so a
+                                // misconfiguration surfaces clearly instead of silently failing.
+                                const AB = window.AcceptBlue || window.HostedTokenization || null;
+
+                                function init() {
+                                    if (!AB) return;
+                                    try {
+                                        hostedCard = new AB({ key: cfg.key });
+                                        if (typeof hostedCard.mount === 'function') {
+                                            hostedCard.mount('#accept-blue-card');
+                                        }
+                                    } catch (e) { console.error('Accept Blue init failed', e); }
+                                }
+
+                                form.addEventListener('submit', function (e) {
+                                    // Already tokenized on a prior pass — let it through.
+                                    if (tokenInput.value) return;
+
+                                    e.preventDefault();
+                                    if (!AB || !hostedCard || typeof hostedCard.getNonce !== 'function') {
+                                        alert('Payment is not available right now. Please try again later.');
+                                        return;
+                                    }
+
+                                    btn.disabled = true;
+                                    btn.textContent = 'Processing…';
+
+                                    hostedCard.getNonce()
+                                        .then(function (nonce) {
+                                            tokenInput.value = (nonce && (nonce.token || nonce.nonce)) || nonce;
+                                            form.submit();
+                                        })
+                                        .catch(function (err) {
+                                            btn.disabled = false;
+                                            updatePayButton();
+                                            alert((err && err.message) || 'Could not verify your card. Please check the details and try again.');
+                                        });
+                                });
+
+                                if (document.readyState !== 'loading') init();
+                                else document.addEventListener('DOMContentLoaded', init);
+                            })();
+                        </script>
+                    @endif
 
                 @elseif($invoice->status === 'payment_plan')
                     <div style="margin-top: 24px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 20px;">
