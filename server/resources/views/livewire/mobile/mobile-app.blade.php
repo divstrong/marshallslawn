@@ -96,6 +96,8 @@
                                 'customer_home' => ['icon' => 'home', 'labelKey' => 'home'],
                                 'customer_estimates' => ['icon' => 'document-text', 'labelKey' => 'estimates'],
                                 'customer_jobs' => ['icon' => 'briefcase', 'labelKey' => 'jobs'],
+                                'customer_invoices' => ['icon' => 'document-text', 'labelKey' => 'invoices'],
+                                'customer_payments' => ['icon' => 'banknotes', 'labelKey' => 'payments'],
                                 'customer_request' => ['icon' => 'plus-circle', 'labelKey' => 'request_service'],
                                 'customer_profile' => ['icon' => 'user', 'labelKey' => 'profile'],
                             ];
@@ -141,6 +143,12 @@
                     @case('customer_jobs')
                         <livewire:mobile.views.customer-jobs-view :device-mode="$deviceMode" wire:key="view-customer-jobs" />
                         @break
+                    @case('customer_invoices')
+                        <livewire:mobile.views.customer-invoices-view :device-mode="$deviceMode" wire:key="view-customer-invoices" />
+                        @break
+                    @case('customer_payments')
+                        <livewire:mobile.views.customer-payments-view :device-mode="$deviceMode" wire:key="view-customer-payments" />
+                        @break
                     @case('customer_profile')
                         <livewire:mobile.views.customer-profile-view :device-mode="$deviceMode" wire:key="view-customer-profile" />
                         @break
@@ -178,11 +186,12 @@
                     <nav class="flex justify-between items-center">
                         @php
                             if ($this->isCustomer) {
+                                // Bottom bar keeps 5 quick tabs; Estimates + Request live in the side menu.
                                 $navItems = [
                                     'customer_home' => ['icon' => 'home', 'labelKey' => 'home'],
-                                    'customer_estimates' => ['icon' => 'document-text', 'labelKey' => 'estimates'],
                                     'customer_jobs' => ['icon' => 'briefcase', 'labelKey' => 'jobs'],
-                                    'customer_request' => ['icon' => 'plus-circle', 'labelKey' => 'request_service'],
+                                    'customer_invoices' => ['icon' => 'document-text', 'labelKey' => 'invoices'],
+                                    'customer_payments' => ['icon' => 'banknotes', 'labelKey' => 'payments'],
                                     'customer_profile' => ['icon' => 'user', 'labelKey' => 'profile'],
                                 ];
                             } else {
