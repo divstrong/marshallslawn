@@ -135,7 +135,5 @@ class CreateJob extends CreateRecord
                 'sort_order' => $order++,
             ]);
         }
-
-        $job->recalculateJobTotal();
     }
 }

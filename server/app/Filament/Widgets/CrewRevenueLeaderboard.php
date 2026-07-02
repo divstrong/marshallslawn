@@ -26,11 +26,17 @@ class CrewRevenueLeaderboard extends Widget
     {
         [$start, $end] = $this->getDateRange();
 
+        // Each job's total is summed from its service line prices, falling back
+        // to the direct price when it has no lines — computed here rather than
+        // stored, so edits to line items are reflected immediately.
+        $lineSum = '(SELECT COALESCE(SUM(js.price), 0) FROM job_services js WHERE js.job_id = service_jobs.id)';
+        $jobTotal = "CASE WHEN {$lineSum} > 0 THEN {$lineSum} ELSE COALESCE(service_jobs.price, 0) END";
+
         $rows = Job::query()
             ->where('status', 'completed')
             ->whereNotNull('crew_id')
             ->whereBetween('completed_date', [$start->toDateString(), $end->toDateString()])
-            ->selectRaw('crew_id, COUNT(*) as jobs, COALESCE(SUM(job_total), 0) as revenue')
+            ->selectRaw("crew_id, COUNT(*) as jobs, COALESCE(SUM({$jobTotal}), 0) as revenue")
             ->groupBy('crew_id')
             ->orderByDesc('revenue')
             ->orderByDesc('jobs')

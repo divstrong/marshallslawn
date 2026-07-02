@@ -87,7 +87,6 @@ class JobServicesManager extends Component
 
         $this->serviceSearch = '';
         $this->showServiceDropdown = false;
-        $this->job->recalculateJobTotal();
     }
 
     public function addCustomLine(): void
@@ -126,7 +125,6 @@ class JobServicesManager extends Component
             $price = round((float) ($row['price'] ?? 0), 2);
             $this->lines[(int) $index]['price'] = number_format($price, 2, '.', '');
             JobService::where('id', $row['id'])->update(['price' => $price]);
-            $this->job->recalculateJobTotal();
         }
     }
 
@@ -143,7 +141,6 @@ class JobServicesManager extends Component
 
         unset($this->lines[$index]);
         $this->lines = array_values($this->lines);
-        $this->job->recalculateJobTotal();
     }
 
     /** Live job total for the footer (sum of the line prices). */
