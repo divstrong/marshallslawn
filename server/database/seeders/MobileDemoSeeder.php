@@ -25,8 +25,15 @@ class MobileDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        // Every employee can sign in with "password" during development.
-        Employee::query()->update(['password' => bcrypt('password')]);
+        // Optionally make EVERY employee sign in with "password" for a full
+        // dev/staging reset. This is a blanket password reset, so it is opt-in
+        // and never runs against real accounts on production unless explicitly
+        // enabled (DEMO_SEED_RESET_PASSWORDS=true). The three demo accounts
+        // below always get "password" regardless, so demo logins keep working.
+        if ($this->shouldResetAllPasswords()) {
+            Employee::query()->update(['password' => bcrypt('password')]);
+            $this->command?->warn('Reset ALL employee passwords to "password".');
+        }
 
         $foreman = $this->employee('foreman@marshallslawn.test', 'Frank', 'Foreman', 'foreman');
         $field = $this->employee('field@marshallslawn.test', 'Felix', 'Field', 'field');
@@ -56,6 +63,17 @@ class MobileDemoSeeder extends Seeder
         $this->command?->line('  foreman@marshallslawn.test   (Foreman)');
         $this->command?->line('  field@marshallslawn.test     (Field)');
         $this->command?->line('  estimator@marshallslawn.test (Estimator)');
+    }
+
+    /**
+     * Whether to reset every employee's password to the shared test password.
+     * Safe by default: only on local/testing, or when explicitly opted in via
+     * DEMO_SEED_RESET_PASSWORDS=true — so it won't clobber real accounts on live.
+     */
+    private function shouldResetAllPasswords(): bool
+    {
+        return app()->environment('local', 'testing')
+            || filter_var(env('DEMO_SEED_RESET_PASSWORDS', false), FILTER_VALIDATE_BOOLEAN);
     }
 
     private function employee(string $email, string $first, string $last, string $role): Employee
