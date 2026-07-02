@@ -104,7 +104,8 @@ class DispatchBoard extends Component
         // Restore this user's saved crew visibility + view mode (issue #24).
         $prefs = $user->dispatch_preferences ?? [];
         $this->hiddenCrewIds = array_values(array_map('intval', $prefs['hidden_crews'] ?? []));
-        $this->viewMode = ($prefs['view_mode'] ?? 'map') === 'list' ? 'list' : 'map';
+        $storedMode = $prefs['view_mode'] ?? 'map';
+        $this->viewMode = in_array($storedMode, ['map', 'list', 'month'], true) ? $storedMode : 'map';
         $this->listRange = ($prefs['list_range'] ?? 'day') === 'week' ? 'week' : 'day';
     }
 
@@ -710,6 +711,91 @@ class DispatchBoard extends Component
         return $days;
     }
 
+    /** Human label for the Month grid, e.g. "July 2026". */
+    #[Computed]
+    public function monthLabel(): string
+    {
+        return Carbon::parse($this->date)->format('F Y');
+    }
+
+    /**
+     * Calendar grid (whole weeks, Sun–Sat) for the month containing the selected
+     * date, with the number of scheduled stops per day so the office can see the
+     * month's workload at a glance and drill into any day.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    #[Computed]
+    public function monthDays(): array
+    {
+        $anchor = Carbon::parse($this->date)->startOfMonth();
+        $gridStart = $anchor->copy()->startOfWeek(Carbon::SUNDAY);
+        $gridEnd = $anchor->copy()->endOfMonth()->endOfWeek(Carbon::SATURDAY);
+
+        $hidden = array_map('intval', $this->hiddenCrewIds);
+
+        // Stops per day (respecting the active + hidden crew filters).
+        $counts = RouteStop::query()
+            ->join('routes', 'routes.id', '=', 'route_stops.route_id')
+            ->whereBetween('routes.route_date', [$gridStart->toDateString(), $gridEnd->toDateString()])
+            ->when(! empty($this->crewIds), fn ($q) => $q->whereIn('routes.crew_id', $this->crewIds))
+            ->when(! empty($hidden), fn ($q) => $q->whereNotIn('routes.crew_id', $hidden))
+            ->selectRaw('DATE(routes.route_date) as d, COUNT(*) as c')
+            ->groupBy('d')
+            ->pluck('c', 'd');
+
+        $today = now()->toDateString();
+        $days = [];
+        $cursor = $gridStart->copy();
+
+        while ($cursor <= $gridEnd) {
+            $key = $cursor->toDateString();
+            $days[] = [
+                'date' => $key,
+                'day_num' => (int) $cursor->format('j'),
+                'in_month' => $cursor->month === $anchor->month,
+                'is_today' => $key === $today,
+                'is_selected' => $key === $this->date,
+                'count' => (int) ($counts[$key] ?? 0),
+            ];
+            $cursor->addDay();
+        }
+
+        return $days;
+    }
+
+    /**
+     * Cancel the job behind a stop: mark it cancelled, pull it off the route, and
+     * alert the crew's field staff (mirrors the Skip flow but for cancellations).
+     */
+    public function cancelStop(int $stopId): void
+    {
+        $stop = RouteStop::find($stopId);
+        if (! $stop) {
+            return;
+        }
+
+        if ($stop->job_id) {
+            $job = \App\Models\Job::find($stop->job_id);
+            $originalDate = $job?->scheduled_date?->toDateString();
+
+            \App\Models\Job::where('id', $stop->job_id)->update([
+                'status' => 'cancelled',
+                'scheduled_date' => null,
+            ]);
+
+            if ($job) {
+                $job->status = 'cancelled';
+                app(\App\Services\JobNotifier::class)->notifySkippedOrCancelled($job, 'cancelled', $originalDate);
+            }
+        }
+
+        $stop->delete();
+
+        unset($this->stops, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary, $this->unmappedStops, $this->listDays);
+        $this->emitStopsUpdated();
+    }
+
     /** Does a stop match the List-view search box (customer / property / service)? */
     private function stopMatchesSearch(RouteStop $stop, string $needle): bool
     {
@@ -979,7 +1065,7 @@ class DispatchBoard extends Component
 
     public function setViewMode(string $mode): void
     {
-        $this->viewMode = $mode === 'list' ? 'list' : 'map';
+        $this->viewMode = in_array($mode, ['map', 'list', 'month'], true) ? $mode : 'map';
         $this->persistDispatchPrefs();
 
         $this->dispatch('dispatch:view-changed', mode: $this->viewMode);
@@ -987,6 +1073,24 @@ class DispatchBoard extends Component
             // Re-feed the markers so the map can (re)build with current data.
             $this->emitStopsUpdated();
         }
+    }
+
+    /** Jump to a specific day and drop into the List view (used by the Month grid). */
+    public function goToDay(string $date): void
+    {
+        $this->date = Carbon::parse($date)->toDateString();
+        $this->viewMode = 'list';
+        $this->selectedStopId = null;
+        $this->persistDispatchPrefs();
+        unset($this->listDays, $this->listRangeLabel);
+    }
+
+    /** Move the Month grid (and selected date) by whole months. */
+    public function shiftMonth(int $months): void
+    {
+        $this->date = Carbon::parse($this->date)->addMonthsNoOverflow($months)->toDateString();
+        unset($this->monthDays, $this->monthLabel, $this->listDays, $this->listRangeLabel);
+        $this->emitStopsUpdated();
     }
 
     /** Switch the List view between a single day and the full week (Mon–Sat). */
@@ -1089,7 +1193,7 @@ class DispatchBoard extends Component
         }
         $stop->save();
 
-        unset($this->stops, $this->selectedStop, $this->summary);
+        unset($this->stops, $this->selectedStop, $this->summary, $this->listDays);
         $this->emitStopsUpdated();
     }
 
@@ -1227,7 +1331,7 @@ class DispatchBoard extends Component
         $this->confirmSkipStopId = null;
         $this->selectedStopId = null;
 
-        unset($this->stops, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary, $this->unmappedStops);
+        unset($this->stops, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary, $this->unmappedStops, $this->listDays);
         $this->emitStopsUpdated();
     }
 

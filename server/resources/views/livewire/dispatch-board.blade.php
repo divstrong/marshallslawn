@@ -132,13 +132,59 @@
         .dispatch-page .d-agenda-day.is-today .d-agenda-weekday { color: var(--d-accent); }
         .dispatch-page .d-agenda-cards { display: flex; flex-wrap: wrap; gap: 12px; min-width: 0; }
         .dispatch-page .d-job-card {
-            display: block; width: 250px; max-width: 100%; text-align: left;
-            font: inherit; cursor: pointer;
+            width: 250px; max-width: 100%;
             background: var(--d-card-bg); border: 1px solid var(--d-border);
-            border-radius: 12px; padding: 14px; text-decoration: none; color: var(--d-text);
+            border-radius: 12px; padding: 14px; color: var(--d-text);
             transition: box-shadow 120ms, border-color 120ms;
         }
         .dispatch-page .d-job-card:hover { border-color: var(--d-muted); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .dispatch-page .d-job-card-open {
+            display: block; width: 100%; text-align: left; font: inherit;
+            background: none; border: 0; padding: 0; cursor: pointer; color: inherit;
+        }
+        .dispatch-page .d-job-card-actions {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+            padding-top: 10px; border-top: 1px solid var(--d-border);
+        }
+        .dispatch-page .d-card-act {
+            font: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+            padding: 4px 9px; border-radius: 6px; border: 1px solid var(--d-border);
+            background: var(--d-card-bg); color: var(--d-text);
+        }
+        .dispatch-page .d-card-act:hover { background: var(--d-hover); }
+        .dispatch-page .d-card-act.complete:hover { border-color: #16a34a; color: #16a34a; }
+        .dispatch-page .d-card-act.progress:hover { border-color: #d97706; color: #d97706; }
+        .dispatch-page .d-card-act.skip:hover { border-color: #dc2626; color: #dc2626; }
+        .dispatch-page .d-card-act.cancel:hover { border-color: #dc2626; background: #dc2626; color: #fff; }
+
+        /* Month view calendar grid. */
+        .dispatch-page .d-month-head {
+            display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 12px;
+        }
+        .dispatch-page .d-month-label { font-size: 16px; font-weight: 700; min-width: 160px; text-align: center; }
+        .dispatch-page .d-month-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+        }
+        .dispatch-page .d-month-dow {
+            text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.05em; color: var(--d-muted); padding-bottom: 4px;
+        }
+        .dispatch-page .d-month-cell {
+            font: inherit; text-align: left; cursor: pointer; min-height: 78px;
+            background: var(--d-card-bg); border: 1px solid var(--d-border); border-radius: 10px;
+            padding: 8px; display: flex; flex-direction: column; gap: 6px; color: var(--d-text);
+            transition: border-color 120ms, box-shadow 120ms;
+        }
+        .dispatch-page .d-month-cell:hover { border-color: var(--d-accent); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .dispatch-page .d-month-cell.is-out { opacity: 0.45; }
+        .dispatch-page .d-month-cell.is-today { border-color: var(--d-accent); }
+        .dispatch-page .d-month-cell.is-selected { box-shadow: 0 0 0 2px var(--d-accent); }
+        .dispatch-page .d-month-daynum { font-size: 13px; font-weight: 600; }
+        .dispatch-page .d-month-count {
+            font-size: 11px; font-weight: 600; align-self: flex-start;
+            background: color-mix(in srgb, var(--d-accent) 15%, transparent); color: var(--d-accent);
+            padding: 1px 8px; border-radius: 9999px;
+        }
         .dispatch-page .d-crew-badge {
             display: inline-block; font-size: 11px; font-weight: 700;
             padding: 2px 10px; border-radius: 9999px; margin-bottom: 10px;
@@ -388,6 +434,12 @@
                             class="d-btn"
                             @if ($this->date === $tomorrow) style="{{ $activeStyle }}" @endif
                         >Tomorrow</button>
+
+                        {{-- Explicit day-of-week so the selected day is unmistakable. --}}
+                        <div class="d-weekday" style="margin-left:8px; line-height:1.1;">
+                            <div style="font-size:15px; font-weight:700;">{{ \Carbon\Carbon::parse($this->date)->format('l') }}</div>
+                            <div style="font-size:12px; color:var(--d-muted);">{{ \Carbon\Carbon::parse($this->date)->format('M j, Y') }}</div>
+                        </div>
                     </div>
 
                     <div class="d-spacer"></div>
@@ -408,6 +460,13 @@
                             style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'list' ? 'background: var(--d-accent); color:#fff;' : '' }}"
                             title="List view"
                         >List</button>
+                        <button
+                            type="button"
+                            wire:click="setViewMode('month')"
+                            class="d-btn"
+                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'month' ? 'background: var(--d-accent); color:#fff;' : '' }}"
+                            title="Month view"
+                        >Month</button>
                     </div>
 
                     {{-- Day / Week range toggle — only meaningful in List view. --}}
@@ -543,24 +602,32 @@
                             @endif
                             <div class="d-agenda-cards">
                                 @forelse ($day['jobs'] as $card)
-                                    <button
-                                        type="button"
-                                        wire:click="openStopDetails({{ $card['id'] }})"
-                                        wire:key="job-card-{{ $card['id'] }}"
-                                        class="d-job-card"
-                                        title="View job details"
-                                    >
-                                        <span class="d-crew-badge" style="background: {{ $card['color'] }}1a; color: {{ $card['color'] }};">{{ $card['crew_name'] }}</span>
-                                        <div class="d-job-card-title">{{ $card['customer_name'] }}</div>
-                                        <div class="d-job-card-sub">{{ $card['address'] }}</div>
-                                        @if ($card['service_summary'])
-                                            <div class="d-job-card-sub">{{ $card['service_summary'] }}</div>
-                                        @endif
-                                        <div class="d-job-card-status">
-                                            <span class="d-dot {{ $card['status_kind'] }}"></span>
-                                            {{ $card['status_label'] }}
+                                    <div wire:key="job-card-{{ $card['id'] }}" class="d-job-card">
+                                        <button
+                                            type="button"
+                                            wire:click="openStopDetails({{ $card['id'] }})"
+                                            class="d-job-card-open"
+                                            title="View job details"
+                                        >
+                                            <span class="d-crew-badge" style="background: {{ $card['color'] }}1a; color: {{ $card['color'] }};">{{ $card['crew_name'] }}</span>
+                                            <div class="d-job-card-title">{{ $card['customer_name'] }}</div>
+                                            <div class="d-job-card-sub">{{ $card['address'] }}</div>
+                                            @if ($card['service_summary'])
+                                                <div class="d-job-card-sub">{{ $card['service_summary'] }}</div>
+                                            @endif
+                                            <div class="d-job-card-status">
+                                                <span class="d-dot {{ $card['status_kind'] }}"></span>
+                                                {{ $card['status_label'] }}
+                                            </div>
+                                        </button>
+                                        {{-- Quick actions (skip / cancel / etc.) right on the card. --}}
+                                        <div class="d-job-card-actions">
+                                            <button type="button" class="d-card-act complete" wire:click="markStopStatus({{ $card['id'] }}, 'completed')" title="Mark completed">Complete</button>
+                                            <button type="button" class="d-card-act progress" wire:click="markStopStatus({{ $card['id'] }}, 'in_progress')" title="Mark in progress">Start</button>
+                                            <button type="button" class="d-card-act skip" wire:click="requestSkip({{ $card['id'] }})" title="Skip this job">Skip</button>
+                                            <button type="button" class="d-card-act cancel" wire:click="cancelStop({{ $card['id'] }})" wire:confirm="Cancel this job? The crew's field staff will be notified." title="Cancel this job">Cancel</button>
                                         </div>
-                                    </button>
+                                    </div>
                                 @empty
                                     <div class="d-agenda-empty">No jobs scheduled.</div>
                                 @endforelse
@@ -573,6 +640,38 @@
                             <div class="d-list-empty">No jobs scheduled for this {{ $this->listRange === 'week' ? 'week' : 'day' }}.</div>
                         @endif
                     @endforelse
+                </div>
+            </div>
+            @elseif ($this->viewMode === 'month')
+            {{-- Month view: calendar of scheduled workload; click a day to drill into it. --}}
+            <div class="d-bar">
+                <div class="d-month-head">
+                    <button type="button" wire:click="shiftMonth(-1)" class="d-icon-btn" title="Previous month">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <span class="d-month-label">{{ $this->monthLabel }}</span>
+                    <button type="button" wire:click="shiftMonth(1)" class="d-icon-btn" title="Next month">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+                <div class="d-month-grid">
+                    @foreach (['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $dow)
+                        <div class="d-month-dow">{{ $dow }}</div>
+                    @endforeach
+                    @foreach ($this->monthDays as $day)
+                        <button
+                            type="button"
+                            wire:click="goToDay('{{ $day['date'] }}')"
+                            wire:key="month-{{ $day['date'] }}"
+                            class="d-month-cell {{ $day['in_month'] ? '' : 'is-out' }} {{ $day['is_today'] ? 'is-today' : '' }} {{ $day['is_selected'] ? 'is-selected' : '' }}"
+                            title="View {{ \Carbon\Carbon::parse($day['date'])->format('l, M j') }}"
+                        >
+                            <span class="d-month-daynum">{{ $day['day_num'] }}</span>
+                            @if ($day['count'] > 0)
+                                <span class="d-month-count">{{ $day['count'] }} {{ \Illuminate\Support\Str::plural('job', $day['count']) }}</span>
+                            @endif
+                        </button>
+                    @endforeach
                 </div>
             </div>
             @else
