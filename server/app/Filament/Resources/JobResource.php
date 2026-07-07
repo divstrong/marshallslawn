@@ -104,6 +104,35 @@ class JobResource extends Resource
                                 ])
                                 ->required(),
 
+                            // Estimated time to completion — two inputs combined into estimated_minutes.
+                            Fieldset::make('Estimated Time to Completion')
+                                ->columns(2)
+                                ->schema([
+                                    Forms\Components\TextInput::make('est_hours')
+                                        ->label('Hours')
+                                        ->numeric()->minValue(0)->maxValue(99)->placeholder('0')
+                                        ->dehydrated(false)
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(fn ($state, Get $get, Set $set) => $set(
+                                            'estimated_minutes',
+                                            (((int) $state) * 60) + (int) $get('est_minutes'),
+                                        )),
+                                    Forms\Components\TextInput::make('est_minutes')
+                                        ->label('Minutes')
+                                        ->numeric()->minValue(0)->maxValue(59)->placeholder('0')
+                                        ->dehydrated(false)
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(fn ($state, Get $get, Set $set) => $set(
+                                            'estimated_minutes',
+                                            (((int) $get('est_hours')) * 60) + (int) $state,
+                                        )),
+                                    Forms\Components\Hidden::make('estimated_minutes'),
+                                ]),
+                            Forms\Components\Toggle::make('do_not_move')
+                                ->label('Do Not Move')
+                                ->helperText("Locks this job's scheduled date — flags admins not to reschedule it.")
+                                ->inline(false),
+
                             // --- Type & recurrence (create only) — issue #13 ---
                             Forms\Components\Radio::make('job_type')
                                 ->label('Type')
@@ -202,6 +231,13 @@ class JobResource extends Resource
                                 ->label('Scheduled date')
                                 ->visible(fn (Get $get): bool => $get('is_scheduled') === 'yes')
                                 ->required(fn (Get $get): bool => $get('is_scheduled') === 'yes'),
+                            Forms\Components\Select::make('tagRecords')
+                                ->label('Tags')
+                                ->relationship('tagRecords', 'name')
+                                ->multiple()
+                                ->searchable()
+                                ->preload()
+                                ->columnSpanFull(),
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
                         ]),
@@ -271,6 +307,14 @@ class JobResource extends Resource
                         'low' => 'success',
                         default => 'gray',
                     }),
+                Tables\Columns\IconColumn::make('do_not_move')
+                    ->label('Do Not Move')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-lock-closed')
+                    ->falseIcon('heroicon-o-lock-open')
+                    ->trueColor('danger')
+                    ->falseColor('gray')
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')

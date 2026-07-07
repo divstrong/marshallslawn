@@ -51,7 +51,8 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->role_id !== null;
+        // Staff users only ever access the admin panel — never the customer portal.
+        return $panel->getId() === 'admin' && $this->role_id !== null;
     }
 
     /**

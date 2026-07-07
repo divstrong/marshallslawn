@@ -3,14 +3,10 @@
 use App\Http\Controllers\PublicEstimateController;
 use App\Http\Controllers\PublicInvoiceController;
 use App\Livewire\DispatchBoard;
-use App\Livewire\Mobile\MobileApp;
 use Illuminate\Support\Facades\Route;
 
-// Route::get('/', function () {
-//     return view('welcome');
-// });
-
-Route::get('/mobile', MobileApp::class)->name('mobile.app');
+// The old mock native web app (/mobile) is retired — employees use the native
+// Expo app and customers use the /portal Filament panel.
 
 // Full-screen dispatch board (auth-protected, lives outside the Filament admin chrome).
 Route::middleware(['auth'])->get('/dispatch', DispatchBoard::class)->name('dispatch.board');

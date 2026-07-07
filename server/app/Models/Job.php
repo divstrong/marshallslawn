@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasTags;
 use App\Support\ServiceGroup;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Job extends Model
 {
     use HasFactory;
+    use HasTags;
 
     /** Hard ceiling for a single job's running timer (issue: 12h max per day). */
     public const MAX_TIMER_HOURS = 12;
@@ -40,6 +42,8 @@ class Job extends Model
         'type',
         'waiting_list',
         'priority',
+        'estimated_minutes',
+        'do_not_move',
         'scheduled_date',
         'completed_date',
         'started_at',
@@ -60,6 +64,8 @@ class Job extends Model
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
             'waiting_list' => 'boolean',
+            'do_not_move' => 'boolean',
+            'estimated_minutes' => 'integer',
             'price' => 'decimal:2',
         ];
     }

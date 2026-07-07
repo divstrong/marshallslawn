@@ -132,6 +132,7 @@
         .dispatch-page .d-agenda-day.is-today .d-agenda-weekday { color: var(--d-accent); }
         .dispatch-page .d-agenda-cards { display: flex; flex-wrap: wrap; gap: 12px; min-width: 0; }
         .dispatch-page .d-job-card {
+            position: relative;
             width: 250px; max-width: 100%;
             background: var(--d-card-bg); border: 1px solid var(--d-border);
             border-radius: 12px; padding: 14px; color: var(--d-text);
@@ -142,20 +143,28 @@
             display: block; width: 100%; text-align: left; font: inherit;
             background: none; border: 0; padding: 0; cursor: pointer; color: inherit;
         }
-        .dispatch-page .d-job-card-actions {
-            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
-            padding-top: 10px; border-top: 1px solid var(--d-border);
+        /* Per-card 3-dot actions menu (top-right). */
+        .dispatch-page .d-job-menu { position: absolute; top: 8px; right: 8px; }
+        .dispatch-page .d-job-menu-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+            border: 1px solid transparent; background: transparent; color: var(--d-muted);
         }
-        .dispatch-page .d-card-act {
-            font: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
-            padding: 4px 9px; border-radius: 6px; border: 1px solid var(--d-border);
-            background: var(--d-card-bg); color: var(--d-text);
+        .dispatch-page .d-job-menu-btn:hover { background: var(--d-hover); color: var(--d-text); border-color: var(--d-border); }
+        .dispatch-page .d-job-menu-btn svg { width: 18px; height: 18px; }
+        .dispatch-page .d-job-menu-list {
+            position: absolute; top: 34px; right: 0; z-index: 30; min-width: 150px;
+            background: var(--d-card-bg); border: 1px solid var(--d-border); border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); padding: 4px;
+            display: flex; flex-direction: column;
         }
-        .dispatch-page .d-card-act:hover { background: var(--d-hover); }
-        .dispatch-page .d-card-act.complete:hover { border-color: #16a34a; color: #16a34a; }
-        .dispatch-page .d-card-act.progress:hover { border-color: #d97706; color: #d97706; }
-        .dispatch-page .d-card-act.skip:hover { border-color: #dc2626; color: #dc2626; }
-        .dispatch-page .d-card-act.cancel:hover { border-color: #dc2626; background: #dc2626; color: #fff; }
+        .dispatch-page .d-job-menu-item {
+            font: inherit; font-size: 13px; font-weight: 500; text-align: left; cursor: pointer;
+            padding: 7px 10px; border-radius: 6px; border: 0; background: transparent; color: var(--d-text);
+        }
+        .dispatch-page .d-job-menu-item:hover { background: var(--d-hover); }
+        .dispatch-page .d-job-menu-item.danger { color: #dc2626; }
+        .dispatch-page .d-job-menu-item.danger:hover { background: #dc2626; color: #fff; }
 
         /* Month view calendar grid. */
         .dispatch-page .d-month-head {
@@ -185,10 +194,27 @@
             background: color-mix(in srgb, var(--d-accent) 15%, transparent); color: var(--d-accent);
             padding: 1px 8px; border-radius: 9999px;
         }
+        /* Per-crew breakdown pills inside a month cell (crew colour + count). */
+        .dispatch-page .d-month-crews { display: flex; flex-wrap: wrap; gap: 3px; align-self: stretch; }
+        .dispatch-page .d-month-crew {
+            display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+            font-size: 10px; font-weight: 700; line-height: 1;
+            padding: 2px 6px; border-radius: 9999px;
+            background: color-mix(in srgb, var(--cc) 15%, transparent); color: var(--cc);
+        }
+        .dispatch-page .d-month-crew-dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--cc); flex-shrink: 0; }
         .dispatch-page .d-crew-badge {
             display: inline-block; font-size: 11px; font-weight: 700;
             padding: 2px 10px; border-radius: 9999px; margin-bottom: 10px;
         }
+        .dispatch-page .d-dnm-badge {
+            display: inline-flex; align-items: center; gap: 4px; vertical-align: top;
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+            padding: 2px 8px; border-radius: 9999px; margin: 0 0 10px 6px;
+            background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5;
+        }
+        .dispatch-page .d-dnm-badge svg { width: 11px; height: 11px; }
+        .dark .dispatch-page .d-dnm-badge { background: rgba(220,38,38,0.18); color: #fca5a5; border-color: rgba(220,38,38,0.4); }
         .dispatch-page .d-job-card-title { font-size: 14px; font-weight: 600; line-height: 1.35; }
         .dispatch-page .d-job-card-sub { font-size: 13px; color: var(--d-muted); margin-top: 4px; }
         .dispatch-page .d-job-card-status {
@@ -403,42 +429,49 @@
             <div class="d-bar">
                 <div class="d-row-wrap">
                     <div class="d-row">
-                        <button type="button" wire:click="shiftDate(-1)" class="d-icon-btn" title="Previous day">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                        </button>
-                        <input type="date" wire:model.live="date" class="d-input">
-                        <button type="button" wire:click="shiftDate(1)" class="d-icon-btn" title="Next day">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </button>
                         @php
+                            $dayGranularity = $this->viewMode === 'map'
+                                || ($this->viewMode === 'list' && $this->listRange === 'day');
+                            $unit = $this->viewMode === 'month'
+                                ? 'month'
+                                : (($this->viewMode === 'list' && $this->listRange === 'week') ? 'week' : 'day');
                             $today = now()->toDateString();
                             $tomorrow = now()->addDay()->toDateString();
                             $yesterday = now()->subDay()->toDateString();
                             $activeStyle = 'background: var(--d-accent); color: #fff; border-color: var(--d-accent);';
                         @endphp
-                        <button
-                            type="button"
-                            wire:click="$set('date', '{{ $yesterday }}')"
-                            class="d-btn"
-                            @if ($this->date === $yesterday) style="{{ $activeStyle }}" @endif
-                        >Yesterday</button>
-                        <button
-                            type="button"
-                            wire:click="$set('date', '{{ $today }}')"
-                            class="d-btn"
-                            @if ($this->date === $today) style="{{ $activeStyle }}" @endif
-                        >Today</button>
-                        <button
-                            type="button"
-                            wire:click="$set('date', '{{ $tomorrow }}')"
-                            class="d-btn"
-                            @if ($this->date === $tomorrow) style="{{ $activeStyle }}" @endif
-                        >Tomorrow</button>
+                        <button type="button" wire:click="shiftPeriod(-1)" class="d-icon-btn" title="Previous {{ $unit }}">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        {{-- The single date control adapts to the view: a month picker in Month view, a day picker otherwise. --}}
+                        @if ($this->viewMode === 'month')
+                            <input type="month" value="{{ \Carbon\Carbon::parse($this->date)->format('Y-m') }}" wire:change="goToMonth($event.target.value)" class="d-input">
+                        @else
+                            <input type="date" wire:model.live="date" class="d-input">
+                        @endif
+                        <button type="button" wire:click="shiftPeriod(1)" class="d-icon-btn" title="Next {{ $unit }}">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
 
-                        {{-- Explicit day-of-week so the selected day is unmistakable. --}}
+                        @if ($dayGranularity)
+                            <button type="button" wire:click="$set('date', '{{ $yesterday }}')" class="d-btn" @if ($this->date === $yesterday) style="{{ $activeStyle }}" @endif>Yesterday</button>
+                        @endif
+                        <button type="button" wire:click="$set('date', '{{ $today }}')" class="d-btn" @if ($this->date === $today) style="{{ $activeStyle }}" @endif>Today</button>
+                        @if ($dayGranularity)
+                            <button type="button" wire:click="$set('date', '{{ $tomorrow }}')" class="d-btn" @if ($this->date === $tomorrow) style="{{ $activeStyle }}" @endif>Tomorrow</button>
+                        @endif
+
+                        {{-- View-aware period label — single source of truth for every view. --}}
                         <div class="d-weekday" style="margin-left:8px; line-height:1.1;">
-                            <div style="font-size:15px; font-weight:700;">{{ \Carbon\Carbon::parse($this->date)->format('l') }}</div>
-                            <div style="font-size:12px; color:var(--d-muted);">{{ \Carbon\Carbon::parse($this->date)->format('M j, Y') }}</div>
+                            @if ($this->viewMode === 'month')
+                                <div style="font-size:15px; font-weight:700;">{{ $this->monthLabel }}</div>
+                            @elseif ($this->viewMode === 'list' && $this->listRange === 'week')
+                                <div style="font-size:15px; font-weight:700;">{{ $this->listRangeLabel }}</div>
+                                <div style="font-size:12px; color:var(--d-muted);">Week view</div>
+                            @else
+                                <div style="font-size:15px; font-weight:700;">{{ \Carbon\Carbon::parse($this->date)->format('l') }}</div>
+                                <div style="font-size:12px; color:var(--d-muted);">{{ \Carbon\Carbon::parse($this->date)->format('M j, Y') }}</div>
+                            @endif
                         </div>
                     </div>
 
@@ -577,7 +610,8 @@
             <div class="d-bar">
                 <div class="d-agenda">
                     <div class="d-agenda-head">
-                        <span>{{ $this->listRangeLabel }}</span>
+                        {{-- Range label lives in the shared top date control now; keep search right-aligned. --}}
+                        <span></span>
                         <label class="d-agenda-search">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
                             <input
@@ -602,7 +636,7 @@
                             @endif
                             <div class="d-agenda-cards">
                                 @forelse ($day['jobs'] as $card)
-                                    <div wire:key="job-card-{{ $card['id'] }}" class="d-job-card">
+                                    <div wire:key="job-card-{{ $card['id'] }}" class="d-job-card" x-data="{ menu: false }">
                                         <button
                                             type="button"
                                             wire:click="openStopDetails({{ $card['id'] }})"
@@ -610,6 +644,12 @@
                                             title="View job details"
                                         >
                                             <span class="d-crew-badge" style="background: {{ $card['color'] }}1a; color: {{ $card['color'] }};">{{ $card['crew_name'] }}</span>
+                                            @if ($card['do_not_move'])
+                                                <span class="d-dnm-badge" title="Do Not Move — keep this job's scheduled date">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                                                    Do Not Move
+                                                </span>
+                                            @endif
                                             <div class="d-job-card-title">{{ $card['customer_name'] }}</div>
                                             <div class="d-job-card-sub">{{ $card['address'] }}</div>
                                             @if ($card['service_summary'])
@@ -620,12 +660,18 @@
                                                 {{ $card['status_label'] }}
                                             </div>
                                         </button>
-                                        {{-- Quick actions (skip / cancel / etc.) right on the card. --}}
-                                        <div class="d-job-card-actions">
-                                            <button type="button" class="d-card-act complete" wire:click="markStopStatus({{ $card['id'] }}, 'completed')" title="Mark completed">Complete</button>
-                                            <button type="button" class="d-card-act progress" wire:click="markStopStatus({{ $card['id'] }}, 'in_progress')" title="Mark in progress">Start</button>
-                                            <button type="button" class="d-card-act skip" wire:click="requestSkip({{ $card['id'] }})" title="Skip this job">Skip</button>
-                                            <button type="button" class="d-card-act cancel" wire:click="cancelStop({{ $card['id'] }})" wire:confirm="Cancel this job? The crew's field staff will be notified." title="Cancel this job">Cancel</button>
+
+                                        {{-- Quick actions collapsed into a top-right 3-dot menu. --}}
+                                        <div class="d-job-menu" @click.outside="menu = false">
+                                            <button type="button" class="d-job-menu-btn" @click="menu = !menu" title="Job actions" aria-label="Job actions" aria-haspopup="true" :aria-expanded="menu">
+                                                <svg fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                                            </button>
+                                            <div class="d-job-menu-list" x-show="menu" x-cloak @click="menu = false">
+                                                <button type="button" class="d-job-menu-item" wire:click="markStopStatus({{ $card['id'] }}, 'completed')">Complete</button>
+                                                <button type="button" class="d-job-menu-item" wire:click="markStopStatus({{ $card['id'] }}, 'in_progress')">Start</button>
+                                                <button type="button" class="d-job-menu-item" wire:click="requestSkip({{ $card['id'] }})">Skip</button>
+                                                <button type="button" class="d-job-menu-item danger" wire:click="cancelStop({{ $card['id'] }})" wire:confirm="Cancel this job? The crew's field staff will be notified.">Cancel</button>
+                                            </div>
                                         </div>
                                     </div>
                                 @empty
@@ -643,17 +689,9 @@
                 </div>
             </div>
             @elseif ($this->viewMode === 'month')
-            {{-- Month view: calendar of scheduled workload; click a day to drill into it. --}}
+            {{-- Month view: calendar of scheduled workload; click a day to drill into it.
+                 Month navigation lives in the shared top date control (no second nav). --}}
             <div class="d-bar">
-                <div class="d-month-head">
-                    <button type="button" wire:click="shiftMonth(-1)" class="d-icon-btn" title="Previous month">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                    </button>
-                    <span class="d-month-label">{{ $this->monthLabel }}</span>
-                    <button type="button" wire:click="shiftMonth(1)" class="d-icon-btn" title="Next month">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    </button>
-                </div>
                 <div class="d-month-grid">
                     @foreach (['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $dow)
                         <div class="d-month-dow">{{ $dow }}</div>
@@ -667,8 +705,18 @@
                             title="View {{ \Carbon\Carbon::parse($day['date'])->format('l, M j') }}"
                         >
                             <span class="d-month-daynum">{{ $day['day_num'] }}</span>
-                            @if ($day['count'] > 0)
-                                <span class="d-month-count">{{ $day['count'] }} {{ \Illuminate\Support\Str::plural('job', $day['count']) }}</span>
+                            @if (! empty($day['crews']))
+                                <div class="d-month-crews">
+                                    @foreach ($day['crews'] as $c)
+                                        <span
+                                            class="d-month-crew"
+                                            style="--cc: {{ $c['color'] }};"
+                                            title="{{ $c['name'] }}: {{ $c['count'] }} {{ \Illuminate\Support\Str::plural('job', $c['count']) }}"
+                                        >
+                                            <span class="d-month-crew-dot"></span>{{ $c['count'] }}
+                                        </span>
+                                    @endforeach
+                                </div>
                             @endif
                         </button>
                     @endforeach

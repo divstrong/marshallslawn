@@ -52,7 +52,7 @@ class CustomerResource extends Resource
                                 ->label('App Password')
                                 ->password()
                                 ->revealable()
-                                ->helperText('Set or reset this customer\'s password for the mobile app. Leave blank to keep unchanged.')
+                                ->helperText('Set or reset this customer\'s password. Leave blank to keep unchanged.')
                                 // Model hashes via the "hashed" cast; only save when a value is entered.
                                 ->dehydrated(fn (?string $state): bool => filled($state))
                                 ->maxLength(255),
@@ -76,6 +76,16 @@ class CustomerResource extends Resource
                                 ->required(),
                             Forms\Components\TextInput::make('customer_type')
                                 ->maxLength(255),
+                            Forms\Components\Select::make('scheduling_type')
+                                ->label('Scheduling Type')
+                                ->options([
+                                    'flexible' => 'Flexible',
+                                    'firm' => 'Firm',
+                                ])
+                                ->default('flexible')
+                                ->native(false)
+                                ->required()
+                                ->helperText('Firm = hold scheduled dates; Flexible = dates may shift.'),
                             Forms\Components\TextInput::make('account_number')
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('division')
@@ -86,9 +96,17 @@ class CustomerResource extends Resource
                                 ->label('Legacy ID')
                                 ->disabled()
                                 ->maxLength(255),
-                            Forms\Components\TagsInput::make('tags')
+                            Forms\Components\Select::make('tagRecords')
                                 ->label('Tags')
-                                ->helperText('Used to target marketing campaigns (e.g. "weekly-mow", "commercial", "vip").')
+                                ->relationship('tagRecords', 'name')
+                                ->multiple()
+                                ->searchable()
+                                ->preload()
+                                ->helperText('Categorized tags imported from the source system. Manage the list under Administration → Tags.')
+                                ->columnSpanFull(),
+                            Forms\Components\TagsInput::make('tags')
+                                ->label('Marketing Tags')
+                                ->helperText('Free-text segments used to target marketing campaigns (e.g. "weekly-mow", "commercial", "vip").')
                                 ->columnSpanFull(),
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
@@ -145,12 +163,23 @@ class CustomerResource extends Resource
                 Tables\Columns\TextColumn::make('city')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('tagRecords.name')
+                    ->label('Tags')
+                    ->badge()
+                    ->limitList(3)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('tags')
+                    ->label('Marketing Tags')
                     ->badge()
                     ->separator(',')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
+                Tables\Columns\TextColumn::make('scheduling_type')
+                    ->label('Scheduling')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => ucfirst($state ?? 'flexible'))
+                    ->color(fn (?string $state): string => $state === 'firm' ? 'danger' : 'gray'),
                 Tables\Columns\TextColumn::make('customer_type')
                     ->label('Type')
                     ->toggleable(),

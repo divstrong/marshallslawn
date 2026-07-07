@@ -733,16 +733,30 @@ class DispatchBoard extends Component
         $gridEnd = $anchor->copy()->endOfMonth()->endOfWeek(Carbon::SATURDAY);
 
         $hidden = array_map('intval', $this->hiddenCrewIds);
+        $crewMap = $this->crewColorMap();
 
-        // Stops per day (respecting the active + hidden crew filters).
-        $counts = RouteStop::query()
+        // Stops per day AND crew (respecting the active + hidden crew filters), so
+        // each day is broken out by crew with its count + color rather than one lump sum.
+        $rows = RouteStop::query()
             ->join('routes', 'routes.id', '=', 'route_stops.route_id')
             ->whereBetween('routes.route_date', [$gridStart->toDateString(), $gridEnd->toDateString()])
             ->when(! empty($this->crewIds), fn ($q) => $q->whereIn('routes.crew_id', $this->crewIds))
             ->when(! empty($hidden), fn ($q) => $q->whereNotIn('routes.crew_id', $hidden))
-            ->selectRaw('DATE(routes.route_date) as d, COUNT(*) as c')
-            ->groupBy('d')
-            ->pluck('c', 'd');
+            ->selectRaw('DATE(routes.route_date) as d, routes.crew_id as crew_id, COUNT(*) as c')
+            ->groupBy('d', 'routes.crew_id')
+            ->get();
+
+        // Group the per-crew tallies under each day.
+        $byDay = [];
+        foreach ($rows as $r) {
+            $cid = (int) $r->crew_id;
+            $byDay[$r->d][] = [
+                'crew_id' => $cid,
+                'name' => $crewMap[$cid]['name'] ?? 'Unassigned',
+                'color' => $crewMap[$cid]['color'] ?? '#6b7280',
+                'count' => (int) $r->c,
+            ];
+        }
 
         $today = now()->toDateString();
         $days = [];
@@ -750,13 +764,17 @@ class DispatchBoard extends Component
 
         while ($cursor <= $gridEnd) {
             $key = $cursor->toDateString();
+            $crews = $byDay[$key] ?? [];
+            usort($crews, fn ($a, $b) => $a['crew_id'] <=> $b['crew_id']);
+
             $days[] = [
                 'date' => $key,
                 'day_num' => (int) $cursor->format('j'),
                 'in_month' => $cursor->month === $anchor->month,
                 'is_today' => $key === $today,
                 'is_selected' => $key === $this->date,
-                'count' => (int) ($counts[$key] ?? 0),
+                'crews' => $crews,
+                'count' => array_sum(array_column($crews, 'count')),
             ];
             $cursor->addDay();
         }
@@ -872,6 +890,7 @@ class DispatchBoard extends Component
             'service_summary' => implode(' · ', array_slice(array_keys($services), 0, 2)),
             'status_label' => $statusLabel,
             'status_kind' => $statusKind,
+            'do_not_move' => (bool) ($stop->job?->do_not_move ?? false),
         ];
     }
 
@@ -1090,6 +1109,41 @@ class DispatchBoard extends Component
     {
         $this->date = Carbon::parse($this->date)->addMonthsNoOverflow($months)->toDateString();
         unset($this->monthDays, $this->monthLabel, $this->listDays, $this->listRangeLabel);
+        $this->emitStopsUpdated();
+    }
+
+    /**
+     * Move the selected date by one unit of the CURRENT view's granularity —
+     * a day (Map / List-Day), a week (List-Week), or a month (Month) — so the
+     * single top-of-page date control drives every view (no per-view nav).
+     */
+    public function shiftPeriod(int $step): void
+    {
+        $date = Carbon::parse($this->date);
+
+        if ($this->viewMode === 'month') {
+            $date->addMonthsNoOverflow($step);
+        } elseif ($this->viewMode === 'list' && $this->listRange === 'week') {
+            $date->addWeeks($step);
+        } else {
+            $date->addDays($step);
+        }
+
+        $this->date = $date->toDateString();
+        $this->selectedStopId = null;
+        unset($this->monthDays, $this->monthLabel, $this->listDays, $this->listRangeLabel);
+        $this->emitStopsUpdated();
+    }
+
+    /** Jump the calendar to a given month ('Y-m') from the month picker. */
+    public function goToMonth(string $value): void
+    {
+        if ($value === '') {
+            return;
+        }
+        $this->date = Carbon::parse($value . '-01')->toDateString();
+        $this->selectedStopId = null;
+        unset($this->monthDays, $this->monthLabel);
         $this->emitStopsUpdated();
     }
 
