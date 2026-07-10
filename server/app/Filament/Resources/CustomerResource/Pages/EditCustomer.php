@@ -18,7 +18,7 @@ class EditCustomer extends EditRecord
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->color('gray')
                 ->slideOver()
-                ->modalWidth('md')
+                ->modalWidth('lg')
                 ->modalHeading(fn (): string => 'Chat with ' . (trim(($this->record->first_name ?? '') . ' ' . ($this->record->last_name ?? '')) ?: ($this->record->company_name ?? 'customer')))
                 ->modalContent(fn () => view('filament.customer-chat-modal', ['customerId' => $this->record->id]))
                 ->modalSubmitAction(false)

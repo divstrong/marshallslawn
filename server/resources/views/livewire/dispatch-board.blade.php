@@ -145,6 +145,15 @@
         }
         /* Per-card 3-dot actions menu (top-right). */
         .dispatch-page .d-job-menu { position: absolute; top: 8px; right: 8px; }
+        .dispatch-page .d-job-gear { position: absolute; top: 8px; right: 40px; }
+        .dispatch-page .d-job-menu-head {
+            font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+            color: var(--d-muted); padding: 6px 10px 4px;
+        }
+        .dispatch-page .d-job-menu-item.is-current { color: var(--d-muted); cursor: default; }
+        .dispatch-page .d-job-menu-item.is-current:hover { background: transparent; }
+        .dispatch-page .d-crew-dot { display: inline-block; width: 9px; height: 9px; border-radius: 9999px; margin-right: 7px; vertical-align: middle; }
+        .dispatch-page .d-job-menu-check { float: right; color: var(--d-muted); }
         .dispatch-page .d-job-menu-btn {
             display: inline-flex; align-items: center; justify-content: center;
             width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
@@ -387,7 +396,7 @@
             background: var(--d-card-bg);
         }
         .dispatch-page .d-chat-bubble {
-            max-width: 80%; padding: 8px 11px; border-radius: 12px;
+            max-width: 82%; padding: 8px 11px; border-radius: 12px;
             font-size: 13px; line-height: 1.45; word-wrap: break-word;
         }
         .dispatch-page .d-chat-bubble.office {
@@ -476,6 +485,11 @@
                     </div>
 
                     <div class="d-spacer"></div>
+
+                    {{-- Create a job on the fly (issue #55). --}}
+                    <button type="button" wire:click="openNewJobModal" class="d-btn" style="height:32px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:600;">
+                        + New Job
+                    </button>
 
                     {{-- Map / List view toggle (issue #24). --}}
                     <div class="d-row" style="gap:0;border:1px solid var(--d-border);border-radius:8px;overflow:hidden;">
@@ -660,6 +674,25 @@
                                                 {{ $card['status_label'] }}
                                             </div>
                                         </button>
+
+                                        {{-- Reassign to another crew on the fly (issue #55). --}}
+                                        <div class="d-job-gear" x-data="{ gear: false }" @click.outside="gear = false">
+                                            <button type="button" class="d-job-menu-btn" @click="gear = !gear" title="Reassign crew" aria-label="Reassign crew" aria-haspopup="true" :aria-expanded="gear">
+                                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                                            </button>
+                                            <div class="d-job-menu-list" x-show="gear" x-cloak @click="gear = false">
+                                                <div class="d-job-menu-head">Reassign to crew</div>
+                                                @foreach ($this->crewColorMap() as $crew)
+                                                    <button type="button"
+                                                        class="d-job-menu-item {{ (int) $crew['id'] === (int) $card['crew_id'] ? 'is-current' : '' }}"
+                                                        @if ((int) $crew['id'] !== (int) $card['crew_id']) wire:click="reassignStopToCrew({{ $card['id'] }}, {{ $crew['id'] }})" @endif>
+                                                        <span class="d-crew-dot" style="background: {{ $crew['color'] }};"></span>
+                                                        {{ $crew['name'] }}
+                                                        @if ((int) $crew['id'] === (int) $card['crew_id'])<span class="d-job-menu-check">✓</span>@endif
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
 
                                         {{-- Quick actions collapsed into a top-right 3-dot menu. --}}
                                         <div class="d-job-menu" @click.outside="menu = false">
@@ -1052,7 +1085,7 @@
             @if ($selectedForeman)
                 <div class="d-chat-header">
                     <div class="d-chat-header-main">
-                        <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9999px;background:{{ $selectedForeman['color'] }};color:#fff;font-weight:700;font-size:13px;flex-shrink:0;">
+                        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9999px;background:{{ $selectedForeman['color'] }};color:#fff;font-weight:700;font-size:13px;flex-shrink:0;">
                             {{ $selectedForeman['initials'] }}
                         </span>
                         <div style="min-width:0;">
@@ -1117,6 +1150,104 @@
                 </div>
             @endif
         </aside>
+
+        {{-- New Job modal (issue #55): create a job on the fly from the board. --}}
+        @if ($showNewJobModal)
+            <div class="d-modal-backdrop" wire:click.self="closeNewJobModal">
+                <form wire:submit="createNewJob" class="d-modal" role="dialog" aria-modal="true" aria-labelledby="newjob-modal-title" style="max-width:520px;">
+                    <div class="d-row" style="justify-content:space-between; align-items:flex-start;">
+                        <div class="d-modal-title" id="newjob-modal-title">New job</div>
+                        <button type="button" wire:click="closeNewJobModal" class="d-btn" style="height:28px; padding:0 10px; font-size:12px;">Close</button>
+                    </div>
+                    <div class="d-modal-body" style="display:flex; flex-direction:column; gap:12px;">
+                        {{-- Customer search --}}
+                        <div style="position:relative;">
+                            <div class="d-label">Customer</div>
+                            <input type="text" wire:model.live.debounce.300ms="newJobCustomerSearch" placeholder="Search customers…" autocomplete="off"
+                                style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;">
+                            @if (! $newJob['customer_id'] && count($this->newJobCustomerResults) > 0)
+                                <div style="position:absolute; z-index:40; left:0; right:0; margin-top:4px; background:var(--d-card-bg); border:1px solid var(--d-border); border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.15); max-height:220px; overflow-y:auto;">
+                                    @foreach ($this->newJobCustomerResults as $c)
+                                        <button type="button" wire:click="selectNewJobCustomer({{ $c['id'] }})"
+                                            style="display:block; width:100%; text-align:left; padding:9px 12px; border:0; background:transparent; cursor:pointer; font-size:13px; color:var(--d-text);"
+                                            onmouseover="this.style.background='var(--d-hover)'" onmouseout="this.style.background='transparent'">{{ $c['label'] }}</button>
+                                    @endforeach
+                                </div>
+                            @endif
+                            @error('newJob.customer_id') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
+                        </div>
+
+                        {{-- Property --}}
+                        <div>
+                            <div class="d-label">Property</div>
+                            <select wire:model="newJob.property_id" @disabled(! $newJob['customer_id'])
+                                style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a;">
+                                <option value="">{{ $newJob['customer_id'] ? 'Select a property' : 'Pick a customer first' }}</option>
+                                @foreach ($this->newJobProperties as $id => $label)
+                                    <option value="{{ $id }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Title --}}
+                        <div>
+                            <div class="d-label">Job title</div>
+                            <input type="text" wire:model="newJob.title" placeholder="Mowing, Mulch install, Spring cleanup…" autocomplete="off"
+                                style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;">
+                            @error('newJob.title') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
+                        </div>
+
+                        {{-- Services (added as TBD; priced later on the job) --}}
+                        <div>
+                            <div class="d-label">Services <span class="d-muted" style="font-weight:400;">(optional — priced later)</span></div>
+                            <select wire:model="newJob.service_ids" multiple size="4"
+                                style="width:100%; border:1px solid var(--d-border); border-radius:8px; padding:6px; font-size:13px; background:#fff; color:#0f172a;">
+                                @foreach ($this->newJobServiceOptions as $id => $name)
+                                    <option value="{{ $id }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="d-row" style="gap:12px;">
+                            <div style="flex:1;">
+                                <div class="d-label">Scheduled date</div>
+                                <input type="date" wire:model="newJob.scheduled_date"
+                                    style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;">
+                            </div>
+                            <div style="flex:1;">
+                                <div class="d-label">Crew</div>
+                                <select wire:model="newJob.crew_id"
+                                    style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a;">
+                                    <option value="">Unassigned</option>
+                                    @foreach ($this->crewColorMap() as $crew)
+                                        <option value="{{ $crew['id'] }}">{{ $crew['name'] }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="flex:1;">
+                            <div class="d-label">Priority</div>
+                            <select wire:model="newJob.priority"
+                                style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a;">
+                                <option value="low">Low</option>
+                                <option value="normal">Normal</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+
+                        <p class="d-muted" style="font-size:12px; margin:0;">
+                            A date and crew place the job straight onto that crew's route. Leave them blank to drop it into the Unassigned pile.
+                        </p>
+                    </div>
+                    <div class="d-row" style="justify-content:flex-end; gap:8px; margin-top:6px;">
+                        <button type="button" wire:click="closeNewJobModal" class="d-btn" style="height:36px; padding:0 14px; font-size:13px;">Cancel</button>
+                        <button type="submit" class="d-btn" style="height:36px; padding:0 18px; font-size:13px; font-weight:600; background:var(--d-accent); color:#fff; border-color:var(--d-accent);">Create job</button>
+                    </div>
+                </form>
+            </div>
+        @endif
 
         {{-- Job services / notes modal --}}
         @if ($showServicesModal)
