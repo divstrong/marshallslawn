@@ -194,33 +194,40 @@
             transition: border-color 120ms, box-shadow 120ms;
         }
         .dispatch-page .d-month-cell:hover { border-color: var(--d-accent); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .dispatch-page .d-month-cell.is-out { opacity: 0.45; }
+        /* Days from the neighbouring month: dim only the day number, not the crew
+           rows, so their text stays fully readable. */
+        .dispatch-page .d-month-cell.is-out { background: color-mix(in srgb, var(--d-border) 18%, var(--d-card-bg)); }
+        .dispatch-page .d-month-cell.is-out .d-month-daynum { color: var(--d-muted); }
         .dispatch-page .d-month-cell.is-today { border-color: var(--d-accent); }
         .dispatch-page .d-month-cell.is-selected { box-shadow: 0 0 0 2px var(--d-accent); }
         .dispatch-page .d-month-daynum-btn {
             font: inherit; border: 0; background: transparent; padding: 0; cursor: pointer;
             align-self: flex-start; color: inherit;
         }
-        .dispatch-page .d-month-daynum { font-size: 13px; font-weight: 600; }
+        .dispatch-page .d-month-daynum { font-size: 13px; font-weight: 700; color: var(--d-text); }
         .dispatch-page .d-month-count {
             font-size: 11px; font-weight: 600; align-self: flex-start;
             background: color-mix(in srgb, var(--d-accent) 15%, transparent); color: var(--d-accent);
             padding: 1px 8px; border-radius: 9999px;
         }
-        /* One crew per row, full-width and clickable → that day's filtered map. */
+        /* One crew per row, full-width and clickable → that day's filtered map.
+           Text is the standard dark colour at full opacity for readability; the
+           crew colour is carried by the dot + border, and the tint mixes with the
+           opaque card background (no see-through fading). */
         .dispatch-page .d-month-crews { display: flex; flex-direction: column; gap: 4px; align-self: stretch; }
         .dispatch-page .d-month-crew {
             font: inherit; cursor: pointer; text-align: left; width: 100%;
             display: flex; align-items: center; gap: 6px;
-            font-size: 11px; font-weight: 600; line-height: 1.2;
-            padding: 4px 8px; border-radius: 6px; border: 1px solid transparent;
-            background: color-mix(in srgb, var(--cc) 12%, transparent); color: var(--cc);
+            font-size: 11px; font-weight: 600; line-height: 1.2; color: var(--d-text);
+            padding: 4px 8px; border-radius: 6px;
+            border: 1px solid color-mix(in srgb, var(--cc) 40%, transparent);
+            background: color-mix(in srgb, var(--cc) 15%, var(--d-card-bg));
             transition: border-color 120ms, background 120ms;
         }
-        .dispatch-page .d-month-crew:hover { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 22%, transparent); }
-        .dispatch-page .d-month-crew-dot { width: 7px; height: 7px; border-radius: 9999px; background: var(--cc); flex-shrink: 0; }
-        .dispatch-page .d-month-crew-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dispatch-page .d-month-crew-count { flex-shrink: 0; opacity: 0.85; font-weight: 700; }
+        .dispatch-page .d-month-crew:hover { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 28%, var(--d-card-bg)); }
+        .dispatch-page .d-month-crew-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--cc); flex-shrink: 0; }
+        .dispatch-page .d-month-crew-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--d-text); font-weight: 600; }
+        .dispatch-page .d-month-crew-count { flex-shrink: 0; font-weight: 700; color: var(--d-text); }
         .dispatch-page .d-crew-badge {
             display: inline-block; font-size: 11px; font-weight: 700;
             padding: 2px 10px; border-radius: 9999px; margin-bottom: 10px;
@@ -494,7 +501,7 @@
 
                         {{-- Create a job on the fly (issue #55). Sits right by the date so
                              it's easy to reach; sized to match the Today button. --}}
-                        <button type="button" wire:click="openNewJobModal" class="d-btn" style="margin-left:8px;height:32px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:600;">
+                        <button type="button" wire:click="openNewJobModal" class="d-btn" style="margin-left:2rem;height:32px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:600;">
                             + New Job
                         </button>
                     </div>
