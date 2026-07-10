@@ -22,6 +22,20 @@ class AppServiceProvider extends ServiceProvider
         // The admin and customer panels share a session; keep them from stealing
         // each other's post-login redirect out of `url.intended`.
         $this->app->bind(LoginResponse::class, PanelAwareLoginResponse::class);
+
+        // Resolve the configured translation driver (issue #56).
+        $this->app->singleton(\App\Services\Translation\TranslationDriver::class, function () {
+            return match (config('services.translation.driver')) {
+                'openai' => new \App\Services\Translation\OpenAiTranslationDriver(
+                    config('services.translation.openai.key'),
+                    config('services.translation.openai.model', 'gpt-4o-mini'),
+                ),
+                'google' => new \App\Services\Translation\GoogleTranslationDriver(
+                    config('services.google.translate_key'),
+                ),
+                default => new \App\Services\Translation\NullTranslationDriver(),
+            };
+        });
     }
 
     /**

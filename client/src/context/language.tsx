@@ -5,6 +5,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { setAppLanguage } from '@/lib/api';
 import { LANGUAGE_STORAGE_KEY } from '@/constants/config';
 import { getItem, setItem } from '@/lib/storage';
 import { type Language, translate } from '@/lib/translations';
@@ -25,6 +26,12 @@ const LanguageContext = createContext<LanguageContextValue | undefined>(undefine
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>('en');
+
+  // Keep the API client's language header in sync so the server can return
+  // translated job details + chat for this language (issue #56).
+  useEffect(() => {
+    setAppLanguage(language);
+  }, [language]);
 
   // Restore the saved language on launch.
   useEffect(() => {

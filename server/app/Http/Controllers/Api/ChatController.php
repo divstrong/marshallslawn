@@ -40,6 +40,9 @@ class ChatController extends Controller
             ->limit(200)
             ->get();
 
+        // Batch-translate the office messages once for non-English staff (issue #56).
+        \App\Support\TranslationWarmer::chat($messages, \App\Support\AppLocale::target($request));
+
         return ChatMessageResource::collection($messages);
     }
 

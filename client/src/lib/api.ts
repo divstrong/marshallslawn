@@ -28,6 +28,15 @@ export function setAuthToken(token: string | null): void {
   authToken = token;
 }
 
+// The app's selected language, sent to the server so it can return job details
+// and office chat translated for non-English field staff (issue #56). Kept in
+// memory and updated by the language context, mirroring the auth token.
+let appLanguage = 'en';
+
+export function setAppLanguage(language: string): void {
+  appLanguage = language || 'en';
+}
+
 /** Error carrying the HTTP status and any field-level validation errors. */
 export class ApiError extends Error {
   status: number;
@@ -78,6 +87,7 @@ async function request<T>(
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        'X-App-Language': appLanguage,
         ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
