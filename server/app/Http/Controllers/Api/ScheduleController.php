@@ -65,6 +65,9 @@ class ScheduleController extends Controller
             $job->route_order = $index + 1;
         }
 
+        // Batch-translate the day's jobs once for non-English staff (issue #56).
+        \App\Support\TranslationWarmer::jobs($ordered, \App\Support\AppLocale::target($request));
+
         return response()->json([
             'date' => $date->toDateString(),
             'is_today' => $date->isToday(),

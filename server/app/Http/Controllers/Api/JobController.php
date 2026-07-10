@@ -44,6 +44,9 @@ class JobController extends Controller
 
         $jobs = $query->orderByDesc('scheduled_date')->orderByDesc('id')->limit(200)->get();
 
+        // Batch-translate the whole list once for non-English staff (issue #56).
+        \App\Support\TranslationWarmer::jobs($jobs, \App\Support\AppLocale::target($request));
+
         return JobResource::collection($jobs);
     }
 
@@ -66,6 +69,8 @@ class JobController extends Controller
         // Spray Tech intelligence (issue #12): flag a mowing job scheduled within
         // two days of this spray job at the same property.
         $job->mowing_conflict = $this->mowingConflict($job);
+
+        \App\Support\TranslationWarmer::jobs([$job], \App\Support\AppLocale::target($request));
 
         return new JobResource($job);
     }

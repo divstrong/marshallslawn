@@ -188,7 +188,7 @@
             letter-spacing: 0.05em; color: var(--d-muted); padding-bottom: 4px;
         }
         .dispatch-page .d-month-cell {
-            font: inherit; text-align: left; cursor: pointer; min-height: 78px;
+            font: inherit; text-align: left; min-height: 78px;
             background: var(--d-card-bg); border: 1px solid var(--d-border); border-radius: 10px;
             padding: 8px; display: flex; flex-direction: column; gap: 6px; color: var(--d-text);
             transition: border-color 120ms, box-shadow 120ms;
@@ -197,21 +197,30 @@
         .dispatch-page .d-month-cell.is-out { opacity: 0.45; }
         .dispatch-page .d-month-cell.is-today { border-color: var(--d-accent); }
         .dispatch-page .d-month-cell.is-selected { box-shadow: 0 0 0 2px var(--d-accent); }
+        .dispatch-page .d-month-daynum-btn {
+            font: inherit; border: 0; background: transparent; padding: 0; cursor: pointer;
+            align-self: flex-start; color: inherit;
+        }
         .dispatch-page .d-month-daynum { font-size: 13px; font-weight: 600; }
         .dispatch-page .d-month-count {
             font-size: 11px; font-weight: 600; align-self: flex-start;
             background: color-mix(in srgb, var(--d-accent) 15%, transparent); color: var(--d-accent);
             padding: 1px 8px; border-radius: 9999px;
         }
-        /* Per-crew breakdown pills inside a month cell (crew colour + count). */
-        .dispatch-page .d-month-crews { display: flex; flex-wrap: wrap; gap: 3px; align-self: stretch; }
+        /* One crew per row, full-width and clickable → that day's filtered map. */
+        .dispatch-page .d-month-crews { display: flex; flex-direction: column; gap: 4px; align-self: stretch; }
         .dispatch-page .d-month-crew {
-            display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
-            font-size: 10px; font-weight: 700; line-height: 1;
-            padding: 2px 6px; border-radius: 9999px;
-            background: color-mix(in srgb, var(--cc) 15%, transparent); color: var(--cc);
+            font: inherit; cursor: pointer; text-align: left; width: 100%;
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; font-weight: 600; line-height: 1.2;
+            padding: 4px 8px; border-radius: 6px; border: 1px solid transparent;
+            background: color-mix(in srgb, var(--cc) 12%, transparent); color: var(--cc);
+            transition: border-color 120ms, background 120ms;
         }
-        .dispatch-page .d-month-crew-dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--cc); flex-shrink: 0; }
+        .dispatch-page .d-month-crew:hover { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 22%, transparent); }
+        .dispatch-page .d-month-crew-dot { width: 7px; height: 7px; border-radius: 9999px; background: var(--cc); flex-shrink: 0; }
+        .dispatch-page .d-month-crew-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dispatch-page .d-month-crew-count { flex-shrink: 0; opacity: 0.85; font-weight: 700; }
         .dispatch-page .d-crew-badge {
             display: inline-block; font-size: 11px; font-weight: 700;
             padding: 2px 10px; border-radius: 9999px; margin-bottom: 10px;
@@ -482,59 +491,53 @@
                                 <div style="font-size:12px; color:var(--d-muted);">{{ \Carbon\Carbon::parse($this->date)->format('M j, Y') }}</div>
                             @endif
                         </div>
+
+                        {{-- Create a job on the fly (issue #55). Sits right by the date so
+                             it's easy to reach; sized to match the Today button. --}}
+                        <button type="button" wire:click="openNewJobModal" class="d-btn" style="margin-left:8px;height:32px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:600;">
+                            + New Job
+                        </button>
                     </div>
 
                     <div class="d-spacer"></div>
 
-                    {{-- Create a job on the fly (issue #55). --}}
-                    <button type="button" wire:click="openNewJobModal" class="d-btn" style="height:32px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:600;">
-                        + New Job
-                    </button>
-
-                    {{-- Map / List view toggle (issue #24). --}}
+                    {{-- View control: Map / Day / Week / Month. Day + Week are both the
+                         list layout, so "List" isn't a separate choice (issue #24). --}}
+                    @php
+                        $onDay = $this->viewMode === 'list' && $this->listRange === 'day';
+                        $onWeek = $this->viewMode === 'list' && $this->listRange === 'week';
+                        $segActive = 'background: var(--d-accent); color:#fff;';
+                    @endphp
                     <div class="d-row" style="gap:0;border:1px solid var(--d-border);border-radius:8px;overflow:hidden;">
                         <button
                             type="button"
-                            wire:click="setViewMode('map')"
+                            wire:click="setDispatchView('map')"
                             class="d-btn"
-                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'map' ? 'background: var(--d-accent); color:#fff;' : '' }}"
+                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'map' ? $segActive : '' }}"
                             title="Map view"
                         >Map</button>
                         <button
                             type="button"
-                            wire:click="setViewMode('list')"
+                            wire:click="setDispatchView('day')"
                             class="d-btn"
-                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'list' ? 'background: var(--d-accent); color:#fff;' : '' }}"
-                            title="List view"
-                        >List</button>
+                            style="height:32px;border:none;border-radius:0;{{ $onDay ? $segActive : '' }}"
+                            title="Show the selected day"
+                        >Day</button>
                         <button
                             type="button"
-                            wire:click="setViewMode('month')"
+                            wire:click="setDispatchView('week')"
                             class="d-btn"
-                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'month' ? 'background: var(--d-accent); color:#fff;' : '' }}"
+                            style="height:32px;border:none;border-radius:0;{{ $onWeek ? $segActive : '' }}"
+                            title="Show the whole week (Mon–Sat)"
+                        >Week</button>
+                        <button
+                            type="button"
+                            wire:click="setDispatchView('month')"
+                            class="d-btn"
+                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'month' ? $segActive : '' }}"
                             title="Month view"
                         >Month</button>
                     </div>
-
-                    {{-- Day / Week range toggle — only meaningful in List view. --}}
-                    @if ($this->viewMode === 'list')
-                        <div class="d-row" style="gap:0;border:1px solid var(--d-border);border-radius:8px;overflow:hidden;">
-                            <button
-                                type="button"
-                                wire:click="setListRange('day')"
-                                class="d-btn"
-                                style="height:32px;border:none;border-radius:0;{{ $this->listRange === 'day' ? 'background: var(--d-accent); color:#fff;' : '' }}"
-                                title="Show the selected day"
-                            >Day</button>
-                            <button
-                                type="button"
-                                wire:click="setListRange('week')"
-                                class="d-btn"
-                                style="height:32px;border:none;border-radius:0;{{ $this->listRange === 'week' ? 'background: var(--d-accent); color:#fff;' : '' }}"
-                                title="Show the whole week (Mon–Sat)"
-                            >Week</button>
-                        </div>
-                    @endif
 
                     <button
                         type="button"
@@ -730,28 +733,39 @@
                         <div class="d-month-dow">{{ $dow }}</div>
                     @endforeach
                     @foreach ($this->monthDays as $day)
-                        <button
-                            type="button"
-                            wire:click="goToDay('{{ $day['date'] }}')"
+                        <div
                             wire:key="month-{{ $day['date'] }}"
                             class="d-month-cell {{ $day['in_month'] ? '' : 'is-out' }} {{ $day['is_today'] ? 'is-today' : '' }} {{ $day['is_selected'] ? 'is-selected' : '' }}"
-                            title="View {{ \Carbon\Carbon::parse($day['date'])->format('l, M j') }}"
                         >
-                            <span class="d-month-daynum">{{ $day['day_num'] }}</span>
+                            {{-- The day number opens the day's list view. --}}
+                            <button
+                                type="button"
+                                wire:click="goToDay('{{ $day['date'] }}')"
+                                class="d-month-daynum-btn"
+                                title="View {{ \Carbon\Carbon::parse($day['date'])->format('l, M j') }}"
+                            >
+                                <span class="d-month-daynum">{{ $day['day_num'] }}</span>
+                            </button>
                             @if (! empty($day['crews']))
+                                {{-- One row per crew: "Crew — N jobs", clickable to that day's
+                                     map filtered to the crew. --}}
                                 <div class="d-month-crews">
                                     @foreach ($day['crews'] as $c)
-                                        <span
+                                        <button
+                                            type="button"
+                                            wire:click="goToDayCrewMap('{{ $day['date'] }}', {{ $c['crew_id'] }})"
                                             class="d-month-crew"
                                             style="--cc: {{ $c['color'] }};"
-                                            title="{{ $c['name'] }}: {{ $c['count'] }} {{ \Illuminate\Support\Str::plural('job', $c['count']) }}"
+                                            title="View {{ $c['name'] }} on {{ \Carbon\Carbon::parse($day['date'])->format('M j') }} on the map"
                                         >
-                                            <span class="d-month-crew-dot"></span>{{ $c['count'] }}
-                                        </span>
+                                            <span class="d-month-crew-dot"></span>
+                                            <span class="d-month-crew-name">{{ $c['name'] }}</span>
+                                            <span class="d-month-crew-count">{{ $c['count'] }} {{ \Illuminate\Support\Str::plural('job', $c['count']) }}</span>
+                                        </button>
                                     @endforeach
                                 </div>
                             @endif
-                        </button>
+                        </div>
                     @endforeach
                 </div>
             </div>
@@ -1386,7 +1400,14 @@
                                 if ((e.detail || {}).mode !== 'map') return;
                                 setTimeout(() => {
                                     if (!window.google || !window.google.maps) return;
-                                    if (!this.map) {
+                                    const el = document.getElementById('dispatch-map');
+                                    if (!el) return;
+                                    // Switching away from Map (e.g. Month view) destroys and
+                                    // recreates #dispatch-map. Resizing the old, now-detached map
+                                    // instance renders it at the default world view — so rebuild
+                                    // whenever the container element has been replaced.
+                                    if (!this.map || this.map.getDiv() !== el) {
+                                        this.map = null;
                                         this.buildMap(this.lastPins, this.lastForemen);
                                     } else {
                                         google.maps.event.trigger(this.map, 'resize');
@@ -1439,8 +1460,15 @@
                             this.markers = [];
                             if (!pins.length && !foremen.length) return;
 
+                            // A finite, non-zero coordinate. Guards against (0,0)/null pins
+                            // that would otherwise stretch the bounds off Africa and zoom the
+                            // map out to nation/world level.
+                            const validCoord = (v) => typeof v === 'number' && isFinite(v) && v !== 0;
+
                             this.bounds = new google.maps.LatLngBounds();
+                            let plotted = 0;
                             pins.forEach((p) => {
+                                if (!validCoord(p.lat) || !validCoord(p.lng)) return;
                                 const isJob = p.kind === 'job';
                                 const opacity = p.status === 'completed' ? 0.5 : (p.status === 'skipped' ? 0.4 : 1);
                                 const labelText = isJob ? '?' : String(p.sort_order ?? '');
@@ -1481,9 +1509,11 @@
                                 });
                                 this.markers.push(marker);
                                 this.bounds.extend({ lat: p.lat, lng: p.lng });
+                                plotted++;
                             });
 
                             foremen.forEach((f) => {
+                                if (!validCoord(f.lat) || !validCoord(f.lng)) return;
                                 const marker = new google.maps.Marker({
                                     position: { lat: f.lat, lng: f.lng },
                                     map: this.map,
@@ -1506,13 +1536,26 @@
                                 marker.addListener('click', () => this.$wire.selectForeman(f.id));
                                 this.markers.push(marker);
                                 this.bounds.extend({ lat: f.lat, lng: f.lng });
+                                plotted++;
                             });
 
-                            if (this.markers.length === 1) {
-                                this.map.setCenter(this.markers[0].getPosition());
+                            if (plotted === 0) {
+                                // Nothing to show for this day/crew — hold the Richmond region
+                                // rather than drifting to a world view.
+                                this.map.setCenter({ lat: 37.5407, lng: -77.4360 });
+                                this.map.setZoom(11);
+                            } else if (plotted === 1) {
+                                this.map.setCenter(this.bounds.getCenter());
                                 this.map.setZoom(14);
-                            } else if (this.markers.length > 1) {
+                            } else {
                                 this.map.fitBounds(this.bounds, 60);
+                                // Keep a sensible floor/ceiling so a lone outlier or a tight
+                                // cluster still reads as the Richmond area.
+                                google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                                    const z = this.map.getZoom();
+                                    if (z > 15) this.map.setZoom(15);
+                                    if (z < 9) { this.map.setCenter({ lat: 37.5407, lng: -77.4360 }); this.map.setZoom(11); }
+                                });
                             }
                         },
                     };

@@ -1116,6 +1116,31 @@ class DispatchBoard extends Component
         }
     }
 
+    /**
+     * Single top-of-board view control: Map / Day / Week / Month. Day and Week
+     * are both the list layout (they only differ in range), so "List" isn't shown
+     * as its own choice — the Day/Week buttons select it implicitly.
+     */
+    public function setDispatchView(string $view): void
+    {
+        match ($view) {
+            'day' => $this->applyView('list', 'day'),
+            'week' => $this->applyView('list', 'week'),
+            'month' => $this->applyView('month', null),
+            default => $this->applyView('map', null),
+        };
+    }
+
+    private function applyView(string $mode, ?string $range): void
+    {
+        if ($range !== null) {
+            $this->listRange = $range === 'week' ? 'week' : 'day';
+            unset($this->listDays, $this->listRangeLabel);
+        }
+
+        $this->setViewMode($mode);
+    }
+
     /** Jump to a specific day and drop into the List view (used by the Month grid). */
     public function goToDay(string $date): void
     {
@@ -1124,6 +1149,30 @@ class DispatchBoard extends Component
         $this->selectedStopId = null;
         $this->persistDispatchPrefs();
         unset($this->listDays, $this->listRangeLabel);
+    }
+
+    /**
+     * Jump from a Month-view crew row straight into that day's Map, filtered to
+     * the chosen crew. Un-hides the crew if it was hidden so its pins actually show.
+     */
+    public function goToDayCrewMap(string $date, int $crewId): void
+    {
+        $this->date = Carbon::parse($date)->toDateString();
+        $this->viewMode = 'map';
+        $this->crewIds = [$crewId];
+        $this->hiddenCrewIds = array_values(array_filter(
+            array_map('intval', $this->hiddenCrewIds),
+            fn ($id) => $id !== $crewId,
+        ));
+        $this->selectedStopId = null;
+        $this->persistDispatchPrefs();
+
+        unset(
+            $this->monthDays, $this->monthLabel, $this->listDays, $this->listRangeLabel,
+            $this->stops, $this->summary, $this->foremanPins, $this->visibleCrews,
+        );
+        $this->dispatch('dispatch:view-changed', mode: 'map');
+        $this->emitStopsUpdated();
     }
 
     /** Move the Month grid (and selected date) by whole months. */

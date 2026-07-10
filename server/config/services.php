@@ -37,6 +37,29 @@ return [
 
     'google' => [
         'maps_key' => env('GOOGLE_MAPS_API_KEY'),
+        // Google Cloud Translation API key (optional alternative translation driver).
+        'translate_key' => env('GOOGLE_TRANSLATE_KEY'),
+    ],
+
+    /*
+    | On-the-fly translation of admin-authored content (job details + chat) for
+    | field staff whose app is set to another language (issue #56).
+    |
+    | driver:  'openai' (uses the key already in .env), 'google', or 'null'
+    |          (a no-op passthrough for local dev / when translation is off).
+    | Every unique source string is translated once and cached in the
+    | `translations` table, so ongoing cost is near zero and repeat requests are
+    | instant. A failed/absent provider always falls back to the original text —
+    | translation never breaks an API response.
+    */
+    'translation' => [
+        // Defaults to OpenAI (uses OPENAI_KEY). Falls back to English automatically
+        // when no key is set, so this is safe even before the key is configured.
+        'driver' => env('TRANSLATION_DRIVER', 'openai'),
+        'openai' => [
+            'key' => env('OPENAI_KEY'),
+            'model' => env('OPENAI_TRANSLATION_MODEL', 'gpt-4o-mini'),
+        ],
     ],
 
     /*

@@ -2,20 +2,23 @@
 
 namespace App\Services;
 
+use App\Livewire\JobServiceLines;
 use App\Models\Job;
 use App\Models\JobService;
 use App\Models\RecurringJobTemplate;
 use App\Models\Service;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Turns the shared job-form payload into a Job (or a recurring series). Used by
- * both the Jobs resource create page and the customer Jobs-tab modal so the two
- * entry points behave identically (issue #54).
+ * the Jobs resource create page, the customer Jobs-tab modal, and the dispatch
+ * New Job modal so every entry point behaves identically (issues #52, #54, #55).
  *
- * @phpstan-type ServiceLine array{service_id: int, price: float|null, description: string|null}
+ * @phpstan-type ServiceLine array{service_id: ?int, description: ?string, quantity: float, unit_price: ?float, price: ?float}
  */
 class JobFromFormCreator
 {
@@ -27,8 +30,16 @@ class JobFromFormCreator
     public function create(array $data, array $overrides = []): array
     {
         $type = $data['job_type'] ?? 'one_time';
-        $lines = $this->normaliseServiceLines($data['service_lines'] ?? []);
-        $serviceIds = array_column($lines, 'service_id');
+        $lines = $this->resolveLines($data);
+        $serviceIds = array_values(array_filter(array_column($lines, 'service_id')));
+
+        // The service grid on create requires a recurring series to carry at least
+        // one line (matching the old repeater's rule).
+        if ($type === 'recurring' && $lines === []) {
+            throw ValidationException::withMessages([
+                'services' => 'A recurring job needs at least one service.',
+            ]);
+        }
 
         $recur = [
             'frequency' => ($data['recur_frequency'] ?? 'weekly') === 'monthly' ? 'monthly' : 'weekly',
@@ -40,7 +51,7 @@ class JobFromFormCreator
         ];
 
         // Drop the form-only control fields before touching the Job model.
-        foreach (['job_type', 'service_lines', 'recur_frequency', 'recur_day_of_week', 'recur_indefinite', 'recur_occurrences', 'recur_start', 'recur_end'] as $key) {
+        foreach (['job_type', 'service_lines', 'services_draft_id', 'recur_frequency', 'recur_day_of_week', 'recur_indefinite', 'recur_occurrences', 'recur_start', 'recur_end'] as $key) {
             unset($data[$key]);
         }
 
@@ -99,31 +110,94 @@ class JobFromFormCreator
     }
 
     /**
-     * Flatten the Services-tab repeater into service lines, resolving the TBD /
-     * fixed-price choice into a nullable price (null = TBD). Lines without a
-     * service are dropped, and a service may only appear once.
+     * Gather the service lines for a create, from either:
+     *   - the draft cache written by the JobServiceLines grid (normal create), or
+     *   - a `service_lines` array passed directly (the dispatch New Job modal).
+     * The draft cache is consumed (deleted) once read.
      *
-     * @param  array<int|string, array<string, mixed>>  $rows
+     * @param  array<string, mixed>  $data
      * @return array<int, ServiceLine>
      */
-    public function normaliseServiceLines(array $rows): array
+    private function resolveLines(array $data): array
+    {
+        if (! empty($data['service_lines']) && is_array($data['service_lines'])) {
+            return $this->normaliseDirectLines($data['service_lines']);
+        }
+
+        $draftId = $data['services_draft_id'] ?? null;
+        if (! $draftId) {
+            return [];
+        }
+
+        $rows = Cache::pull(JobServiceLines::draftCacheKey($draftId)) ?? [];
+
+        return $this->normaliseColumnLines($rows);
+    }
+
+    /**
+     * The draft grid already stores column-shaped rows; keep the valid ones.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, ServiceLine>
+     */
+    private function normaliseColumnLines(array $rows): array
     {
         $lines = [];
-
         foreach ($rows as $row) {
-            $serviceId = (int) ($row['service_id'] ?? 0);
-            if ($serviceId <= 0 || isset($lines[$serviceId])) {
+            $serviceId = ($row['service_id'] ?? null) ? (int) $row['service_id'] : null;
+            $description = filled($row['description'] ?? null) ? $row['description'] : null;
+
+            // Skip a genuinely empty row (no service and no description).
+            if (! $serviceId && ! $description) {
                 continue;
             }
 
-            $lines[$serviceId] = [
+            $unit = $row['unit_price'] ?? null;
+            $qty = (float) ($row['quantity'] ?? 1) ?: 1;
+
+            $lines[] = [
                 'service_id' => $serviceId,
-                'price' => ($row['pricing'] ?? 'tbd') === 'fixed' ? round((float) ($row['price'] ?? 0), 2) : null,
-                'description' => filled($row['description'] ?? null) ? $row['description'] : null,
+                'description' => $description,
+                'quantity' => $qty,
+                'unit_price' => $unit === null ? null : round((float) $unit, 2),
+                'price' => $unit === null ? null : round($qty * (float) $unit, 2),
             ];
         }
 
-        return array_values($lines);
+        return $lines;
+    }
+
+    /**
+     * The dispatch modal passes simple rows: ['service_id', 'pricing'=>'tbd'|'fixed', 'price'?].
+     * Quantity is 1; a fixed price is the rate.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, ServiceLine>
+     */
+    private function normaliseDirectLines(array $rows): array
+    {
+        $lines = [];
+        $seen = [];
+        foreach ($rows as $row) {
+            $serviceId = (int) ($row['service_id'] ?? 0);
+            if ($serviceId <= 0 || isset($seen[$serviceId])) {
+                continue;
+            }
+            $seen[$serviceId] = true;
+
+            $fixed = ($row['pricing'] ?? 'tbd') === 'fixed';
+            $rate = $fixed ? round((float) ($row['price'] ?? 0), 2) : null;
+
+            $lines[] = [
+                'service_id' => $serviceId,
+                'description' => null,
+                'quantity' => 1.0,
+                'unit_price' => $rate,
+                'price' => $rate,
+            ];
+        }
+
+        return $lines;
     }
 
     /**
@@ -152,9 +226,12 @@ class JobFromFormCreator
             JobService::create([
                 'job_id' => $job->id,
                 'service_id' => $line['service_id'],
-                // Null price = TBD; the office quotes it later (issue #52).
+                'quantity' => $line['quantity'],
+                // Null unit_price/price = TBD; the office quotes it later (issue #52).
+                'unit_price' => $line['unit_price'],
                 'price' => $line['price'],
-                'description' => $line['description'] ?? Service::whereKey($line['service_id'])->value('name'),
+                'description' => $line['description']
+                    ?? ($line['service_id'] ? Service::whereKey($line['service_id'])->value('name') : null),
                 'sort_order' => $order,
             ]);
         }

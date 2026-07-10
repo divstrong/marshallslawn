@@ -10,6 +10,8 @@ class JobService extends Model
     protected $fillable = [
         'job_id',
         'service_id',
+        'quantity',
+        'unit_price',
         'price',
         'description',
         'sort_order',
@@ -17,6 +19,8 @@ class JobService extends Model
     ];
 
     protected $casts = [
+        'quantity' => 'decimal:2',
+        'unit_price' => 'decimal:2',
         'price' => 'decimal:2',
         'sort_order' => 'integer',
         'completed_at' => 'datetime',
