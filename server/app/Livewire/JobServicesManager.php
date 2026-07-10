@@ -14,7 +14,10 @@ class JobServicesManager extends Component
     public string $serviceSearch = '';
     public bool $showServiceDropdown = false;
 
-    /** Working copy of the lines: ['id', 'service_id', 'service_name', 'price', 'description']. */
+    /**
+     * Working copy of the lines: ['id', 'service_id', 'service_name', 'price', 'description'].
+     * A null 'price' means TBD — the line has not been quoted yet (issue #52).
+     */
     public array $lines = [];
 
     public function mount(Job $job): void
@@ -33,7 +36,7 @@ class JobServicesManager extends Component
                 'id' => (int) $line->id,
                 'service_id' => $line->service_id ? (int) $line->service_id : null,
                 'service_name' => $line->service?->name,
-                'price' => number_format((float) $line->price, 2, '.', ''),
+                'price' => $line->price === null ? null : number_format((float) $line->price, 2, '.', ''),
                 'description' => $line->description ?? '',
             ])
             ->all();
@@ -68,7 +71,9 @@ class JobServicesManager extends Component
             return;
         }
 
-        $price = (float) ($service->default_price ?? 0);
+        // A service with no standard rate starts as TBD rather than a misleading $0.
+        $price = $service->default_price !== null ? (float) $service->default_price : null;
+
         $line = JobService::create([
             'job_id' => $this->job->id,
             'service_id' => $service->id,
@@ -81,7 +86,7 @@ class JobServicesManager extends Component
             'id' => (int) $line->id,
             'service_id' => (int) $service->id,
             'service_name' => $service->name,
-            'price' => number_format($price, 2, '.', ''),
+            'price' => $price === null ? null : number_format($price, 2, '.', ''),
             'description' => $service->name,
         ];
 
@@ -94,7 +99,7 @@ class JobServicesManager extends Component
         $line = JobService::create([
             'job_id' => $this->job->id,
             'service_id' => null,
-            'price' => 0,
+            'price' => null,
             'description' => '',
             'sort_order' => $this->nextSortOrder(),
         ]);
@@ -103,9 +108,21 @@ class JobServicesManager extends Component
             'id' => (int) $line->id,
             'service_id' => null,
             'service_name' => null,
-            'price' => '0.00',
+            'price' => null,
             'description' => '',
         ];
+    }
+
+    /** Flip a line back to TBD, clearing whatever price was quoted. */
+    public function markTbd(int $index): void
+    {
+        $row = $this->lines[$index] ?? null;
+        if (! $row || empty($row['id'])) {
+            return;
+        }
+
+        $this->lines[$index]['price'] = null;
+        JobService::where('id', $row['id'])->update(['price' => null]);
     }
 
     public function updatedLines($value, $key): void
@@ -122,7 +139,15 @@ class JobServicesManager extends Component
         }
 
         if ($field === 'price') {
-            $price = round((float) ($row['price'] ?? 0), 2);
+            // Blanking the input puts the line back to TBD.
+            if (! filled($row['price'])) {
+                $this->lines[(int) $index]['price'] = null;
+                JobService::where('id', $row['id'])->update(['price' => null]);
+
+                return;
+            }
+
+            $price = round((float) $row['price'], 2);
             $this->lines[(int) $index]['price'] = number_format($price, 2, '.', '');
             JobService::where('id', $row['id'])->update(['price' => $price]);
         }
@@ -143,7 +168,7 @@ class JobServicesManager extends Component
         $this->lines = array_values($this->lines);
     }
 
-    /** Live job total for the footer (sum of the line prices). */
+    /** Live job total for the footer (sum of the quoted line prices; TBD lines count as nothing). */
     public function getJobTotalProperty(): string
     {
         $sum = 0;
@@ -152,6 +177,18 @@ class JobServicesManager extends Component
         }
 
         return number_format($sum, 2, '.', '');
+    }
+
+    /** True while any line is still unquoted, so the total is only a subtotal. */
+    public function getHasTbdLinesProperty(): bool
+    {
+        foreach ($this->lines as $line) {
+            if (! filled($line['price'] ?? null)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function nextSortOrder(): int

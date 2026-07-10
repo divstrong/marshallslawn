@@ -60,7 +60,15 @@ class Customer extends Authenticatable implements FilamentUser, HasName
         'source',
         'notes',
         'tags',
+        'sms_consent_status',
+        'sms_opt_in_sent_at',
+        'sms_consent_at',
     ];
+
+    /** SMS consent states (A2P / CTIA). */
+    public const SMS_PENDING = 'pending';
+    public const SMS_CONFIRMED = 'confirmed';
+    public const SMS_OPTED_OUT = 'opted_out';
 
     /**
      * @return array<string, string>
@@ -79,7 +87,61 @@ class Customer extends Authenticatable implements FilamentUser, HasName
         return [
             'tags' => 'array',
             'password' => 'hashed',
+            'sms_opt_in_sent_at' => 'datetime',
+            'sms_consent_at' => 'datetime',
         ];
+    }
+
+    /** True only when the customer has confirmed opt-in and has a phone to text. */
+    public function canReceiveSms(): bool
+    {
+        return $this->sms_consent_status === self::SMS_CONFIRMED && filled($this->phone);
+    }
+
+    public function markSmsConfirmed(): void
+    {
+        $this->forceFill([
+            'sms_consent_status' => self::SMS_CONFIRMED,
+            'sms_consent_at' => now(),
+        ])->saveQuietly();
+    }
+
+    public function markSmsOptedOut(): void
+    {
+        $this->forceFill([
+            'sms_consent_status' => self::SMS_OPTED_OUT,
+        ])->saveQuietly();
+    }
+
+    /**
+     * Send the one-time double opt-in request, if double opt-in is enabled, the
+     * customer has a phone, is still pending, and we haven't asked in the last 24h.
+     */
+    public function sendSmsOptInRequest(): void
+    {
+        if (! config('twilio.opt_in.enabled')) {
+            return;
+        }
+
+        if (blank($this->phone) || $this->sms_consent_status !== self::SMS_PENDING) {
+            return;
+        }
+
+        if ($this->sms_opt_in_sent_at && $this->sms_opt_in_sent_at->gt(now()->subDay())) {
+            return;
+        }
+
+        $company = \App\Models\Setting::get('company_name', "Marshall's Lawn & Landscape");
+        $first = $this->first_name ?: 'there';
+
+        app(\App\Services\TwilioService::class)->sendSms(
+            $this->phone,
+            "{$company}: Hi {$first}, reply YES to receive text updates about your lawn & landscaping service. "
+                . 'Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to cancel.',
+            'opt_in_request',
+        );
+
+        $this->forceFill(['sms_opt_in_sent_at' => now()])->saveQuietly();
     }
 
     public function properties(): HasMany

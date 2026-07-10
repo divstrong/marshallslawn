@@ -4,12 +4,15 @@ namespace App\Livewire;
 
 use App\Models\ChatMessage;
 use App\Models\Crew;
+use App\Models\Job;
+use App\Models\Route;
 use App\Models\RouteStop;
 use App\Models\Service;
 use App\Models\Setting;
 use App\Services\GeocodingService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -93,6 +96,25 @@ class DispatchBoard extends Component
     public string $chatBody = '';
 
     public $chatAttachment = null;
+
+    /** New Job modal (issue #55): create a job on the fly without leaving the board. */
+    public bool $showNewJobModal = false;
+
+    public string $newJobCustomerSearch = '';
+
+    /**
+     * @var array{customer_id: ?int, property_id: ?int, title: string, priority: string,
+     *     scheduled_date: ?string, crew_id: ?int, service_ids: array<int, int>}
+     */
+    public array $newJob = [
+        'customer_id' => null,
+        'property_id' => null,
+        'title' => '',
+        'priority' => 'normal',
+        'scheduled_date' => null,
+        'crew_id' => null,
+        'service_ids' => [],
+    ];
 
     public function mount(): void
     {
@@ -1225,6 +1247,202 @@ class DispatchBoard extends Component
         }
         unset($this->foremanPins, $this->selectedForeman);
         $this->emitStopsUpdated();
+    }
+
+    /**
+     * Move a stop's job to a different crew right from its card (issue #55).
+     * The stop hops onto the target crew's route for the same day (created if
+     * needed), and the job's crew_id follows so the two stay in sync.
+     */
+    public function reassignStopToCrew(int $stopId, int $crewId): void
+    {
+        $stop = RouteStop::with('route')->find($stopId);
+        $crew = Crew::find($crewId);
+        if (! $stop || ! $crew || ! $stop->route) {
+            return;
+        }
+
+        // Already on this crew — nothing to do.
+        if ((int) $stop->route->crew_id === $crewId) {
+            return;
+        }
+
+        $date = $stop->route->route_date;
+
+        DB::transaction(function () use ($stop, $crew, $date) {
+            $target = Route::whereDate('route_date', $date)->where('crew_id', $crew->id)->first()
+                ?? Route::create([
+                    'name' => Carbon::parse($date)->format('D, M j') . ' — ' . $crew->name,
+                    'route_date' => $date,
+                    'crew_id' => $crew->id,
+                    'status' => 'planning',
+                ]);
+
+            $stop->update([
+                'route_id' => $target->id,
+                'sort_order' => (int) $target->stops()->max('sort_order') + 1,
+            ]);
+
+            // Keep the underlying job's crew in step (drives Scheduling + reports).
+            if ($stop->job_id) {
+                Job::whereKey($stop->job_id)->update(['crew_id' => $crew->id]);
+            }
+        });
+
+        unset($this->stops, $this->listDays, $this->selectedStop, $this->summary, $this->foremanPins);
+        $this->emitStopsUpdated();
+    }
+
+    /**
+     * Open the New Job modal, seeded with the day and crew currently in focus so
+     * the common case (add a stop to what you're looking at) is one step.
+     */
+    public function openNewJobModal(): void
+    {
+        $defaultCrew = null;
+        if ($this->selectedForemanId) {
+            $defaultCrew = Crew::where('foreman_id', $this->selectedForemanId)->value('id');
+        }
+        $defaultCrew ??= array_key_first($this->visibleCrews) ?: array_key_first($this->crewColorMap());
+
+        $this->newJobCustomerSearch = '';
+        $this->newJob = [
+            'customer_id' => null,
+            'property_id' => null,
+            'title' => '',
+            'priority' => 'normal',
+            'scheduled_date' => $this->date,
+            'crew_id' => $defaultCrew ? (int) $defaultCrew : null,
+            'service_ids' => [],
+        ];
+        $this->showNewJobModal = true;
+    }
+
+    public function closeNewJobModal(): void
+    {
+        $this->showNewJobModal = false;
+    }
+
+    /**
+     * Customer search results for the New Job modal.
+     *
+     * @return array<int, array{id: int, label: string}>
+     */
+    #[Computed]
+    public function newJobCustomerResults(): array
+    {
+        $search = trim($this->newJobCustomerSearch);
+        if (strlen($search) < 2) {
+            return [];
+        }
+
+        return \App\Models\Customer::query()
+            ->where(function ($q) use ($search) {
+                $q->where('last_name', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('company_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->orderBy('last_name')
+            ->limit(15)
+            ->get()
+            ->map(fn ($c) => [
+                'id' => (int) $c->id,
+                'label' => trim(($c->first_name ?? '') . ' ' . ($c->last_name ?? ''))
+                    ?: ($c->company_name ?: "Customer #{$c->id}"),
+            ])
+            ->all();
+    }
+
+    public function selectNewJobCustomer(int $customerId): void
+    {
+        $this->newJob['customer_id'] = $customerId;
+        $this->newJob['property_id'] = null;
+        $customer = \App\Models\Customer::find($customerId);
+        $this->newJobCustomerSearch = $customer
+            ? (trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')) ?: ($customer->company_name ?? ''))
+            : '';
+
+        // Default to the customer's primary property so the form is usable in one pick.
+        $this->newJob['property_id'] = \App\Models\Property::where('customer_id', $customerId)
+            ->orderByDesc('is_primary')
+            ->orderBy('address')
+            ->value('id');
+    }
+
+    /**
+     * Properties belonging to the chosen customer.
+     *
+     * @return array<int, string>
+     */
+    #[Computed]
+    public function newJobProperties(): array
+    {
+        if (! $this->newJob['customer_id']) {
+            return [];
+        }
+
+        return \App\Models\Property::where('customer_id', $this->newJob['customer_id'])
+            ->orderByDesc('is_primary')
+            ->orderBy('address')
+            ->get()
+            ->mapWithKeys(fn ($p) => [(int) $p->id => trim($p->address . ($p->city ? ", {$p->city}" : ''))])
+            ->all();
+    }
+
+    /**
+     * Active services offered for the New Job service picker.
+     *
+     * @return array<int, string>
+     */
+    #[Computed]
+    public function newJobServiceOptions(): array
+    {
+        return Service::where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    /**
+     * Create the job from the modal via the shared creator, then drop it onto the
+     * board (JobObserver + JobRouteAssigner place it on the crew's route).
+     */
+    public function createNewJob(): void
+    {
+        $data = $this->validate([
+            'newJob.customer_id' => ['required', 'integer', 'exists:customers,id'],
+            'newJob.property_id' => ['nullable', 'integer', 'exists:properties,id'],
+            'newJob.title' => ['required', 'string', 'max:255'],
+            'newJob.priority' => ['nullable', 'in:low,normal,high,urgent'],
+            'newJob.scheduled_date' => ['nullable', 'date'],
+            'newJob.crew_id' => ['nullable', 'integer', 'exists:crews,id'],
+            'newJob.service_ids' => ['array'],
+            'newJob.service_ids.*' => ['integer', 'exists:services,id'],
+        ])['newJob'];
+
+        // Services come in as TBD lines; pricing is set later on the job.
+        $serviceLines = array_map(
+            fn ($id) => ['service_id' => (int) $id, 'pricing' => 'tbd'],
+            $data['service_ids'],
+        );
+
+        app(\App\Services\JobFromFormCreator::class)->create([
+            'title' => $data['title'],
+            'customer_id' => $data['customer_id'],
+            'property_id' => $data['property_id'],
+            'priority' => $data['priority'] ?: 'normal',
+            'status' => $data['scheduled_date'] ? 'scheduled' : 'pending',
+            'scheduled_date' => $data['scheduled_date'],
+            'crew_id' => $data['crew_id'],
+            'job_type' => 'one_time',
+            'service_lines' => $serviceLines,
+        ]);
+
+        $this->showNewJobModal = false;
+        unset($this->stops, $this->listDays, $this->summary, $this->foremanPins, $this->unroutedJobs);
+        $this->emitStopsUpdated();
+        $this->dispatch('dispatch:job-created');
     }
 
     public function markStopStatus(int $id, string $status): void

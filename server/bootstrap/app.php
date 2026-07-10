@@ -12,7 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Twilio posts webhooks without a CSRF token; they're authenticated by
+        // the X-Twilio-Signature check in TwilioWebhookController instead.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/twilio/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -14,13 +14,14 @@ return new class extends Migration
             $table->decimal('job_total', 10, 2)->default(0)->after('price');
         });
 
-        // Backfill from the sum of each job's service lines.
+        // Backfill from the sum of each job's service lines. Avoids an UPDATE table
+        // alias, which SQLite does not accept.
         DB::statement('
-            UPDATE service_jobs sj
+            UPDATE service_jobs
             SET job_total = (
-                SELECT COALESCE(SUM(js.price), 0)
-                FROM job_services js
-                WHERE js.job_id = sj.id
+                SELECT COALESCE(SUM(job_services.price), 0)
+                FROM job_services
+                WHERE job_services.job_id = service_jobs.id
             )
         ');
 

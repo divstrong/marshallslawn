@@ -55,10 +55,10 @@ class Settings extends Page
                         ->schema([
                             View::make('livewire.job-status-manager-embed'),
                         ]),
-                    Tab::make('Waiting List')
-                        ->icon('heroicon-o-queue-list')
+                    Tab::make('Notifications')
+                        ->icon('heroicon-o-chat-bubble-left-right')
                         ->schema([
-                            View::make('livewire.waiting-list-filter-manager-embed'),
+                            View::make('livewire.sms-template-manager-embed'),
                         ]),
                 ]),
         ]);

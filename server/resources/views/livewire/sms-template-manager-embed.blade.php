@@ -1,0 +1,1 @@
+@livewire('sms-template-manager')

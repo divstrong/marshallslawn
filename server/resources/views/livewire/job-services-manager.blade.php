@@ -52,6 +52,8 @@
                     <input
                         wire:model.blur="lines.{{ $i }}.price"
                         type="number" min="0" step="0.01"
+                        placeholder="TBD"
+                        title="Leave blank for TBD"
                         style="padding: 8px 10px; font-size: 14px; border: 1px solid #e5e7eb; border-radius: 6px; width: 100%; box-sizing: border-box; text-align: right;"
                     />
                     <button
@@ -65,10 +67,18 @@
 
             {{-- Job Total --}}
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 2px solid #e5e7eb;">
-                <span style="font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Job Total</span>
+                <span style="font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+                    Job Total{{ $this->hasTbdLines ? ' (so far)' : '' }}
+                </span>
                 <span style="font-size: 18px; font-weight: 700; color: #111827;">${{ number_format((float) $this->jobTotal, 2) }}</span>
             </div>
-            <p style="font-size: 11px; color: #9ca3af; margin-top: 4px; text-align: right;">Counts toward the crew's revenue when the job is completed.</p>
+            <p style="font-size: 11px; color: #9ca3af; margin-top: 4px; text-align: right;">
+                @if ($this->hasTbdLines)
+                    Some lines are still TBD and are not counted yet.
+                @else
+                    Counts toward the crew's revenue when the job is completed.
+                @endif
+            </p>
         @else
             <div style="padding: 24px 0; text-align: center; color: #9ca3af; font-size: 13px; border-bottom: 1px dashed #e5e7eb;">
                 No services attached yet. Search below to add one.
@@ -95,7 +105,9 @@
                                 onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'"
                             >
                                 <span style="font-weight: 500; color: #111827;">{{ $svc->name }}</span>
-                                <span style="font-size: 12px; color: #6b7280;">${{ number_format((float) $svc->default_price, 2) }}</span>
+                                <span style="font-size: 12px; color: #6b7280;">
+                                    {{ $svc->default_price === null ? 'TBD' : '$' . number_format((float) $svc->default_price, 2) }}
+                                </span>
                             </button>
                         @endforeach
                     </div>

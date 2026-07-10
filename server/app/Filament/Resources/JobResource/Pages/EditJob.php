@@ -29,7 +29,7 @@ class EditJob extends EditRecord
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->color('gray')
                 ->slideOver()
-                ->modalWidth('md')
+                ->modalWidth('lg')
                 ->visible(fn (): bool => $this->record->customer_id !== null)
                 ->modalHeading(fn (): string => 'Chat with ' . ($this->record->customer
                     ? (trim(($this->record->customer->first_name ?? '') . ' ' . ($this->record->customer->last_name ?? '')) ?: ($this->record->customer->company_name ?? 'customer'))

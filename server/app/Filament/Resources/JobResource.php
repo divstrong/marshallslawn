@@ -40,6 +40,12 @@ class JobResource extends Resource
                         ->icon('heroicon-o-information-circle')
                         ->columns(2)
                         ->schema([
+                            Forms\Components\TextInput::make('title')
+                                ->label('Job title')
+                                ->required()
+                                ->maxLength(255)
+                                ->placeholder('Mowing, Mulch install, Spring cleanup…')
+                                ->columnSpanFull(),
                             Forms\Components\Select::make('customer_id')
                                 ->relationship('customer', 'last_name')
                                 ->getOptionLabelFromRecordUsing(function ($record): string {
@@ -55,7 +61,11 @@ class JobResource extends Resource
                                 ->live()
                                 // Changing the customer invalidates any property picked for the old one.
                                 ->afterStateUpdated(fn (Set $set) => $set('property_id', null))
-                                ->required(),
+                                ->required()
+                                // Create a customer without leaving the job form; Filament selects
+                                // the new record automatically (issue #52).
+                                ->createOptionForm(static::inlineCustomerForm())
+                                ->createOptionUsing(fn (array $data): int => static::createInlineCustomer($data)),
                             Forms\Components\Select::make('property_id')
                                 ->relationship(
                                     name: 'property',
@@ -102,7 +112,7 @@ class JobResource extends Resource
                                     'high' => 'High',
                                     'urgent' => 'Urgent',
                                 ])
-                                ->required(),
+                                ->default('normal'),
 
                             // Estimated time to completion — two inputs combined into estimated_minutes.
                             Fieldset::make('Estimated Time to Completion')
@@ -145,20 +155,6 @@ class JobResource extends Resource
                                 ->inlineLabel(false)
                                 ->live()
                                 ->visibleOn('create')
-                                ->columnSpanFull(),
-                            Forms\Components\Select::make('services')
-                                ->label('Services')
-                                ->multiple()
-                                ->options(fn () => \App\Models\Service::query()
-                                    ->where('is_active', true)
-                                    ->orderBy('name')
-                                    ->pluck('name', 'id')
-                                    ->all())
-                                ->searchable()
-                                ->preload()
-                                ->visibleOn('create')
-                                ->required(fn (Get $get): bool => $get('job_type') === 'recurring')
-                                ->helperText('Applied to the job(s). Required for a recurring series.')
                                 ->columnSpanFull(),
                             Fieldset::make('Recurrence')
                                 // Only on the create form, and only when Recurring is chosen.
@@ -241,12 +237,67 @@ class JobResource extends Resource
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
                         ]),
+                    // Available from the very first save (issue #52): on create the lines
+                    // live in the form state, and on edit the Livewire manager takes over.
                     Tab::make('Services')
                         ->icon('heroicon-o-wrench-screwdriver')
                         ->badge(fn (?Job $record): ?string => $record?->jobServices()->count() ?: null)
-                        ->hidden(fn (?Job $record): bool => ! $record?->exists)
                         ->schema([
-                            View::make('filament.resources.job.services-tab'),
+                            Forms\Components\Repeater::make('service_lines')
+                                ->hiddenLabel()
+                                ->visibleOn('create')
+                                ->addActionLabel('Add a service')
+                                ->reorderable(false)
+                                ->columns(12)
+                                ->minItems(fn (Get $get): int => $get('job_type') === 'recurring' ? 1 : 0)
+                                ->helperText('Recurring jobs need at least one service. Prices can be left as TBD.')
+                                ->schema([
+                                    Forms\Components\Select::make('service_id')
+                                        ->label('Service')
+                                        ->options(fn (): array => \App\Models\Service::query()
+                                            ->where('is_active', true)
+                                            ->orderBy('name')
+                                            ->pluck('name', 'id')
+                                            ->all())
+                                        ->searchable()
+                                        ->preload()
+                                        ->required()
+                                        ->live()
+                                        // Pre-fill the quote with the service's standard rate.
+                                        ->afterStateUpdated(function ($state, Set $set): void {
+                                            $default = \App\Models\Service::whereKey($state)->value('default_price');
+                                            if ($default !== null) {
+                                                $set('pricing', 'fixed');
+                                                $set('price', (string) $default);
+                                            }
+                                        })
+                                        ->columnSpan(5),
+                                    Forms\Components\TextInput::make('description')
+                                        ->label('Notes')
+                                        ->maxLength(255)
+                                        ->columnSpan(3),
+                                    Forms\Components\Select::make('pricing')
+                                        ->label('Price')
+                                        ->options([
+                                            'tbd' => 'TBD',
+                                            'fixed' => 'Set a price',
+                                        ])
+                                        ->default('tbd')
+                                        ->selectablePlaceholder(false)
+                                        ->live()
+                                        ->columnSpan(2),
+                                    Forms\Components\TextInput::make('price')
+                                        ->hiddenLabel()
+                                        ->numeric()
+                                        ->minValue(0)
+                                        ->prefix('$')
+                                        ->placeholder('0.00')
+                                        ->required(fn (Get $get): bool => $get('pricing') === 'fixed')
+                                        ->visible(fn (Get $get): bool => $get('pricing') === 'fixed')
+                                        ->columnSpan(2),
+                                ]),
+                            View::make('filament.resources.job.services-tab')
+                                ->visible(fn (?Job $record): bool => (bool) $record?->exists),
                         ]),
                     Tab::make('Attachments')
                         ->icon('heroicon-o-paper-clip')
@@ -257,6 +308,74 @@ class JobResource extends Resource
                         ]),
                 ]),
         ]);
+    }
+
+    /**
+     * The trimmed-down customer form offered behind the "+" on the Customer select.
+     * Just enough to start a job; the rest is filled in on the customer record later.
+     *
+     * @return array<int, \Filament\Schemas\Components\Component>
+     */
+    public static function inlineCustomerForm(): array
+    {
+        return [
+            Forms\Components\TextInput::make('first_name')->required()->maxLength(255),
+            Forms\Components\TextInput::make('last_name')->required()->maxLength(255),
+            Forms\Components\TextInput::make('company_name')->maxLength(255),
+            Forms\Components\TextInput::make('email')->email()->maxLength(255),
+            Forms\Components\TextInput::make('phone')->tel()->maxLength(255),
+            Forms\Components\Select::make('customer_type')
+                ->label('Customer Type')
+                ->options([
+                    'Residential' => 'Residential',
+                    'Commercial' => 'Commercial',
+                ])
+                ->native(false),
+            Forms\Components\TextInput::make('address')
+                ->maxLength(255)
+                ->helperText('Creates the primary property for this customer.')
+                ->columnSpanFull(),
+            Forms\Components\TextInput::make('city')->maxLength(255),
+            Forms\Components\TextInput::make('state')->maxLength(255),
+            Forms\Components\TextInput::make('zip')->maxLength(255),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return int  The new customer's id, which Filament selects into the field.
+     */
+    public static function createInlineCustomer(array $data): int
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($data): int {
+            $customer = \App\Models\Customer::create([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'company_name' => $data['company_name'] ?? null,
+                'email' => $data['email'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'customer_type' => $data['customer_type'] ?? null,
+                'address' => $data['address'] ?? null,
+                'city' => $data['city'] ?? null,
+                'state' => $data['state'] ?? null,
+                'zip' => $data['zip'] ?? null,
+                'status' => 'active',
+            ]);
+
+            // A job needs somewhere to happen, so seed the primary property too.
+            if (filled($data['address'] ?? null)) {
+                \App\Models\Property::create([
+                    'customer_id' => $customer->id,
+                    'address' => $data['address'],
+                    'city' => $data['city'] ?? null,
+                    'state' => $data['state'] ?? null,
+                    'zip' => $data['zip'] ?? null,
+                    'is_primary' => true,
+                ]);
+            }
+
+            return $customer->id;
+        });
     }
 
     public static function table(Table $table): Table
@@ -328,6 +447,39 @@ class JobResource extends Resource
                         'high' => 'High',
                         'urgent' => 'Urgent',
                     ]),
+                // The waiting list is no longer a place jobs are moved to — it's simply
+                // the work that has neither a crew nor a date yet (issues #52, #53).
+                Tables\Filters\Filter::make('waiting_list')
+                    ->label('Waiting list (unassigned + unscheduled)')
+                    ->toggle()
+                    ->query(fn ($query) => $query->whereNull('crew_id')->whereNull('scheduled_date')),
+                Tables\Filters\Filter::make('unassigned')
+                    ->label('Unassigned (no crew)')
+                    ->toggle()
+                    ->query(fn ($query) => $query->whereNull('crew_id')),
+                Tables\Filters\Filter::make('unscheduled')
+                    ->label('Unscheduled (no date)')
+                    ->toggle()
+                    ->query(fn ($query) => $query->whereNull('scheduled_date')),
+                // Searchable, multi-select service picker — the list is long, so it is
+                // searched rather than rendered as a flat wall of checkboxes (issue #52).
+                Tables\Filters\SelectFilter::make('services')
+                    ->label('Services')
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->options(fn (): array => \App\Models\Service::query()
+                        ->where('is_active', true)
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all())
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['values'] ?? [],
+                        fn ($q, array $serviceIds) => $q->whereHas(
+                            'jobServices',
+                            fn ($js) => $js->whereIn('service_id', $serviceIds),
+                        ),
+                    )),
             ])
             ->defaultPaginationPageOption(50)
             ->actions([
@@ -335,6 +487,29 @@ class JobResource extends Resource
             ])
             ->bulkActions([
                 Actions\BulkActionGroup::make([
+                    Actions\BulkAction::make('changeStatus')
+                        ->label('Change status')
+                        ->icon('heroicon-o-flag')
+                        ->schema([
+                            Forms\Components\Select::make('status')
+                                ->label('New status')
+                                ->options(fn (): array => \App\Models\JobStatus::options())
+                                ->required()
+                                ->native(false),
+                        ])
+                        ->action(function (\Illuminate\Support\Collection $records, array $data): void {
+                            // Save each record rather than mass-updating: the JobObserver
+                            // keeps route stops and crew notifications in step with status.
+                            foreach ($records as $record) {
+                                $record->update(['status' => $data['status']]);
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title($records->count() . ' ' . \Illuminate\Support\Str::plural('job', $records->count()) . ' updated')
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                     Actions\DeleteBulkAction::make(),
                 ]),
             ]);
