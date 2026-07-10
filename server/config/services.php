@@ -53,7 +53,9 @@ return [
     | translation never breaks an API response.
     */
     'translation' => [
-        'driver' => env('TRANSLATION_DRIVER', 'null'),
+        // Defaults to OpenAI (uses OPENAI_KEY). Falls back to English automatically
+        // when no key is set, so this is safe even before the key is configured.
+        'driver' => env('TRANSLATION_DRIVER', 'openai'),
         'openai' => [
             'key' => env('OPENAI_KEY'),
             'model' => env('OPENAI_TRANSLATION_MODEL', 'gpt-4o-mini'),
