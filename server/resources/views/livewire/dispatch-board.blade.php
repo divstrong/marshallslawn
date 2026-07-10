@@ -188,7 +188,7 @@
             letter-spacing: 0.05em; color: var(--d-muted); padding-bottom: 4px;
         }
         .dispatch-page .d-month-cell {
-            font: inherit; text-align: left; cursor: pointer; min-height: 78px;
+            font: inherit; text-align: left; min-height: 78px;
             background: var(--d-card-bg); border: 1px solid var(--d-border); border-radius: 10px;
             padding: 8px; display: flex; flex-direction: column; gap: 6px; color: var(--d-text);
             transition: border-color 120ms, box-shadow 120ms;
@@ -197,21 +197,30 @@
         .dispatch-page .d-month-cell.is-out { opacity: 0.45; }
         .dispatch-page .d-month-cell.is-today { border-color: var(--d-accent); }
         .dispatch-page .d-month-cell.is-selected { box-shadow: 0 0 0 2px var(--d-accent); }
+        .dispatch-page .d-month-daynum-btn {
+            font: inherit; border: 0; background: transparent; padding: 0; cursor: pointer;
+            align-self: flex-start; color: inherit;
+        }
         .dispatch-page .d-month-daynum { font-size: 13px; font-weight: 600; }
         .dispatch-page .d-month-count {
             font-size: 11px; font-weight: 600; align-self: flex-start;
             background: color-mix(in srgb, var(--d-accent) 15%, transparent); color: var(--d-accent);
             padding: 1px 8px; border-radius: 9999px;
         }
-        /* Per-crew breakdown pills inside a month cell (crew colour + count). */
-        .dispatch-page .d-month-crews { display: flex; flex-wrap: wrap; gap: 3px; align-self: stretch; }
+        /* One crew per row, full-width and clickable → that day's filtered map. */
+        .dispatch-page .d-month-crews { display: flex; flex-direction: column; gap: 4px; align-self: stretch; }
         .dispatch-page .d-month-crew {
-            display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
-            font-size: 10px; font-weight: 700; line-height: 1;
-            padding: 2px 6px; border-radius: 9999px;
-            background: color-mix(in srgb, var(--cc) 15%, transparent); color: var(--cc);
+            font: inherit; cursor: pointer; text-align: left; width: 100%;
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; font-weight: 600; line-height: 1.2;
+            padding: 4px 8px; border-radius: 6px; border: 1px solid transparent;
+            background: color-mix(in srgb, var(--cc) 12%, transparent); color: var(--cc);
+            transition: border-color 120ms, background 120ms;
         }
-        .dispatch-page .d-month-crew-dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--cc); flex-shrink: 0; }
+        .dispatch-page .d-month-crew:hover { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 22%, transparent); }
+        .dispatch-page .d-month-crew-dot { width: 7px; height: 7px; border-radius: 9999px; background: var(--cc); flex-shrink: 0; }
+        .dispatch-page .d-month-crew-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dispatch-page .d-month-crew-count { flex-shrink: 0; opacity: 0.85; font-weight: 700; }
         .dispatch-page .d-crew-badge {
             display: inline-block; font-size: 11px; font-weight: 700;
             padding: 2px 10px; border-radius: 9999px; margin-bottom: 10px;
@@ -724,28 +733,39 @@
                         <div class="d-month-dow">{{ $dow }}</div>
                     @endforeach
                     @foreach ($this->monthDays as $day)
-                        <button
-                            type="button"
-                            wire:click="goToDay('{{ $day['date'] }}')"
+                        <div
                             wire:key="month-{{ $day['date'] }}"
                             class="d-month-cell {{ $day['in_month'] ? '' : 'is-out' }} {{ $day['is_today'] ? 'is-today' : '' }} {{ $day['is_selected'] ? 'is-selected' : '' }}"
-                            title="View {{ \Carbon\Carbon::parse($day['date'])->format('l, M j') }}"
                         >
-                            <span class="d-month-daynum">{{ $day['day_num'] }}</span>
+                            {{-- The day number opens the day's list view. --}}
+                            <button
+                                type="button"
+                                wire:click="goToDay('{{ $day['date'] }}')"
+                                class="d-month-daynum-btn"
+                                title="View {{ \Carbon\Carbon::parse($day['date'])->format('l, M j') }}"
+                            >
+                                <span class="d-month-daynum">{{ $day['day_num'] }}</span>
+                            </button>
                             @if (! empty($day['crews']))
+                                {{-- One row per crew: "Crew — N jobs", clickable to that day's
+                                     map filtered to the crew. --}}
                                 <div class="d-month-crews">
                                     @foreach ($day['crews'] as $c)
-                                        <span
+                                        <button
+                                            type="button"
+                                            wire:click="goToDayCrewMap('{{ $day['date'] }}', {{ $c['crew_id'] }})"
                                             class="d-month-crew"
                                             style="--cc: {{ $c['color'] }};"
-                                            title="{{ $c['name'] }}: {{ $c['count'] }} {{ \Illuminate\Support\Str::plural('job', $c['count']) }}"
+                                            title="View {{ $c['name'] }} on {{ \Carbon\Carbon::parse($day['date'])->format('M j') }} on the map"
                                         >
-                                            <span class="d-month-crew-dot"></span>{{ $c['count'] }}
-                                        </span>
+                                            <span class="d-month-crew-dot"></span>
+                                            <span class="d-month-crew-name">{{ $c['name'] }}</span>
+                                            <span class="d-month-crew-count">{{ $c['count'] }} {{ \Illuminate\Support\Str::plural('job', $c['count']) }}</span>
+                                        </button>
                                     @endforeach
                                 </div>
                             @endif
-                        </button>
+                        </div>
                     @endforeach
                 </div>
             </div>

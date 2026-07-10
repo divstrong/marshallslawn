@@ -1151,6 +1151,30 @@ class DispatchBoard extends Component
         unset($this->listDays, $this->listRangeLabel);
     }
 
+    /**
+     * Jump from a Month-view crew row straight into that day's Map, filtered to
+     * the chosen crew. Un-hides the crew if it was hidden so its pins actually show.
+     */
+    public function goToDayCrewMap(string $date, int $crewId): void
+    {
+        $this->date = Carbon::parse($date)->toDateString();
+        $this->viewMode = 'map';
+        $this->crewIds = [$crewId];
+        $this->hiddenCrewIds = array_values(array_filter(
+            array_map('intval', $this->hiddenCrewIds),
+            fn ($id) => $id !== $crewId,
+        ));
+        $this->selectedStopId = null;
+        $this->persistDispatchPrefs();
+
+        unset(
+            $this->monthDays, $this->monthLabel, $this->listDays, $this->listRangeLabel,
+            $this->stops, $this->summary, $this->foremanPins, $this->visibleCrews,
+        );
+        $this->dispatch('dispatch:view-changed', mode: 'map');
+        $this->emitStopsUpdated();
+    }
+
     /** Move the Month grid (and selected date) by whole months. */
     public function shiftMonth(int $months): void
     {
