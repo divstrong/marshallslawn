@@ -465,6 +465,18 @@
                             $yesterday = now()->subDay()->toDateString();
                             $activeStyle = 'background: var(--d-accent); color: #fff; border-color: var(--d-accent);';
                         @endphp
+                        {{-- View-aware period label, ahead of the picker so it reads naturally. --}}
+                        <div class="d-weekday" style="margin-right:16px; line-height:1.1;">
+                            @if ($this->viewMode === 'month')
+                                <div style="font-size:15px; font-weight:700;">{{ $this->monthLabel }}</div>
+                            @elseif ($this->viewMode === 'list' && $this->listRange === 'week')
+                                <div style="font-size:15px; font-weight:700;">{{ $this->listRangeLabel }}</div>
+                                <div style="font-size:12px; color:var(--d-muted);">Week view</div>
+                            @else
+                                <div style="font-size:15px; font-weight:700;">{{ \Carbon\Carbon::parse($this->date)->format('l') }}</div>
+                                <div style="font-size:12px; color:var(--d-muted);">{{ \Carbon\Carbon::parse($this->date)->format('M j, Y') }}</div>
+                            @endif
+                        </div>
                         <button type="button" wire:click="shiftPeriod(-1)" class="d-icon-btn" title="Previous {{ $unit }}">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         </button>
@@ -486,22 +498,9 @@
                             <button type="button" wire:click="$set('date', '{{ $tomorrow }}')" class="d-btn" @if ($this->date === $tomorrow) style="{{ $activeStyle }}" @endif>Tomorrow</button>
                         @endif
 
-                        {{-- View-aware period label — single source of truth for every view. --}}
-                        <div class="d-weekday" style="margin-left:8px; line-height:1.1;">
-                            @if ($this->viewMode === 'month')
-                                <div style="font-size:15px; font-weight:700;">{{ $this->monthLabel }}</div>
-                            @elseif ($this->viewMode === 'list' && $this->listRange === 'week')
-                                <div style="font-size:15px; font-weight:700;">{{ $this->listRangeLabel }}</div>
-                                <div style="font-size:12px; color:var(--d-muted);">Week view</div>
-                            @else
-                                <div style="font-size:15px; font-weight:700;">{{ \Carbon\Carbon::parse($this->date)->format('l') }}</div>
-                                <div style="font-size:12px; color:var(--d-muted);">{{ \Carbon\Carbon::parse($this->date)->format('M j, Y') }}</div>
-                            @endif
-                        </div>
-
-                        {{-- Create a job on the fly (issue #55). Sits right by the date so
-                             it's easy to reach; sized to match the Today button. --}}
-                        <button type="button" wire:click="openNewJobModal" class="d-btn" style="margin-left:2rem;height:32px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:600;">
+                        {{-- Create a job on the fly (issue #55). Sits after the date controls
+                             with breathing room; sized to match the Today button. --}}
+                        <button type="button" wire:click="openNewJobModal" class="d-btn" style="margin-left:5rem;height:32px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:600;">
                             + New Job
                         </button>
                     </div>
