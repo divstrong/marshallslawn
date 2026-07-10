@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\CustomerResource\RelationManagers;
 
-use App\Models\Property;
+use App\Filament\Resources\JobResource;
+use App\Services\JobFromFormCreator;
 use Filament\Actions;
-use Filament\Forms;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -16,48 +16,16 @@ class JobsRelationManager extends RelationManager
 
     protected static string | \BackedEnum | null $icon = 'heroicon-o-clipboard-document-list';
 
+    /**
+     * Reuse the main Jobs resource form so the New Job modal here carries exactly
+     * the same fields and tabs — Services (with TBD pricing), recurrence, and the
+     * rest — as creating a job from the Jobs resource (issue #54). The customer is
+     * already known (the owner of this tab), so it is forced on save rather than
+     * picked.
+     */
     public function form(Schema $schema): Schema
     {
-        return $schema->schema([
-            Forms\Components\Select::make('property_id')
-                ->label('Property')
-                ->options(fn (): array => Property::query()
-                    ->where('customer_id', $this->getOwnerRecord()->getKey())
-                    ->orderByDesc('is_primary')
-                    ->orderBy('address')
-                    ->pluck('address', 'id')
-                    ->all())
-                ->searchable()
-                ->required(),
-            Forms\Components\TextInput::make('title')
-                ->required()
-                ->maxLength(255)
-                ->placeholder('Mowing, Mulch install, Spring cleanup…'),
-            Forms\Components\Select::make('status')
-                ->options([
-                    'pending' => 'Pending',
-                    'scheduled' => 'Scheduled',
-                    'in_progress' => 'In Progress',
-                    'completed' => 'Completed',
-                    'skipped' => 'Skipped',
-                    'cancelled' => 'Cancelled',
-                ])
-                ->default('pending')
-                ->required(),
-            Forms\Components\Select::make('priority')
-                ->options([
-                    'low' => 'Low',
-                    'normal' => 'Normal',
-                    'high' => 'High',
-                    'urgent' => 'Urgent',
-                ])
-                ->default('normal')
-                ->required(),
-            Forms\Components\DatePicker::make('scheduled_date')
-                ->label('Scheduled date'),
-            Forms\Components\Textarea::make('notes')
-                ->columnSpanFull(),
-        ]);
+        return JobResource::form($schema);
     }
 
     public function table(Table $table): Table
@@ -102,10 +70,14 @@ class JobsRelationManager extends RelationManager
                 Actions\CreateAction::make()
                     ->label('New Job')
                     ->icon('heroicon-o-plus')
-                    ->mutateFormDataUsing(function (array $data): array {
-                        $data['type'] = $data['type'] ?? 'one_time';
-                        return $data;
-                    }),
+                    ->modalWidth(\Filament\Support\Enums\Width::FiveExtraLarge)
+                    // The customer is already known — pre-select it so the shared
+                    // picker is valid and shows the right account.
+                    ->fillForm(fn (): array => ['customer_id' => $this->getOwnerRecord()->getKey()])
+                    // Pin the customer to this tab's owner, then run the same
+                    // creation path (services + recurrence) as the Jobs resource.
+                    ->using(fn (array $data): \Illuminate\Database\Eloquent\Model => app(JobFromFormCreator::class)
+                        ->create($data, ['customer_id' => $this->getOwnerRecord()->getKey()])['job']),
             ])
             ->actions([
                 Actions\Action::make('open')
