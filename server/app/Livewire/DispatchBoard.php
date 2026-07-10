@@ -1116,6 +1116,31 @@ class DispatchBoard extends Component
         }
     }
 
+    /**
+     * Single top-of-board view control: Map / Day / Week / Month. Day and Week
+     * are both the list layout (they only differ in range), so "List" isn't shown
+     * as its own choice — the Day/Week buttons select it implicitly.
+     */
+    public function setDispatchView(string $view): void
+    {
+        match ($view) {
+            'day' => $this->applyView('list', 'day'),
+            'week' => $this->applyView('list', 'week'),
+            'month' => $this->applyView('month', null),
+            default => $this->applyView('map', null),
+        };
+    }
+
+    private function applyView(string $mode, ?string $range): void
+    {
+        if ($range !== null) {
+            $this->listRange = $range === 'week' ? 'week' : 'day';
+            unset($this->listDays, $this->listRangeLabel);
+        }
+
+        $this->setViewMode($mode);
+    }
+
     /** Jump to a specific day and drop into the List view (used by the Month grid). */
     public function goToDay(string $date): void
     {

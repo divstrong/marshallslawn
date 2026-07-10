@@ -491,50 +491,43 @@
                         + New Job
                     </button>
 
-                    {{-- Map / List view toggle (issue #24). --}}
+                    {{-- View control: Map / Day / Week / Month. Day + Week are both the
+                         list layout, so "List" isn't a separate choice (issue #24). --}}
+                    @php
+                        $onDay = $this->viewMode === 'list' && $this->listRange === 'day';
+                        $onWeek = $this->viewMode === 'list' && $this->listRange === 'week';
+                        $segActive = 'background: var(--d-accent); color:#fff;';
+                    @endphp
                     <div class="d-row" style="gap:0;border:1px solid var(--d-border);border-radius:8px;overflow:hidden;">
                         <button
                             type="button"
-                            wire:click="setViewMode('map')"
+                            wire:click="setDispatchView('map')"
                             class="d-btn"
-                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'map' ? 'background: var(--d-accent); color:#fff;' : '' }}"
+                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'map' ? $segActive : '' }}"
                             title="Map view"
                         >Map</button>
                         <button
                             type="button"
-                            wire:click="setViewMode('list')"
+                            wire:click="setDispatchView('day')"
                             class="d-btn"
-                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'list' ? 'background: var(--d-accent); color:#fff;' : '' }}"
-                            title="List view"
-                        >List</button>
+                            style="height:32px;border:none;border-radius:0;{{ $onDay ? $segActive : '' }}"
+                            title="Show the selected day"
+                        >Day</button>
                         <button
                             type="button"
-                            wire:click="setViewMode('month')"
+                            wire:click="setDispatchView('week')"
                             class="d-btn"
-                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'month' ? 'background: var(--d-accent); color:#fff;' : '' }}"
+                            style="height:32px;border:none;border-radius:0;{{ $onWeek ? $segActive : '' }}"
+                            title="Show the whole week (Mon–Sat)"
+                        >Week</button>
+                        <button
+                            type="button"
+                            wire:click="setDispatchView('month')"
+                            class="d-btn"
+                            style="height:32px;border:none;border-radius:0;{{ $this->viewMode === 'month' ? $segActive : '' }}"
                             title="Month view"
                         >Month</button>
                     </div>
-
-                    {{-- Day / Week range toggle — only meaningful in List view. --}}
-                    @if ($this->viewMode === 'list')
-                        <div class="d-row" style="gap:0;border:1px solid var(--d-border);border-radius:8px;overflow:hidden;">
-                            <button
-                                type="button"
-                                wire:click="setListRange('day')"
-                                class="d-btn"
-                                style="height:32px;border:none;border-radius:0;{{ $this->listRange === 'day' ? 'background: var(--d-accent); color:#fff;' : '' }}"
-                                title="Show the selected day"
-                            >Day</button>
-                            <button
-                                type="button"
-                                wire:click="setListRange('week')"
-                                class="d-btn"
-                                style="height:32px;border:none;border-radius:0;{{ $this->listRange === 'week' ? 'background: var(--d-accent); color:#fff;' : '' }}"
-                                title="Show the whole week (Mon–Sat)"
-                            >Week</button>
-                        </div>
-                    @endif
 
                     <button
                         type="button"
