@@ -486,10 +486,14 @@
 
                     <div class="d-spacer"></div>
 
-                    {{-- Create a job on the fly (issue #55). --}}
-                    <button type="button" wire:click="openNewJobModal" class="d-btn" style="height:32px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:600;">
+                    {{-- Create a job on the fly (issue #55). Centered between the date
+                         controls and the view cluster via matching auto-margin spacers
+                         so it stands out. --}}
+                    <button type="button" wire:click="openNewJobModal" class="d-btn d-btn-newjob" style="height:36px;padding:0 20px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:700;box-shadow:0 2px 8px rgba(201,9,47,0.25);">
                         + New Job
                     </button>
+
+                    <div class="d-spacer"></div>
 
                     {{-- View control: Map / Day / Week / Month. Day + Week are both the
                          list layout, so "List" isn't a separate choice (issue #24). --}}
