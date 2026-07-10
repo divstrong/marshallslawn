@@ -25,7 +25,8 @@ class CreateJob extends CreateRecord
     protected function handleRecordCreation(array $data): Model
     {
         $type = $data['job_type'] ?? 'one_time';
-        $serviceIds = array_values(array_filter(array_map('intval', (array) ($data['services'] ?? []))));
+        $lines = $this->normaliseServiceLines($data['service_lines'] ?? []);
+        $serviceIds = array_column($lines, 'service_id');
 
         $recur = [
             'frequency' => ($data['recur_frequency'] ?? 'weekly') === 'monthly' ? 'monthly' : 'weekly',
@@ -37,21 +38,21 @@ class CreateJob extends CreateRecord
         ];
 
         // Drop the form-only control fields before touching the Job model.
-        foreach (['job_type', 'services', 'recur_frequency', 'recur_day_of_week', 'recur_indefinite', 'recur_occurrences', 'recur_start', 'recur_end'] as $key) {
+        foreach (['job_type', 'service_lines', 'recur_frequency', 'recur_day_of_week', 'recur_indefinite', 'recur_occurrences', 'recur_start', 'recur_end'] as $key) {
             unset($data[$key]);
         }
 
         if ($type !== 'recurring') {
-            return DB::transaction(function () use ($data, $serviceIds) {
+            return DB::transaction(function () use ($data, $lines) {
                 /** @var Job $job */
                 $job = Job::create($data);
-                $this->attachServices($job, $serviceIds);
+                $this->attachServices($job, $lines);
 
                 return $job;
             });
         }
 
-        return DB::transaction(function () use ($data, $serviceIds, $recur) {
+        return DB::transaction(function () use ($data, $lines, $serviceIds, $recur) {
             $start = Carbon::parse($recur['start']);
 
             $template = RecurringJobTemplate::create([
@@ -94,10 +95,38 @@ class CreateJob extends CreateRecord
                 'status' => 'scheduled',
                 'scheduled_date' => $start->toDateString(),
             ]));
-            $this->attachServices($job, $serviceIds);
+            $this->attachServices($job, $lines);
 
             return $job;
         });
+    }
+
+    /**
+     * Flatten the Services-tab repeater into service lines, resolving the TBD /
+     * fixed-price choice into a nullable price (null = TBD). Lines without a
+     * service are dropped, and a service is only allowed to appear once.
+     *
+     * @param  array<int|string, array<string, mixed>>  $rows
+     * @return array<int, array{service_id: int, price: float|null, description: string|null}>
+     */
+    private function normaliseServiceLines(array $rows): array
+    {
+        $lines = [];
+
+        foreach ($rows as $row) {
+            $serviceId = (int) ($row['service_id'] ?? 0);
+            if ($serviceId <= 0 || isset($lines[$serviceId])) {
+                continue;
+            }
+
+            $lines[$serviceId] = [
+                'service_id' => $serviceId,
+                'price' => ($row['pricing'] ?? 'tbd') === 'fixed' ? round((float) ($row['price'] ?? 0), 2) : null,
+                'description' => filled($row['description'] ?? null) ? $row['description'] : null,
+            ];
+        }
+
+        return array_values($lines);
     }
 
     /**
@@ -121,18 +150,18 @@ class CreateJob extends CreateRecord
     }
 
     /**
-     * @param  array<int, int>  $serviceIds
+     * @param  array<int, array{service_id: int, price: float|null, description: string|null}>  $lines
      */
-    private function attachServices(Job $job, array $serviceIds): void
+    private function attachServices(Job $job, array $lines): void
     {
-        $order = 0;
-        foreach (array_values(array_unique(array_filter($serviceIds))) as $serviceId) {
+        foreach (array_values($lines) as $order => $line) {
             JobService::create([
                 'job_id' => $job->id,
-                'service_id' => $serviceId,
-                // Snapshot the service's rate as the approved line price (crew revenue).
-                'price' => (float) (Service::whereKey($serviceId)->value('default_price') ?? 0),
-                'sort_order' => $order++,
+                'service_id' => $line['service_id'],
+                // Null price = TBD; the office quotes it later (issue #52).
+                'price' => $line['price'],
+                'description' => $line['description'] ?? Service::whereKey($line['service_id'])->value('name'),
+                'sort_order' => $order,
             ]);
         }
     }
