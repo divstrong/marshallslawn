@@ -1400,7 +1400,14 @@
                                 if ((e.detail || {}).mode !== 'map') return;
                                 setTimeout(() => {
                                     if (!window.google || !window.google.maps) return;
-                                    if (!this.map) {
+                                    const el = document.getElementById('dispatch-map');
+                                    if (!el) return;
+                                    // Switching away from Map (e.g. Month view) destroys and
+                                    // recreates #dispatch-map. Resizing the old, now-detached map
+                                    // instance renders it at the default world view — so rebuild
+                                    // whenever the container element has been replaced.
+                                    if (!this.map || this.map.getDiv() !== el) {
+                                        this.map = null;
                                         this.buildMap(this.lastPins, this.lastForemen);
                                     } else {
                                         google.maps.event.trigger(this.map, 'resize');
@@ -1453,8 +1460,15 @@
                             this.markers = [];
                             if (!pins.length && !foremen.length) return;
 
+                            // A finite, non-zero coordinate. Guards against (0,0)/null pins
+                            // that would otherwise stretch the bounds off Africa and zoom the
+                            // map out to nation/world level.
+                            const validCoord = (v) => typeof v === 'number' && isFinite(v) && v !== 0;
+
                             this.bounds = new google.maps.LatLngBounds();
+                            let plotted = 0;
                             pins.forEach((p) => {
+                                if (!validCoord(p.lat) || !validCoord(p.lng)) return;
                                 const isJob = p.kind === 'job';
                                 const opacity = p.status === 'completed' ? 0.5 : (p.status === 'skipped' ? 0.4 : 1);
                                 const labelText = isJob ? '?' : String(p.sort_order ?? '');
@@ -1495,9 +1509,11 @@
                                 });
                                 this.markers.push(marker);
                                 this.bounds.extend({ lat: p.lat, lng: p.lng });
+                                plotted++;
                             });
 
                             foremen.forEach((f) => {
+                                if (!validCoord(f.lat) || !validCoord(f.lng)) return;
                                 const marker = new google.maps.Marker({
                                     position: { lat: f.lat, lng: f.lng },
                                     map: this.map,
@@ -1520,13 +1536,26 @@
                                 marker.addListener('click', () => this.$wire.selectForeman(f.id));
                                 this.markers.push(marker);
                                 this.bounds.extend({ lat: f.lat, lng: f.lng });
+                                plotted++;
                             });
 
-                            if (this.markers.length === 1) {
-                                this.map.setCenter(this.markers[0].getPosition());
+                            if (plotted === 0) {
+                                // Nothing to show for this day/crew — hold the Richmond region
+                                // rather than drifting to a world view.
+                                this.map.setCenter({ lat: 37.5407, lng: -77.4360 });
+                                this.map.setZoom(11);
+                            } else if (plotted === 1) {
+                                this.map.setCenter(this.bounds.getCenter());
                                 this.map.setZoom(14);
-                            } else if (this.markers.length > 1) {
+                            } else {
                                 this.map.fitBounds(this.bounds, 60);
+                                // Keep a sensible floor/ceiling so a lone outlier or a tight
+                                // cluster still reads as the Richmond area.
+                                google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                                    const z = this.map.getZoom();
+                                    if (z > 15) this.map.setZoom(15);
+                                    if (z < 9) { this.map.setCenter({ lat: 37.5407, lng: -77.4360 }); this.map.setZoom(11); }
+                                });
                             }
                         },
                     };
