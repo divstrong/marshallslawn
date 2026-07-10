@@ -239,65 +239,27 @@ class JobResource extends Resource
                         ]),
                     // Available from the very first save (issue #52): on create the lines
                     // live in the form state, and on edit the Livewire manager takes over.
+                    // Estimate-style service grid (Description / Qty / Rate / Total)
+                    // via a custom Livewire component — no Filament repeater (issue #52).
+                    // On create the grid buffers rows against a draft id and
+                    // JobFromFormCreator persists them; on edit it writes straight to
+                    // job_services. Job-level notes live on the General tab.
                     Tab::make('Services')
                         ->icon('heroicon-o-wrench-screwdriver')
                         ->badge(fn (?Job $record): ?string => $record?->jobServices()->count() ?: null)
                         ->schema([
-                            Forms\Components\Repeater::make('service_lines')
-                                ->hiddenLabel()
+                            Forms\Components\Hidden::make('services_draft_id')
+                                // Create-only: the draft buffer id the grid writes to. On
+                                // edit it isn't dehydrated, so it never hits the model.
                                 ->visibleOn('create')
-                                ->addActionLabel('Add a service')
-                                ->reorderable(false)
-                                ->columns(12)
-                                ->minItems(fn (Get $get): int => $get('job_type') === 'recurring' ? 1 : 0)
-                                ->helperText('Recurring jobs need at least one service. Prices can be left as TBD.')
-                                ->schema([
-                                    Forms\Components\Select::make('service_id')
-                                        ->label('Service')
-                                        ->options(fn (): array => \App\Models\Service::query()
-                                            ->where('is_active', true)
-                                            ->orderBy('name')
-                                            ->pluck('name', 'id')
-                                            ->all())
-                                        ->searchable()
-                                        ->preload()
-                                        ->required()
-                                        ->live()
-                                        // Pre-fill the quote with the service's standard rate.
-                                        ->afterStateUpdated(function ($state, Set $set): void {
-                                            $default = \App\Models\Service::whereKey($state)->value('default_price');
-                                            if ($default !== null) {
-                                                $set('pricing', 'fixed');
-                                                $set('price', (string) $default);
-                                            }
-                                        })
-                                        ->columnSpan(5),
-                                    Forms\Components\TextInput::make('description')
-                                        ->label('Notes')
-                                        ->maxLength(255)
-                                        ->columnSpan(3),
-                                    Forms\Components\Select::make('pricing')
-                                        ->label('Price')
-                                        ->options([
-                                            'tbd' => 'TBD',
-                                            'fixed' => 'Set a price',
-                                        ])
-                                        ->default('tbd')
-                                        ->selectablePlaceholder(false)
-                                        ->live()
-                                        ->columnSpan(2),
-                                    Forms\Components\TextInput::make('price')
-                                        ->hiddenLabel()
-                                        ->numeric()
-                                        ->minValue(0)
-                                        ->prefix('$')
-                                        ->placeholder('0.00')
-                                        ->required(fn (Get $get): bool => $get('pricing') === 'fixed')
-                                        ->visible(fn (Get $get): bool => $get('pricing') === 'fixed')
-                                        ->columnSpan(2),
-                                ]),
-                            View::make('filament.resources.job.services-tab')
-                                ->visible(fn (?Job $record): bool => (bool) $record?->exists),
+                                ->default(fn (): string => (string) \Illuminate\Support\Str::uuid()),
+                            \Filament\Schemas\Components\Livewire::make(
+                                \App\Livewire\JobServiceLines::class,
+                                fn (Get $get, ?Job $record): array => [
+                                    'jobId' => $record?->exists ? $record->id : null,
+                                    'draftId' => $record?->exists ? null : $get('services_draft_id'),
+                                ],
+                            )->key('job-service-lines'),
                         ]),
                     Tab::make('Attachments')
                         ->icon('heroicon-o-paper-clip')

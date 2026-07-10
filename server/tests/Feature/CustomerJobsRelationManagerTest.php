@@ -18,7 +18,7 @@ class CustomerJobsRelationManagerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_new_job_modal_creates_a_job_for_the_owning_customer_with_services(): void
+    public function test_new_job_modal_creates_a_job_pinned_to_the_owning_customer(): void
     {
         $role = Role::firstOrCreate(['name' => 'admin'], ['label' => 'Admin', 'is_admin' => true]);
         $this->actingAs(User::factory()->create(['role_id' => $role->id]));
@@ -26,8 +26,10 @@ class CustomerJobsRelationManagerTest extends TestCase
 
         $customer = Customer::create(['first_name' => 'Jane', 'last_name' => 'Doe', 'status' => 'active']);
         $property = Property::create(['customer_id' => $customer->id, 'address' => '1 Elm St']);
-        $mowing = Service::create(['name' => 'Mowing', 'category' => 'Lawn', 'default_price' => 45, 'is_active' => true]);
 
+        // Services flow through the shared JobServiceLines grid + draft cache (covered
+        // by CreateJobServicesTabTest / JobServiceLinesTest); here we verify the modal
+        // reuses the main form and pins the job to the tab's owner.
         Livewire::test(JobsRelationManager::class, [
             'ownerRecord' => $customer,
             'pageClass' => EditCustomer::class,
@@ -37,16 +39,11 @@ class CustomerJobsRelationManagerTest extends TestCase
                 'property_id' => $property->id,
                 'status' => 'pending',
                 'job_type' => 'one_time',
-                'service_lines' => [
-                    ['service_id' => $mowing->id, 'pricing' => 'tbd', 'description' => null],
-                ],
             ])
             ->assertHasNoTableActionErrors();
 
         $job = Job::firstWhere('title', 'From the customer tab');
         $this->assertNotNull($job);
         $this->assertSame($customer->id, $job->customer_id);
-        $this->assertSame(1, $job->jobServices()->count());
-        $this->assertNull($job->jobServices()->first()->price, 'TBD line should keep a null price');
     }
 }
