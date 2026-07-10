@@ -201,26 +201,29 @@
             font: inherit; border: 0; background: transparent; padding: 0; cursor: pointer;
             align-self: flex-start; color: inherit;
         }
-        .dispatch-page .d-month-daynum { font-size: 13px; font-weight: 600; }
+        .dispatch-page .d-month-daynum { font-size: 13px; font-weight: 700; color: var(--d-text); }
         .dispatch-page .d-month-count {
             font-size: 11px; font-weight: 600; align-self: flex-start;
             background: color-mix(in srgb, var(--d-accent) 15%, transparent); color: var(--d-accent);
             padding: 1px 8px; border-radius: 9999px;
         }
-        /* One crew per row, full-width and clickable → that day's filtered map. */
+        /* One crew per row, full-width and clickable → that day's filtered map.
+           Text stays the standard dark colour (full opacity) for readability; the
+           crew colour is carried by the dot + border, not the text. */
         .dispatch-page .d-month-crews { display: flex; flex-direction: column; gap: 4px; align-self: stretch; }
         .dispatch-page .d-month-crew {
             font: inherit; cursor: pointer; text-align: left; width: 100%;
             display: flex; align-items: center; gap: 6px;
-            font-size: 11px; font-weight: 600; line-height: 1.2;
-            padding: 4px 8px; border-radius: 6px; border: 1px solid transparent;
-            background: color-mix(in srgb, var(--cc) 12%, transparent); color: var(--cc);
+            font-size: 11px; font-weight: 600; line-height: 1.2; color: var(--d-text);
+            padding: 4px 8px; border-radius: 6px;
+            border: 1px solid color-mix(in srgb, var(--cc) 35%, transparent);
+            background: color-mix(in srgb, var(--cc) 14%, var(--d-card-bg));
             transition: border-color 120ms, background 120ms;
         }
-        .dispatch-page .d-month-crew:hover { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 22%, transparent); }
-        .dispatch-page .d-month-crew-dot { width: 7px; height: 7px; border-radius: 9999px; background: var(--cc); flex-shrink: 0; }
-        .dispatch-page .d-month-crew-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dispatch-page .d-month-crew-count { flex-shrink: 0; opacity: 0.85; font-weight: 700; }
+        .dispatch-page .d-month-crew:hover { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 26%, var(--d-card-bg)); }
+        .dispatch-page .d-month-crew-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--cc); flex-shrink: 0; }
+        .dispatch-page .d-month-crew-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--d-text); }
+        .dispatch-page .d-month-crew-count { flex-shrink: 0; font-weight: 700; color: var(--d-muted); }
         .dispatch-page .d-crew-badge {
             display: inline-block; font-size: 11px; font-weight: 700;
             padding: 2px 10px; border-radius: 9999px; margin-bottom: 10px;
