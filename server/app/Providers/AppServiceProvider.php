@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Http\Responses\PanelAwareLoginResponse;
+use App\Models\Invoice;
 use App\Models\Job;
 use App\Models\Property;
+use App\Observers\InvoiceObserver;
 use App\Observers\JobObserver;
 use App\Observers\PropertyObserver;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
@@ -29,5 +31,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Property::observe(PropertyObserver::class);
         Job::observe(JobObserver::class);
+        Invoice::observe(InvoiceObserver::class);
     }
 }

@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\PublicEstimateController;
 use App\Http\Controllers\PublicInvoiceController;
+use App\Http\Controllers\SmsOptInController;
+use App\Http\Controllers\TwilioWebhookController;
 use App\Livewire\DispatchBoard;
 use Illuminate\Support\Facades\Route;
 
@@ -17,3 +19,12 @@ Route::post('/estimate/{token}/decline', [PublicEstimateController::class, 'decl
 
 Route::get('/invoice/{token}', [PublicInvoiceController::class, 'show'])->name('invoice.public');
 Route::post('/invoice/{token}/pay', [PublicInvoiceController::class, 'pay'])->name('invoice.pay');
+
+// Public SMS opt-in (A2P 10DLC Call-to-Action page) + Twilio webhooks. The
+// webhooks are CSRF-exempt (see bootstrap/app.php) and verified by Twilio
+// signature instead.
+Route::get('/sms-opt-in', [SmsOptInController::class, 'show'])->name('sms-opt-in');
+Route::post('/sms-opt-in', [SmsOptInController::class, 'store'])->middleware('throttle:10,1')->name('sms-opt-in.store');
+
+Route::post('/webhooks/twilio/inbound', [TwilioWebhookController::class, 'inbound'])->name('webhooks.twilio.inbound');
+Route::post('/webhooks/twilio/status', [TwilioWebhookController::class, 'status'])->name('webhooks.twilio.status');

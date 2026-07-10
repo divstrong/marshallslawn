@@ -59,6 +59,14 @@ class CustomerResource extends Resource
                             Forms\Components\TextInput::make('phone')
                                 ->tel()
                                 ->maxLength(255),
+                            Forms\Components\Placeholder::make('sms_consent_status')
+                                ->label('SMS consent')
+                                ->content(fn (?Customer $record): string => match ($record?->sms_consent_status) {
+                                    Customer::SMS_CONFIRMED => 'Confirmed'
+                                        . ($record?->sms_consent_at ? ' on ' . $record->sms_consent_at->format('M j, Y') : ''),
+                                    Customer::SMS_OPTED_OUT => 'Opted out',
+                                    default => 'Pending — no confirmed opt-in',
+                                }),
                             Forms\Components\TextInput::make('address')
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('city')
