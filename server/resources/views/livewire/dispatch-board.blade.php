@@ -482,16 +482,13 @@
                                 <div style="font-size:12px; color:var(--d-muted);">{{ \Carbon\Carbon::parse($this->date)->format('M j, Y') }}</div>
                             @endif
                         </div>
+
+                        {{-- Create a job on the fly (issue #55). Sits right by the date so
+                             it's easy to reach; sized to match the Today button. --}}
+                        <button type="button" wire:click="openNewJobModal" class="d-btn" style="margin-left:8px;height:32px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:600;">
+                            + New Job
+                        </button>
                     </div>
-
-                    <div class="d-spacer"></div>
-
-                    {{-- Create a job on the fly (issue #55). Centered between the date
-                         controls and the view cluster via matching auto-margin spacers
-                         so it stands out. --}}
-                    <button type="button" wire:click="openNewJobModal" class="d-btn d-btn-newjob" style="height:36px;padding:0 20px;background:var(--d-accent);color:#fff;border-color:var(--d-accent);font-weight:700;box-shadow:0 2px 8px rgba(201,9,47,0.25);">
-                        + New Job
-                    </button>
 
                     <div class="d-spacer"></div>
 
