@@ -74,8 +74,14 @@ class CustomerResource extends Resource
                                     'lead' => 'Lead',
                                 ])
                                 ->required(),
-                            Forms\Components\TextInput::make('customer_type')
-                                ->maxLength(255),
+                            Forms\Components\Select::make('customer_type')
+                                ->label('Customer Type')
+                                // Option keys match the values already imported from the legacy system.
+                                ->options([
+                                    'Residential' => 'Residential',
+                                    'Commercial' => 'Commercial',
+                                ])
+                                ->native(false),
                             Forms\Components\Select::make('scheduling_type')
                                 ->label('Scheduling Type')
                                 ->options([

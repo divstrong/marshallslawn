@@ -14,13 +14,17 @@ return new class extends Migration
             $table->decimal('price', 10, 2)->default(0)->after('service_id');
         });
 
-        // Backfill each line from its service's default rate.
-        DB::statement('
-            UPDATE job_services js
-            JOIN services s ON s.id = js.service_id
-            SET js.price = s.default_price
-            WHERE js.service_id IS NOT NULL
-        ');
+        // Backfill each line from its service's default rate. Written as a correlated
+        // subquery rather than UPDATE..JOIN so it runs on SQLite as well as MySQL.
+        DB::table('job_services')
+            ->whereNotNull('service_id')
+            ->whereExists(fn ($query) => $query
+                ->select(DB::raw(1))
+                ->from('services')
+                ->whereColumn('services.id', 'job_services.service_id'))
+            ->update([
+                'price' => DB::raw('(select default_price from services where services.id = job_services.service_id)'),
+            ]);
     }
 
     public function down(): void
