@@ -34,4 +34,12 @@ export const PUSH_TOKEN_STORAGE_KEY = 'marshalls.push.token';
 /** Storage key for the selected app language. */
 export const LANGUAGE_STORAGE_KEY = 'marshalls.language';
 
+/**
+ * Storage key for when the background location task last reached dispatch.
+ * Written from outside React (the task runs headless), read back by the
+ * Location Sharing card so crews — and App Review — can see that background
+ * reporting is genuinely running.
+ */
+export const LAST_LOCATION_SYNC_KEY = 'marshalls.location.lastSync';
+
 export const APP_VERSION = '1.0.0-beta';

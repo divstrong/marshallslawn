@@ -7,6 +7,7 @@ import { Icon } from '@/components/icon';
 import { Card } from '@/components/ui';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
 import { useLanguage } from '@/context/language';
+import { useLayout } from '@/hooks/use-layout';
 import { api } from '@/lib/api';
 import type { JobMedia } from '@/lib/types';
 
@@ -19,7 +20,13 @@ interface JobPhotosProps {
 /** Photo gallery + capture/upload for the job detail screen. */
 export function JobPhotos({ jobId, media, onChanged }: JobPhotosProps) {
   const { t } = useLanguage();
+  const { isTablet } = useLayout();
   const [uploading, setUploading] = useState(false);
+
+  // Keep thumbnails roughly thumb-sized rather than letting three of them
+  // stretch across an iPad. The 1% slack absorbs the flex gap.
+  const thumbColumns = isTablet ? 4 : 3;
+  const thumbWidth = `${100 / thumbColumns - 1.5}%` as const;
 
   const upload = async (asset: ImagePicker.ImagePickerAsset) => {
     setUploading(true);
@@ -97,7 +104,7 @@ export function JobPhotos({ jobId, media, onChanged }: JobPhotosProps) {
       {media.length > 0 ? (
         <View style={styles.grid}>
           {media.map((item) => (
-            <View key={item.id} style={styles.thumbWrap}>
+            <View key={item.id} style={[styles.thumbWrap, { width: thumbWidth }]}>
               <Image source={{ uri: item.url }} style={styles.thumb} contentFit="cover" transition={150} />
               <Pressable onPress={() => removePhoto(item)} hitSlop={6} style={styles.remove}>
                 <Icon name="close" size={14} color={AppColors.onBrand} />
@@ -135,7 +142,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   thumbWrap: {
-    width: '31.5%',
     aspectRatio: 1,
   },
   thumb: {

@@ -130,10 +130,15 @@ function unwrap<T>(payload: { data: T }): T {
 }
 
 export const api = {
-  // --- Auth ---
-  login(email: string, password: string) {
-    return request<{ token: string; employee: Employee }>('POST', '/login', {
-      body: { email, password },
+  // --- Auth (passwordless: emailed one-time code) ---
+  requestLoginCode(email: string) {
+    return request<{ message: string; expires_in_minutes: number }>('POST', '/auth/request-code', {
+      body: { email },
+    });
+  },
+  verifyLoginCode(email: string, code: string) {
+    return request<{ token: string; employee: Employee }>('POST', '/auth/verify-code', {
+      body: { email, code },
     });
   },
   devLogin(role: Role) {

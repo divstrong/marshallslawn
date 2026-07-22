@@ -25,6 +25,7 @@ import {
 } from '@/components/ui';
 import { AppColors, Radius, Spacing } from '@/constants/theme';
 import { useLanguage } from '@/context/language';
+import { useContentWidth, useLayout } from '@/hooks/use-layout';
 import { api } from '@/lib/api';
 import { formatMoney } from '@/lib/format';
 import type { Customer, Property, QuoteLineItemDraft, QuoteStatus } from '@/lib/types';
@@ -47,6 +48,8 @@ function toNumber(value: string): number {
 export function QuoteEditor({ quoteId }: { quoteId?: number }) {
   const router = useRouter();
   const { t } = useLanguage();
+  const { gutter } = useLayout();
+  const contentWidth = useContentWidth();
   const isEdit = quoteId !== undefined;
 
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -201,7 +204,10 @@ export function QuoteEditor({ quoteId }: { quoteId?: number }) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[styles.body, { paddingHorizontal: gutter }, contentWidth]}
+          keyboardShouldPersistTaps="handled"
+        >
           {formError ? (
             <View style={styles.errorBox}>
               <Icon name="alert-circle" size={16} color={AppColors.danger} />
@@ -374,6 +380,7 @@ interface CustomerPickerProps {
 function CustomerPicker({ visible, onClose, onSelect }: CustomerPickerProps) {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const contentWidth = useContentWidth(640);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Customer[]>([]);
   const [searching, setSearching] = useState(false);
@@ -402,13 +409,13 @@ function CustomerPicker({ visible, onClose, onSelect }: CustomerPickerProps) {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={[styles.modal, { paddingTop: insets.top + Spacing.three }]}>
-        <View style={styles.modalHeader}>
+        <View style={[styles.modalHeader, contentWidth]}>
           <Text style={styles.modalTitle}>{t('quote.pickerTitle')}</Text>
           <Pressable onPress={onClose} hitSlop={10}>
             <Icon name="close" size={24} color={AppColors.text} />
           </Pressable>
         </View>
-        <View style={styles.modalSearch}>
+        <View style={[styles.modalSearch, contentWidth]}>
           <TextField
             placeholder={t('quote.searchCustomers')}
             value={query}
@@ -421,7 +428,7 @@ function CustomerPicker({ visible, onClose, onSelect }: CustomerPickerProps) {
         <FlatList
           data={results}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.modalList}
+          contentContainerStyle={[styles.modalList, contentWidth]}
           renderItem={({ item }) => (
             <Pressable
               onPress={() => onSelect(item)}
@@ -458,7 +465,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   body: {
-    padding: Spacing.four,
+    paddingTop: Spacing.four,
     gap: Spacing.three,
     paddingBottom: Spacing.eight,
   },

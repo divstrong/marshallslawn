@@ -16,8 +16,9 @@ class EditEmployee extends EditRecord
     }
 
     /**
-     * Never prefill the password field with the stored hash — leave it blank so
-     * an unchanged field keeps the existing password.
+     * The field app is passwordless, so the form no longer exposes a password.
+     * Legacy hashes may still sit on the record; keep them out of the form
+     * payload entirely rather than round-tripping them.
      */
     protected function mutateFormDataBeforeFill(array $data): array
     {

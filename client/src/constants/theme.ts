@@ -148,4 +148,10 @@ export const Radius = {
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+
+/** Reading width for detail/form screens — job detail, settings, quote editor. */
 export const MaxContentWidth = 800;
+/** Wider cap for card grids, which tolerate more columns before looking sparse. */
+export const MaxListWidth = 1180;
+/** Width of the tablet side navigation rail, per breakpoint. */
+export const RailWidth = { medium: 92, expanded: 232 } as const;

@@ -9,6 +9,7 @@ import { AppColors, Radius, Spacing, statusTone } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
+import { useContentWidth, useLayout } from '@/hooks/use-layout';
 import { api } from '@/lib/api';
 import { formatDateFull } from '@/lib/format';
 import { openMaps } from '@/lib/links';
@@ -34,6 +35,8 @@ function shiftDate(value: string, days: number): string {
 export default function ScheduleScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { gutter } = useLayout();
+  const contentWidth = useContentWidth();
   const [date, setDate] = useState(todayString());
   const [refreshing, setRefreshing] = useState(false);
 
@@ -59,7 +62,7 @@ export default function ScheduleScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, { padding: gutter }, contentWidth]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Current weather for the crew's location */}
@@ -180,7 +183,6 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   body: {
-    padding: Spacing.four,
     gap: Spacing.three,
     flexGrow: 1,
   },

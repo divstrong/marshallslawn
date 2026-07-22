@@ -16,6 +16,7 @@ import {
   stopTracking,
   type TrackingPermission,
 } from '@/lib/location';
+import { getLastLocationSync, type LastLocationSync } from '@/lib/location-task';
 
 interface LocationContextValue {
   /** True when the signed-in role is tracked (foreman). */
@@ -24,6 +25,8 @@ interface LocationContextValue {
   supported: boolean;
   permission: TrackingPermission;
   active: boolean;
+  /** The last batch this device delivered to dispatch, if any. */
+  lastSync: LastLocationSync | null;
   /** Prompt for permission and start tracking. */
   enable: () => Promise<void>;
 }
@@ -39,6 +42,31 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
   const [permission, setPermission] = useState<TrackingPermission>('undetermined');
   const [active, setActive] = useState(false);
+  const [lastSync, setLastSync] = useState<LastLocationSync | null>(null);
+
+  // The background task writes to storage from outside React, so poll while a
+  // tracked role is signed in to keep the Location Sharing card honest.
+  useEffect(() => {
+    if (!tracksThisRole) {
+      setLastSync(null);
+      return;
+    }
+
+    let cancelled = false;
+    const read = async () => {
+      const value = await getLastLocationSync();
+      if (!cancelled) {
+        setLastSync(value);
+      }
+    };
+
+    read();
+    const timer = setInterval(read, 15_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [tracksThisRole]);
 
   // Start tracking for a signed-in foreman; stop it for anyone else.
   useEffect(() => {
@@ -92,8 +120,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<LocationContextValue>(
-    () => ({ tracksThisRole, supported, permission, active, enable }),
-    [tracksThisRole, supported, permission, active, enable],
+    () => ({ tracksThisRole, supported, permission, active, lastSync, enable }),
+    [tracksThisRole, supported, permission, active, lastSync, enable],
   );
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;

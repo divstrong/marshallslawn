@@ -423,6 +423,36 @@ class JobResource extends Resource
                     ->label('Unscheduled (no date)')
                     ->toggle()
                     ->query(fn ($query) => $query->whereNull('scheduled_date')),
+                Tables\Filters\Filter::make('scheduled_date')
+                    ->schema([
+                        Forms\Components\DatePicker::make('on')->label('Scheduled on'),
+                        Forms\Components\DatePicker::make('from')->label('Scheduled from'),
+                        Forms\Components\DatePicker::make('until')->label('Scheduled until'),
+                    ])
+                    // "on" pins a single day; "from"/"until" are the range form. Setting
+                    // "on" makes the range fields redundant, so it wins outright.
+                    ->query(fn ($query, array $data) => filled($data['on'] ?? null)
+                        ? $query->whereDate('scheduled_date', $data['on'])
+                        : $query
+                            ->when($data['from'] ?? null, fn ($q, $d) => $q->whereDate('scheduled_date', '>=', $d))
+                            ->when($data['until'] ?? null, fn ($q, $d) => $q->whereDate('scheduled_date', '<=', $d)))
+                    ->indicateUsing(function (array $data): array {
+                        if (filled($data['on'] ?? null)) {
+                            return ['Scheduled on ' . \Illuminate\Support\Carbon::parse($data['on'])->toFormattedDateString()];
+                        }
+
+                        $indicators = [];
+
+                        if (filled($data['from'] ?? null)) {
+                            $indicators[] = 'Scheduled from ' . \Illuminate\Support\Carbon::parse($data['from'])->toFormattedDateString();
+                        }
+
+                        if (filled($data['until'] ?? null)) {
+                            $indicators[] = 'Scheduled until ' . \Illuminate\Support\Carbon::parse($data['until'])->toFormattedDateString();
+                        }
+
+                        return $indicators;
+                    }),
                 // Searchable, multi-select service picker — the list is long, so it is
                 // searched rather than rendered as a flat wall of checkboxes (issue #52).
                 Tables\Filters\SelectFilter::make('services')

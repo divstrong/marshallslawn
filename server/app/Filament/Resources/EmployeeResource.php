@@ -60,17 +60,10 @@ class EmployeeResource extends Resource
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('email')
                                 ->email()
-                                ->maxLength(255),
-                            Forms\Components\TextInput::make('password')
-                                ->label('Password')
-                                ->password()
-                                ->revealable()
-                                ->autocomplete('new-password')
-                                // Hashed by the model's cast on save. Only persisted when a
-                                // value is entered, so an empty field leaves the password unchanged.
-                                ->dehydrated(fn (?string $state): bool => filled($state))
-                                ->helperText('Leave blank to keep the current password. Enter a value to set or replace the login password.')
-                                ->maxLength(255),
+                                ->maxLength(255)
+                                // The field app is passwordless — this address is both the
+                                // login identifier and where the sign-in code is sent.
+                                ->helperText('Used to sign in to the field app. Sign-in codes are emailed here.'),
                             Forms\Components\TextInput::make('phone')
                                 ->tel()
                                 ->maxLength(255),

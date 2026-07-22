@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
@@ -13,9 +13,10 @@ import {
   ScreenHeader,
   StatusBadge,
 } from '@/components/ui';
-import { AppColors, Spacing } from '@/constants/theme';
+import { AppColors, MaxListWidth, Spacing } from '@/constants/theme';
 import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
+import { padToColumns, useContentWidth, useLayout } from '@/hooks/use-layout';
 import { api } from '@/lib/api';
 import { formatDateShort, formatMoney } from '@/lib/format';
 import type { Quote } from '@/lib/types';
@@ -23,6 +24,8 @@ import type { Quote } from '@/lib/types';
 export default function QuotesScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { columns, gutter } = useLayout();
+  const contentWidth = useContentWidth(MaxListWidth);
   const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -50,6 +53,9 @@ export default function QuotesScreen() {
     n: quotes.length,
   });
 
+  // Blanks keep the last grid row's cards the same width as a full row.
+  const cells = useMemo(() => padToColumns(quotes, columns), [quotes, columns]);
+
   return (
     <View style={styles.screen}>
       <ScreenHeader
@@ -58,17 +64,27 @@ export default function QuotesScreen() {
         right={<HeaderButton icon="add" onPress={() => router.push('/quote/new')} />}
       />
 
-      <View style={styles.filters}>
+      <View style={[styles.filters, { paddingHorizontal: gutter }, contentWidth]}>
         <FilterTabs options={filters} value={filter} onChange={setFilter} />
       </View>
 
       <FlatList
-        data={quotes}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <QuoteCard quote={item} onPress={() => router.push(`/quote/${item.id}`)} />
-        )}
+        // FlatList cannot change `numColumns` in place — remount it instead.
+        key={columns}
+        data={cells}
+        numColumns={columns}
+        columnWrapperStyle={columns > 1 ? styles.column : undefined}
+        keyExtractor={(item, index) => (item ? String(item.id) : `blank-${index}`)}
+        contentContainerStyle={[styles.list, { padding: gutter }, contentWidth]}
+        renderItem={({ item }) =>
+          item ? (
+            <View style={styles.cell}>
+              <QuoteCard quote={item} onPress={() => router.push(`/quote/${item.id}`)} />
+            </View>
+          ) : (
+            <View style={styles.cell} />
+          )
+        }
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           loading ? (
@@ -127,13 +143,17 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   filters: {
-    paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
   },
   list: {
-    padding: Spacing.four,
     gap: Spacing.three,
     flexGrow: 1,
+  },
+  column: {
+    gap: Spacing.three,
+  },
+  cell: {
+    flex: 1,
   },
   card: {
     gap: Spacing.two,

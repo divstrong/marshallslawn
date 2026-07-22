@@ -7,42 +7,16 @@ use App\Http\Resources\EmployeeResource;
 use App\Models\Employee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 /**
- * Token authentication for the native app. Employees authenticate
- * directly (the users table is reserved for the Filament back-office).
+ * Session endpoints for the native app. Employees authenticate directly (the
+ * users table is reserved for the Filament back-office).
+ *
+ * Sign-in itself is passwordless and lives in {@see PasswordlessAuthController};
+ * what remains here is the dev shortcut plus session read/teardown.
  */
 class AuthController extends Controller
 {
-    /**
-     * Email + password login. Issues a Sanctum token.
-     */
-    public function login(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'email' => ['required', 'string'],
-            'password' => ['required', 'string'],
-        ]);
-
-        $employee = Employee::query()->where('email', $data['email'])->first();
-
-        if (! $employee || ! $employee->password || ! Hash::check($data['password'], $employee->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Those credentials do not match our records.'],
-            ]);
-        }
-
-        if ($employee->status !== 'active') {
-            throw ValidationException::withMessages([
-                'email' => ['This account is no longer active.'],
-            ]);
-        }
-
-        return $this->tokenResponse($employee);
-    }
-
     /**
      * Local-only shortcut so the in-app dev role switcher can jump
      * straight into a Foreman / Field / Estimator experience.

@@ -8,8 +8,8 @@ import type { LocationObject } from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 
-import { API_BASE_URL, TOKEN_STORAGE_KEY } from '@/constants/config';
-import { getItem } from '@/lib/storage';
+import { API_BASE_URL, LAST_LOCATION_SYNC_KEY, TOKEN_STORAGE_KEY } from '@/constants/config';
+import { getItem, setItem } from '@/lib/storage';
 
 export const LOCATION_TASK = 'marshalls-foreman-location';
 
@@ -32,7 +32,7 @@ if (Platform.OS !== 'web') {
     }
 
     try {
-      await fetch(`${API_BASE_URL}/locations`, {
+      const response = await fetch(`${API_BASE_URL}/locations`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
@@ -50,8 +50,43 @@ if (Platform.OS !== 'web') {
           })),
         }),
       });
+
+      if (response.ok) {
+        // Recorded so the Location Sharing card can show that background
+        // reporting is actually reaching dispatch, not just permitted.
+        const newest = locations[locations.length - 1];
+        await setItem(
+          LAST_LOCATION_SYNC_KEY,
+          JSON.stringify({
+            at: new Date(newest.timestamp).toISOString(),
+            latitude: newest.coords.latitude,
+            longitude: newest.coords.longitude,
+            points: locations.length,
+          }),
+        );
+      }
     } catch {
       // Drop this batch — the OS will deliver more.
     }
   });
+}
+
+export interface LastLocationSync {
+  at: string;
+  latitude: number;
+  longitude: number;
+  points: number;
+}
+
+/** The most recent batch this device delivered to dispatch, if any. */
+export async function getLastLocationSync(): Promise<LastLocationSync | null> {
+  const raw = await getItem(LAST_LOCATION_SYNC_KEY);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as LastLocationSync;
+  } catch {
+    return null;
+  }
 }

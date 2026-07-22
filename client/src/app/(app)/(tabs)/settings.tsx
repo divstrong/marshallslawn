@@ -23,11 +23,13 @@ import {
   SectionLabel,
 } from '@/components/ui';
 import { APP_VERSION } from '@/constants/config';
-import { AppColors, Brand, Radius, Spacing } from '@/constants/theme';
+import { AppColors, Brand, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/language';
 import { useLocationTracking } from '@/context/location';
+import { useContentWidth, useLayout } from '@/hooks/use-layout';
 import { api } from '@/lib/api';
+import { formatTime } from '@/lib/format';
 import { openMaps, openPhone } from '@/lib/links';
 import { LANGUAGES } from '@/lib/translations';
 
@@ -35,6 +37,9 @@ export default function SettingsScreen() {
   const { employee, signOut, refresh } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const tracking = useLocationTracking();
+  const { isExpanded, gutter } = useLayout();
+  // Two columns need more room than the usual reading width.
+  const contentWidth = useContentWidth(isExpanded ? 1000 : MaxContentWidth);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutVisible, setSignOutVisible] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
@@ -133,154 +138,193 @@ export default function SettingsScreen() {
         ? t('settings.locDenied')
         : t('settings.locPrompt');
 
+  /* Identity and how to reach this person. */
+  const identity = (
+    <>
+      {/* Profile */}
+      <Card style={styles.profileCard}>
+        <Pressable onPress={editAvatar} disabled={avatarBusy} style={styles.avatarWrap}>
+          {employee.avatar_url ? (
+            <Image source={{ uri: employee.avatar_url }} style={styles.avatar} contentFit="cover" />
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback]}>
+              <Text style={styles.avatarText}>{initials || '?'}</Text>
+            </View>
+          )}
+          <View style={styles.avatarBadge}>
+            {avatarBusy ? (
+              <ActivityIndicator size="small" color={AppColors.onBrand} />
+            ) : (
+              <Icon name="camera" size={14} color={AppColors.onBrand} />
+            )}
+          </View>
+        </Pressable>
+        <Text style={styles.name}>{employee.name}</Text>
+        {employee.email ? <Text style={styles.email}>{employee.email}</Text> : null}
+        <View style={styles.badges}>
+          <Badge label={roleLabel} bg={Brand[50]} fg={Brand[700]} />
+          {employee.division ? (
+            <Badge label={employee.division} bg={AppColors.border} fg={AppColors.textSecondary} />
+          ) : null}
+        </View>
+      </Card>
+
+      {/* Contact */}
+      <View style={styles.section}>
+        <SectionLabel>{t('settings.contactInfo')}</SectionLabel>
+        <Card padded={false} style={styles.infoCard}>
+          <InfoRow
+            icon="call-outline"
+            label={t('settings.phone')}
+            value={employee.phone ?? t('settings.notOnFile')}
+            onPress={employee.phone ? () => openPhone(employee.phone!) : undefined}
+          />
+          <Divider />
+          <InfoRow
+            icon="mail-outline"
+            label={t('settings.email')}
+            value={employee.email ?? t('settings.notOnFile')}
+          />
+          {address ? (
+            <>
+              <Divider />
+              <InfoRow
+                icon="location-outline"
+                label={t('settings.address')}
+                value={address}
+                onPress={() => openMaps(address)}
+              />
+            </>
+          ) : null}
+        </Card>
+      </View>
+    </>
+  );
+
+  /* Preferences, device state, and the way out. */
+  const preferences = (
+    <>
+      {/* Language */}
+      <View style={styles.section}>
+        <SectionLabel>{t('settings.language')}</SectionLabel>
+        <Card padded={false} style={styles.infoCard}>
+          {LANGUAGES.map((lang, index) => {
+            const active = language === lang.code;
+            return (
+              <View key={lang.code}>
+                {index > 0 ? <Divider /> : null}
+                <Pressable
+                  onPress={() => setLanguage(lang.code)}
+                  style={({ pressed }) => (pressed ? styles.pressed : undefined)}
+                >
+                  <View style={styles.langRow}>
+                    <Text style={styles.langLabel}>{lang.label}</Text>
+                    {active ? (
+                      <Icon name="checkmark-circle" size={24} color={AppColors.brand} />
+                    ) : (
+                      <View style={styles.langRadio} />
+                    )}
+                  </View>
+                </Pressable>
+              </View>
+            );
+          })}
+        </Card>
+      </View>
+
+      {/* Location sharing (foreman only) */}
+      {tracking.tracksThisRole ? (
+        <View style={styles.section}>
+          <SectionLabel>{t('settings.locationSharing')}</SectionLabel>
+          <Card style={styles.locationCard}>
+            <View style={styles.locationStatus}>
+              <View
+                style={[
+                  styles.locationDot,
+                  { backgroundColor: tracking.active ? AppColors.success : AppColors.warning },
+                ]}
+              />
+              <Text style={styles.locationState}>
+                {tracking.active ? t('settings.locOn') : t('settings.locOff')}
+              </Text>
+            </View>
+            <Text style={styles.locationText}>{locationText}</Text>
+
+            {/* Concrete proof that background reporting is reaching dispatch,
+                rather than merely being permitted. */}
+            {tracking.active ? (
+              <View style={styles.locationProof}>
+                <Icon name="navigate-circle-outline" size={16} color={AppColors.textMuted} />
+                <Text style={styles.locationProofText}>
+                  {tracking.lastSync
+                    ? t('settings.locLastReport', {
+                        time: formatTime(tracking.lastSync.at),
+                        coords: `${tracking.lastSync.latitude.toFixed(4)}, ${tracking.lastSync.longitude.toFixed(4)}`,
+                      })
+                    : t('settings.locAwaitingFirst')}
+                </Text>
+              </View>
+            ) : null}
+
+            {tracking.supported && !tracking.active ? (
+              tracking.permission === 'denied' ? (
+                <Button
+                  label={t('settings.openSettings')}
+                  variant="secondary"
+                  icon="settings-outline"
+                  onPress={() => Linking.openSettings()}
+                />
+              ) : (
+                <Button
+                  label={t('settings.enableLocation')}
+                  icon="location-outline"
+                  onPress={tracking.enable}
+                />
+              )
+            ) : null}
+          </Card>
+        </View>
+      ) : null}
+
+      {/* About */}
+      <View style={styles.section}>
+        <SectionLabel>{t('settings.about')}</SectionLabel>
+        <Card padded={false} style={styles.infoCard}>
+          <InfoRow
+            icon="phone-portrait-outline"
+            label={t('settings.appVersion')}
+            value={APP_VERSION}
+          />
+        </Card>
+      </View>
+
+      <Button
+        label={t('settings.signOut')}
+        icon="log-out-outline"
+        variant="danger"
+        loading={signingOut}
+        onPress={() => setSignOutVisible(true)}
+        style={styles.signOut}
+      />
+    </>
+  );
+
   return (
     <View style={styles.screen}>
       <ScreenHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
 
-      <ScrollView contentContainerStyle={styles.body}>
-        {/* Profile */}
-        <Card style={styles.profileCard}>
-          <Pressable onPress={editAvatar} disabled={avatarBusy} style={styles.avatarWrap}>
-            {employee.avatar_url ? (
-              <Image source={{ uri: employee.avatar_url }} style={styles.avatar} contentFit="cover" />
-            ) : (
-              <View style={[styles.avatar, styles.avatarFallback]}>
-                <Text style={styles.avatarText}>{initials || '?'}</Text>
-              </View>
-            )}
-            <View style={styles.avatarBadge}>
-              {avatarBusy ? (
-                <ActivityIndicator size="small" color={AppColors.onBrand} />
-              ) : (
-                <Icon name="camera" size={14} color={AppColors.onBrand} />
-              )}
-            </View>
-          </Pressable>
-          <Text style={styles.name}>{employee.name}</Text>
-          {employee.email ? <Text style={styles.email}>{employee.email}</Text> : null}
-          <View style={styles.badges}>
-            <Badge label={roleLabel} bg={Brand[50]} fg={Brand[700]} />
-            {employee.division ? (
-              <Badge label={employee.division} bg={AppColors.border} fg={AppColors.textSecondary} />
-            ) : null}
+      <ScrollView contentContainerStyle={[styles.body, { padding: gutter }, contentWidth]}>
+        {isExpanded ? (
+          <View style={styles.columns}>
+            <View style={styles.column}>{identity}</View>
+            <View style={styles.column}>{preferences}</View>
           </View>
-        </Card>
-
-        {/* Contact */}
-        <View style={styles.section}>
-          <SectionLabel>{t('settings.contactInfo')}</SectionLabel>
-          <Card padded={false} style={styles.infoCard}>
-            <InfoRow
-              icon="call-outline"
-              label={t('settings.phone')}
-              value={employee.phone ?? t('settings.notOnFile')}
-              onPress={employee.phone ? () => openPhone(employee.phone!) : undefined}
-            />
-            <Divider />
-            <InfoRow
-              icon="mail-outline"
-              label={t('settings.email')}
-              value={employee.email ?? t('settings.notOnFile')}
-            />
-            {address ? (
-              <>
-                <Divider />
-                <InfoRow
-                  icon="location-outline"
-                  label={t('settings.address')}
-                  value={address}
-                  onPress={() => openMaps(address)}
-                />
-              </>
-            ) : null}
-          </Card>
-        </View>
-
-        {/* Language */}
-        <View style={styles.section}>
-          <SectionLabel>{t('settings.language')}</SectionLabel>
-          <Card padded={false} style={styles.infoCard}>
-            {LANGUAGES.map((lang, index) => {
-              const active = language === lang.code;
-              return (
-                <View key={lang.code}>
-                  {index > 0 ? <Divider /> : null}
-                  <Pressable
-                    onPress={() => setLanguage(lang.code)}
-                    style={({ pressed }) => (pressed ? styles.pressed : undefined)}
-                  >
-                    <View style={styles.langRow}>
-                      <Text style={styles.langLabel}>{lang.label}</Text>
-                      {active ? (
-                        <Icon name="checkmark-circle" size={24} color={AppColors.brand} />
-                      ) : (
-                        <View style={styles.langRadio} />
-                      )}
-                    </View>
-                  </Pressable>
-                </View>
-              );
-            })}
-          </Card>
-        </View>
-
-        {/* Location sharing (foreman only) */}
-        {tracking.tracksThisRole ? (
-          <View style={styles.section}>
-            <SectionLabel>{t('settings.locationSharing')}</SectionLabel>
-            <Card style={styles.locationCard}>
-              <View style={styles.locationStatus}>
-                <View
-                  style={[
-                    styles.locationDot,
-                    { backgroundColor: tracking.active ? AppColors.success : AppColors.warning },
-                  ]}
-                />
-                <Text style={styles.locationState}>
-                  {tracking.active ? t('settings.locOn') : t('settings.locOff')}
-                </Text>
-              </View>
-              <Text style={styles.locationText}>{locationText}</Text>
-              {tracking.supported && !tracking.active ? (
-                tracking.permission === 'denied' ? (
-                  <Button
-                    label={t('settings.openSettings')}
-                    variant="secondary"
-                    icon="settings-outline"
-                    onPress={() => Linking.openSettings()}
-                  />
-                ) : (
-                  <Button
-                    label={t('settings.enableLocation')}
-                    icon="location-outline"
-                    onPress={tracking.enable}
-                  />
-                )
-              ) : null}
-            </Card>
-          </View>
-        ) : null}
-
-        {/* About */}
-        <View style={styles.section}>
-          <SectionLabel>{t('settings.about')}</SectionLabel>
-          <Card padded={false} style={styles.infoCard}>
-            <InfoRow
-              icon="phone-portrait-outline"
-              label={t('settings.appVersion')}
-              value={APP_VERSION}
-            />
-          </Card>
-        </View>
-
-        <Button
-          label={t('settings.signOut')}
-          icon="log-out-outline"
-          variant="danger"
-          loading={signingOut}
-          onPress={() => setSignOutVisible(true)}
-          style={styles.signOut}
-        />
+        ) : (
+          <>
+            {identity}
+            {preferences}
+          </>
+        )}
       </ScrollView>
 
       <ConfirmModal
@@ -341,7 +385,15 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   body: {
-    padding: Spacing.four,
+    gap: Spacing.three,
+  },
+  columns: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.five,
+  },
+  column: {
+    flex: 1,
     gap: Spacing.three,
   },
   profileCard: {
@@ -471,6 +523,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: AppColors.textMuted,
     lineHeight: 19,
+  },
+  locationProof: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    backgroundColor: AppColors.surfaceMuted,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  locationProofText: {
+    flex: 1,
+    fontSize: 12,
+    color: AppColors.textMuted,
+    fontVariant: ['tabular-nums'],
   },
   signOut: {
     marginTop: Spacing.two,

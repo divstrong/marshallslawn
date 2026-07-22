@@ -24,10 +24,11 @@ import {
   StatusBadge,
   TextField,
 } from '@/components/ui';
-import { AppColors, formatStatus, Radius, Spacing } from '@/constants/theme';
+import { AppColors, formatStatus, MaxContentWidth, MaxListWidth, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
+import { useContentWidth, useLayout } from '@/hooks/use-layout';
 import { api } from '@/lib/api';
 import { formatDateLong, formatDuration, formatTime } from '@/lib/format';
 import { openDirections, openMaps, openPhone } from '@/lib/links';
@@ -52,6 +53,9 @@ export default function JobDetailScreen() {
   const router = useRouter();
   const { employee } = useAuth();
   const { t } = useLanguage();
+  const { isExpanded, gutter } = useLayout();
+  // Two columns need the wider cap; a single column stays at reading width.
+  const contentWidth = useContentWidth(isExpanded ? MaxListWidth : MaxContentWidth);
 
   const { data: job, loading, error, reload } = useApiResource(() => api.job(jobId), [jobId]);
 
@@ -138,189 +142,225 @@ export default function JobDetailScreen() {
     }
   }, [jobId, note, reload, t]);
 
+  if (loading || error || !job) {
+    return (
+      <View style={styles.screen}>
+        <ScreenHeader title={t('job.title')} onBack={() => router.back()} />
+        {loading ? (
+          <LoadingState label={t('job.loading')} />
+        ) : (
+          <ErrorState message={error ?? t('job.notFound')} onRetry={reload} />
+        )}
+      </View>
+    );
+  }
+
+  /*
+   * Each section is built once, then arranged per breakpoint below. A single
+   * column keeps the phone's original order; an expanded window splits them
+   * into the work the crew acts on and the reference material beside it.
+   */
+  const timerSection = (
+    <JobTimerCard
+      key="timer"
+      job={job}
+      now={now}
+      busy={busy}
+      isForeman={employee?.role === 'foreman' || employee?.role === 'spray_tech'}
+      onStart={() => runAction('start')}
+      onComplete={() => setConfirmComplete(true)}
+    />
+  );
+
+  const detailSection = <DetailGrid key="detail" job={job} />;
+
+  const customerSection = job.customer ? (
+    <View key="customer" style={styles.section}>
+      <SectionLabel>{t('job.customer')}</SectionLabel>
+      <Card style={styles.gap}>
+        <Text style={styles.cardHeading}>{job.customer.name}</Text>
+        {job.customer.phone ? (
+          <Pressable style={styles.linkRow} onPress={() => openPhone(job.customer!.phone!)}>
+            <Icon name="call-outline" size={16} color={AppColors.brand} />
+            <Text style={styles.linkText}>{job.customer.phone}</Text>
+          </Pressable>
+        ) : null}
+      </Card>
+    </View>
+  ) : null;
+
+  const propertySection = job.property ? (
+    <View key="property" style={styles.section}>
+      <SectionLabel>{t('job.property')}</SectionLabel>
+      <Card style={styles.gap}>
+        <Text style={styles.cardHeading}>{job.property.address ?? t('job.property')}</Text>
+        {job.property.city ? (
+          <Text style={styles.cardMuted}>
+            {[job.property.city, job.property.state].filter(Boolean).join(', ')}{' '}
+            {job.property.zip ?? ''}
+          </Text>
+        ) : null}
+        <Pressable style={styles.linkRow} onPress={() => openMaps(job.property!.full_address)}>
+          <Icon name="navigate-outline" size={16} color={AppColors.brand} />
+          <Text style={styles.linkText}>{t('common.navigate')}</Text>
+        </Pressable>
+      </Card>
+    </View>
+  ) : null;
+
+  const mapSection =
+    job.property && job.property.latitude != null && job.property.longitude != null ? (
+      <View key="map" style={styles.section}>
+        <SectionLabel>{t('job.location')}</SectionLabel>
+        <Card padded={false} style={styles.mapCard}>
+          <Image
+            source={api.jobMapSource(jobId)}
+            style={[styles.mapImage, isExpanded && styles.mapImageWide]}
+            contentFit="cover"
+            transition={150}
+          />
+          <View style={styles.mapFooter}>
+            <Text style={styles.cardMuted} numberOfLines={2}>
+              {job.property.full_address}
+            </Text>
+            <Button
+              label={t('job.directions')}
+              icon="navigate"
+              onPress={() => openDirections(job.property!.latitude!, job.property!.longitude!)}
+            />
+          </View>
+        </Card>
+      </View>
+    ) : null;
+
+  const descriptionSection = job.description ? (
+    <View key="description" style={styles.section}>
+      <SectionLabel>{t('job.description')}</SectionLabel>
+      <Card>
+        <Text style={styles.bodyText}>{job.description}</Text>
+      </Card>
+    </View>
+  ) : null;
+
+  const servicesSection = (
+    <View key="services" style={styles.section}>
+      <SectionLabel>{t('job.services')}</SectionLabel>
+      <Card style={styles.gap}>
+        {services.length > 0 ? (
+          services.map((service, index) => (
+            <Pressable
+              key={service.id}
+              onPress={() => toggleService(service)}
+              disabled={!canToggleServices}
+              style={[styles.serviceRow, index > 0 && styles.noteRowDivider]}
+            >
+              <Icon
+                name={service.completed ? 'checkbox' : 'square-outline'}
+                size={24}
+                color={service.completed ? AppColors.success : AppColors.textFaint}
+              />
+              <View style={styles.serviceBody}>
+                <Text style={[styles.cardHeading, service.completed && styles.serviceDone]}>
+                  {service.name}
+                </Text>
+                {service.description ? (
+                  <Text style={styles.bodyText}>{service.description}</Text>
+                ) : null}
+              </View>
+            </Pressable>
+          ))
+        ) : (
+          <Text style={styles.cardMuted}>{t('job.noServices')}</Text>
+        )}
+      </Card>
+    </View>
+  );
+
+  const photosSection = (
+    <View key="photos" style={styles.section}>
+      <SectionLabel>{t('job.photos')}</SectionLabel>
+      <JobPhotos jobId={jobId} media={job.media} onChanged={reload} />
+    </View>
+  );
+
+  const notesSection = (
+    <View key="notes" style={styles.section}>
+      <SectionLabel>{t('job.notes')}</SectionLabel>
+      <Card style={styles.gap}>
+        {job.messages.length === 0 ? (
+          <Text style={styles.cardMuted}>{t('job.noNotes')}</Text>
+        ) : (
+          job.messages.map((message, index) => (
+            <View key={message.id} style={[styles.noteRow, index > 0 && styles.noteRowDivider]}>
+              <Text style={styles.bodyText}>{message.body}</Text>
+              <Text style={styles.noteMeta}>
+                {message.sender ?? t('job.notes')} · {message.created_human ?? ''}
+              </Text>
+            </View>
+          ))
+        )}
+        <TextField
+          placeholder={t('job.addNotePlaceholder')}
+          value={note}
+          onChangeText={setNote}
+          multiline
+          style={styles.noteInput}
+        />
+        <Button
+          label={t('job.addNote')}
+          icon="chatbubble-outline"
+          variant="secondary"
+          onPress={submitNote}
+          disabled={busy || note.trim().length === 0}
+        />
+      </Card>
+    </View>
+  );
+
   return (
     <View style={styles.screen}>
       <ScreenHeader
-        title={job?.title ?? t('job.title')}
-        subtitle={job?.customer?.name ?? undefined}
+        title={job.title}
+        subtitle={job.customer?.name ?? undefined}
         onBack={() => router.back()}
       />
 
-      {loading ? (
-        <LoadingState label={t('job.loading')} />
-      ) : error || !job ? (
-        <ErrorState message={error ?? t('job.notFound')} onRetry={reload} />
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.body}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          {job.mowing_conflict ? <MowingConflictBanner conflict={job.mowing_conflict} /> : null}
+      <ScrollView
+        contentContainerStyle={[styles.body, { padding: gutter }, contentWidth]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {job.mowing_conflict ? <MowingConflictBanner conflict={job.mowing_conflict} /> : null}
 
-          <JobTimerCard
-            job={job}
-            now={now}
-            busy={busy}
-            isForeman={employee?.role === 'foreman' || employee?.role === 'spray_tech'}
-            onStart={() => runAction('start')}
-            onComplete={() => setConfirmComplete(true)}
-          />
-
-          <DetailGrid job={job} />
-
-          {job.customer ? (
-            <View style={styles.section}>
-              <SectionLabel>{t('job.customer')}</SectionLabel>
-              <Card style={styles.gap}>
-                <Text style={styles.cardHeading}>{job.customer.name}</Text>
-                {job.customer.phone ? (
-                  <Pressable
-                    style={styles.linkRow}
-                    onPress={() => openPhone(job.customer!.phone!)}
-                  >
-                    <Icon name="call-outline" size={16} color={AppColors.brand} />
-                    <Text style={styles.linkText}>{job.customer.phone}</Text>
-                  </Pressable>
-                ) : null}
-              </Card>
+        {isExpanded ? (
+          <View style={styles.columns}>
+            <View style={styles.column}>
+              {timerSection}
+              {detailSection}
+              {descriptionSection}
+              {servicesSection}
+              {notesSection}
             </View>
-          ) : null}
-
-          {job.property ? (
-            <View style={styles.section}>
-              <SectionLabel>{t('job.property')}</SectionLabel>
-              <Card style={styles.gap}>
-                <Text style={styles.cardHeading}>{job.property.address ?? t('job.property')}</Text>
-                {job.property.city ? (
-                  <Text style={styles.cardMuted}>
-                    {[job.property.city, job.property.state].filter(Boolean).join(', ')}{' '}
-                    {job.property.zip ?? ''}
-                  </Text>
-                ) : null}
-                <Pressable
-                  style={styles.linkRow}
-                  onPress={() => openMaps(job.property!.full_address)}
-                >
-                  <Icon name="navigate-outline" size={16} color={AppColors.brand} />
-                  <Text style={styles.linkText}>{t('common.navigate')}</Text>
-                </Pressable>
-              </Card>
+            <View style={styles.column}>
+              {customerSection}
+              {propertySection}
+              {mapSection}
+              {photosSection}
             </View>
-          ) : null}
-
-          {job.property && job.property.latitude != null && job.property.longitude != null ? (
-            <View style={styles.section}>
-              <SectionLabel>{t('job.location')}</SectionLabel>
-              <Card padded={false} style={styles.mapCard}>
-                <Image
-                  source={api.jobMapSource(jobId)}
-                  style={styles.mapImage}
-                  contentFit="cover"
-                  transition={150}
-                />
-                <View style={styles.mapFooter}>
-                  <Text style={styles.cardMuted} numberOfLines={2}>
-                    {job.property.full_address}
-                  </Text>
-                  <Button
-                    label={t('job.directions')}
-                    icon="navigate"
-                    onPress={() =>
-                      openDirections(job.property!.latitude!, job.property!.longitude!)
-                    }
-                  />
-                </View>
-              </Card>
-            </View>
-          ) : null}
-
-          {job.description ? (
-            <View style={styles.section}>
-              <SectionLabel>{t('job.description')}</SectionLabel>
-              <Card>
-                <Text style={styles.bodyText}>{job.description}</Text>
-              </Card>
-            </View>
-          ) : null}
-
-          {/* Services */}
-          <View style={styles.section}>
-            <SectionLabel>{t('job.services')}</SectionLabel>
-            <Card style={styles.gap}>
-              {services.length > 0 ? (
-                services.map((service, index) => (
-                  <Pressable
-                    key={service.id}
-                    onPress={() => toggleService(service)}
-                    disabled={!canToggleServices}
-                    style={[styles.serviceRow, index > 0 && styles.noteRowDivider]}
-                  >
-                    <Icon
-                      name={service.completed ? 'checkbox' : 'square-outline'}
-                      size={24}
-                      color={service.completed ? AppColors.success : AppColors.textFaint}
-                    />
-                    <View style={styles.serviceBody}>
-                      <Text
-                        style={[styles.cardHeading, service.completed && styles.serviceDone]}
-                      >
-                        {service.name}
-                      </Text>
-                      {service.description ? (
-                        <Text style={styles.bodyText}>{service.description}</Text>
-                      ) : null}
-                    </View>
-                  </Pressable>
-                ))
-              ) : (
-                <Text style={styles.cardMuted}>{t('job.noServices')}</Text>
-              )}
-            </Card>
           </View>
-
-          {/* Photos */}
-          <View style={styles.section}>
-            <SectionLabel>{t('job.photos')}</SectionLabel>
-            <JobPhotos jobId={jobId} media={job.media} onChanged={reload} />
-          </View>
-
-          {/* Notes */}
-          <View style={styles.section}>
-            <SectionLabel>{t('job.notes')}</SectionLabel>
-            <Card style={styles.gap}>
-              {job.messages.length === 0 ? (
-                <Text style={styles.cardMuted}>{t('job.noNotes')}</Text>
-              ) : (
-                job.messages.map((message, index) => (
-                  <View
-                    key={message.id}
-                    style={[styles.noteRow, index > 0 && styles.noteRowDivider]}
-                  >
-                    <Text style={styles.bodyText}>{message.body}</Text>
-                    <Text style={styles.noteMeta}>
-                      {message.sender ?? t('job.notes')} · {message.created_human ?? ''}
-                    </Text>
-                  </View>
-                ))
-              )}
-              <TextField
-                placeholder={t('job.addNotePlaceholder')}
-                value={note}
-                onChangeText={setNote}
-                multiline
-                style={styles.noteInput}
-              />
-              <Button
-                label={t('job.addNote')}
-                icon="chatbubble-outline"
-                variant="secondary"
-                onPress={submitNote}
-                disabled={busy || note.trim().length === 0}
-              />
-            </Card>
-          </View>
-        </ScrollView>
-      )}
+        ) : (
+          <>
+            {timerSection}
+            {detailSection}
+            {customerSection}
+            {propertySection}
+            {mapSection}
+            {descriptionSection}
+            {servicesSection}
+            {photosSection}
+            {notesSection}
+          </>
+        )}
+      </ScrollView>
 
       <CompleteJobModal
         visible={confirmComplete}
@@ -532,9 +572,17 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   body: {
-    padding: Spacing.four,
     gap: Spacing.three,
     flexGrow: 1,
+  },
+  columns: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.five,
+  },
+  column: {
+    flex: 1,
+    gap: Spacing.three,
   },
   section: {
     gap: Spacing.two,
@@ -702,6 +750,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 160,
     backgroundColor: AppColors.surfaceMuted,
+  },
+  mapImageWide: {
+    height: 260,
   },
   mapFooter: {
     padding: Spacing.three,

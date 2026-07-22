@@ -25,6 +25,7 @@ import { AppColors, Radius, Spacing } from '@/constants/theme';
 import { useChat } from '@/context/chat';
 import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
+import { useContentWidth, useLayout } from '@/hooks/use-layout';
 import { api } from '@/lib/api';
 import { formatTime } from '@/lib/format';
 import { linkify } from '@/lib/linkify';
@@ -36,6 +37,9 @@ export default function ChatScreen() {
   const { refresh: refreshBadge } = useChat();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const { isTablet, gutter } = useLayout();
+  // A conversation stays readable at roughly this width; wider just adds travel.
+  const contentWidth = useContentWidth(820);
 
   const { data, loading, error, reload } = useApiResource(() => api.chat(), []);
 
@@ -188,35 +192,39 @@ export default function ChatScreen() {
           data={messages}
           inverted
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => <ChatBubble message={item} onOpenMedia={setViewer} />}
+          contentContainerStyle={[styles.list, { padding: gutter }, contentWidth]}
+          renderItem={({ item }) => (
+            <ChatBubble message={item} onOpenMedia={setViewer} isTablet={isTablet} />
+          )}
         />
       )}
 
       <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, Spacing.three) }]}>
-        <Pressable onPress={openAttachMenu} disabled={sending} hitSlop={8} style={styles.attach}>
-          <Icon name="add-circle" size={30} color={AppColors.brand} />
-        </Pressable>
-        <TextInput
-          style={styles.input}
-          placeholder={t('chat.placeholder')}
-          placeholderTextColor={AppColors.textFaint}
-          value={text}
-          onChangeText={setText}
-          multiline
-        />
-        <Pressable
-          onPress={sendText}
-          disabled={!canSend}
-          hitSlop={8}
-          style={[styles.send, !canSend && styles.sendDisabled]}
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color={AppColors.onBrand} />
-          ) : (
-            <Icon name="arrow-up" size={20} color={AppColors.onBrand} />
-          )}
-        </Pressable>
+        <View style={[styles.composerInner, contentWidth]}>
+          <Pressable onPress={openAttachMenu} disabled={sending} hitSlop={8} style={styles.attach}>
+            <Icon name="add-circle" size={30} color={AppColors.brand} />
+          </Pressable>
+          <TextInput
+            style={styles.input}
+            placeholder={t('chat.placeholder')}
+            placeholderTextColor={AppColors.textFaint}
+            value={text}
+            onChangeText={setText}
+            multiline
+          />
+          <Pressable
+            onPress={sendText}
+            disabled={!canSend}
+            hitSlop={8}
+            style={[styles.send, !canSend && styles.sendDisabled]}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={AppColors.onBrand} />
+            ) : (
+              <Icon name="arrow-up" size={20} color={AppColors.onBrand} />
+            )}
+          </Pressable>
+        </View>
       </View>
 
       <MediaViewer source={viewer} onClose={() => setViewer(null)} />
@@ -227,9 +235,11 @@ export default function ChatScreen() {
 function ChatBubble({
   message,
   onOpenMedia,
+  isTablet,
 }: {
   message: ChatMessage;
   onOpenMedia: (source: MediaSource) => void;
+  isTablet: boolean;
 }) {
   const { t } = useLanguage();
   const mine = message.sender === 'foreman';
@@ -237,7 +247,14 @@ function ChatBubble({
 
   return (
     <View style={[styles.row, mine ? styles.rowMine : styles.rowTheirs]}>
-      <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
+      <View
+        style={[
+          styles.bubble,
+          // A percentage cap makes bubbles absurdly wide on a tablet.
+          isTablet && styles.bubbleWide,
+          mine ? styles.bubbleMine : styles.bubbleTheirs,
+        ]}
+      >
         {attachment && attachment.type === 'file' ? (
           <Pressable
             onPress={() => Linking.openURL(attachment.url)}
@@ -293,7 +310,6 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   list: {
-    padding: Spacing.four,
     gap: Spacing.three,
     flexGrow: 1,
   },
@@ -314,6 +330,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
+  },
+  bubbleWide: {
+    maxWidth: 560,
   },
   bubbleMine: {
     backgroundColor: AppColors.brand,
@@ -391,14 +410,17 @@ const styles = StyleSheet.create({
     color: AppColors.textFaint,
   },
   composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.three,
     backgroundColor: AppColors.surface,
     borderTopWidth: 1,
     borderTopColor: AppColors.border,
+  },
+  // Keeps the composer aligned with the thread on a wide window.
+  composerInner: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: Spacing.two,
   },
   attach: {
     paddingBottom: 5,

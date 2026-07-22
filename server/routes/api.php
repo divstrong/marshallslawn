@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\LookupController;
+use App\Http\Controllers\Api\PasswordlessAuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\QuoteController;
@@ -20,8 +21,10 @@ use Illuminate\Support\Facades\Route;
 | Estimator experiences).
 */
 
-// Public — authentication.
-Route::post('/login', [AuthController::class, 'login']);
+// Public — passwordless authentication. The app has no password field: an
+// emailed one-time code is the only way in.
+Route::post('/auth/request-code', [PasswordlessAuthController::class, 'requestCode']);
+Route::post('/auth/verify-code', [PasswordlessAuthController::class, 'verifyCode']);
 Route::post('/dev/login', [AuthController::class, 'devLogin']);
 
 // Authenticated — Sanctum bearer token.

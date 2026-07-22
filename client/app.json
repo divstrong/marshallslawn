@@ -9,8 +9,15 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.marshallslawn.app",
+      "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
       }
     },
     "android": {
@@ -51,8 +58,9 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Marshall's Lawn shares your location with the office while you are on the clock so dispatch can see where your crew is.",
-          "locationWhenInUsePermission": "Marshall's Lawn shares your location with the office while you are on the clock so dispatch can see where your crew is.",
+          "locationAlwaysAndWhenInUsePermission": "Marshall's Lawn shares your crew's location with the dispatch office continuously while you are signed in, including when the app is in the background or your screen is locked, so dispatch can track crews live on the map and send the next job to the nearest crew.",
+          "locationAlwaysPermission": "Marshall's Lawn shares your crew's location with the dispatch office continuously while you are signed in, including when the app is in the background or your screen is locked, so dispatch can track crews live on the map and send the next job to the nearest crew.",
+          "locationWhenInUsePermission": "Marshall's Lawn shares your crew's location with the dispatch office so the office can see where your crew is working and route the next job to you.",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
@@ -70,6 +78,12 @@
         "expo-notifications",
         {
           "color": "#e00a35"
+        }
+      ],
+      [
+        "./plugins/with-background-modes",
+        {
+          "modes": ["location"]
         }
       ]
     ],

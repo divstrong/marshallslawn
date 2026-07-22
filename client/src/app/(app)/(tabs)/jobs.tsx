@@ -5,10 +5,11 @@ import { FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from
 import { Icon } from '@/components/icon';
 import { JobCard } from '@/components/job-card';
 import { EmptyState, ErrorState, FilterTabs, LoadingState, ScreenHeader } from '@/components/ui';
-import { AppColors, Radius, Spacing } from '@/constants/theme';
+import { AppColors, MaxListWidth, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
+import { padToColumns, useContentWidth, useLayout } from '@/hooks/use-layout';
 import { api } from '@/lib/api';
 import { formatDateLong, formatDateShort } from '@/lib/format';
 import type { Job } from '@/lib/types';
@@ -32,6 +33,8 @@ export default function JobsScreen() {
   const router = useRouter();
   const { employee } = useAuth();
   const { t } = useLanguage();
+  const { columns, gutter, isTablet } = useLayout();
+  const contentWidth = useContentWidth(MaxListWidth);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -64,13 +67,25 @@ export default function JobsScreen() {
     n: visibleJobs.length,
   });
 
+  // Blanks keep the last grid row's cards the same width as a full row.
+  const cells = useMemo(() => padToColumns(visibleJobs, columns), [visibleJobs, columns]);
+
   return (
     <View style={styles.screen}>
       <ScreenHeader title={t('jobs.title')} subtitle={data ? countSubtitle : subtitle} />
 
-      <View style={styles.filters}>
-        <FilterTabs options={filters} value={filter} onChange={setFilter} />
-        <View style={styles.searchRow}>
+      <View
+        style={[
+          styles.filters,
+          isTablet && styles.filtersWide,
+          { paddingHorizontal: gutter },
+          contentWidth,
+        ]}
+      >
+        <View style={isTablet ? styles.filterTabsWrap : undefined}>
+          <FilterTabs options={filters} value={filter} onChange={setFilter} />
+        </View>
+        <View style={[styles.searchRow, isTablet && styles.searchRowWide]}>
           <Icon name="search" size={18} color={AppColors.textFaint} />
           <TextInput
             style={styles.searchInput}
@@ -92,13 +107,23 @@ export default function JobsScreen() {
       </View>
 
       <FlatList
-        data={visibleJobs}
-        keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.list}
+        // FlatList cannot change `numColumns` in place — remount it instead.
+        key={columns}
+        data={cells}
+        numColumns={columns}
+        columnWrapperStyle={columns > 1 ? styles.column : undefined}
+        keyExtractor={(item, index) => (item ? String(item.id) : `blank-${index}`)}
+        contentContainerStyle={[styles.list, { padding: gutter }, contentWidth]}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => (
-          <JobCard job={item} onPress={() => router.push(`/job/${item.id}`)} />
-        )}
+        renderItem={({ item }) =>
+          item ? (
+            <View style={styles.cell}>
+              <JobCard job={item} onPress={() => router.push(`/job/${item.id}`)} />
+            </View>
+          ) : (
+            <View style={styles.cell} />
+          )
+        }
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           loading ? (
@@ -130,9 +155,16 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   filters: {
-    paddingHorizontal: Spacing.four,
     paddingTop: Spacing.three,
     gap: Spacing.three,
+  },
+  // Tablets have room for the pills and the search field on one line.
+  filtersWide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterTabsWrap: {
+    flex: 1,
   },
   searchRow: {
     flexDirection: 'row',
@@ -145,6 +177,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: AppColors.border,
   },
+  searchRowWide: {
+    width: 320,
+  },
   searchInput: {
     flex: 1,
     fontSize: 15,
@@ -152,8 +187,13 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   list: {
-    padding: Spacing.four,
     gap: Spacing.three,
     flexGrow: 1,
+  },
+  column: {
+    gap: Spacing.three,
+  },
+  cell: {
+    flex: 1,
   },
 });

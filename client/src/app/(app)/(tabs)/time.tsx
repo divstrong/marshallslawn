@@ -6,12 +6,15 @@ import { Button, Card, ErrorState, LoadingState, ScreenHeader, SectionLabel } fr
 import { AppColors, Radius, Spacing } from '@/constants/theme';
 import { useLanguage } from '@/context/language';
 import { useApiResource } from '@/hooks/use-async';
+import { useContentWidth, useLayout } from '@/hooks/use-layout';
 import { api } from '@/lib/api';
 import { formatDateLong, formatDuration, formatHoursMinutes, formatTime, minutesSince } from '@/lib/format';
 import type { TimeLog } from '@/lib/types';
 
 export default function TimeScreen() {
   const { t, language } = useLanguage();
+  const { gutter } = useLayout();
+  const contentWidth = useContentWidth();
   const [now, setNow] = useState(() => new Date());
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -70,7 +73,7 @@ export default function TimeScreen() {
       <ScreenHeader title={t('time.title')} subtitle={t('time.subtitle')} />
 
       <ScrollView
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[styles.body, { padding: gutter }, contentWidth]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Live clock */}
@@ -208,7 +211,6 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.background,
   },
   body: {
-    padding: Spacing.four,
     gap: Spacing.three,
     flexGrow: 1,
   },

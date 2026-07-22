@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, type IconName } from '@/components/icon';
 import { AppColors, Radius, Spacing, statusTone } from '@/constants/theme';
 import { useLanguage } from '@/context/language';
+import { useLayout } from '@/hooks/use-layout';
 
 /* -------------------------------------------------------------------------- */
 /* Header                                                                     */
@@ -32,12 +33,26 @@ interface ScreenHeaderProps {
   right?: React.ReactNode;
 }
 
-/** Brand-red bar pinned to the top of every screen. */
+/**
+ * Brand-red bar pinned to the top of every screen. The title stays on the
+ * leading edge at every width, matching the iPadOS navigation bar, but the
+ * bar itself gets more air and larger type on a tablet.
+ */
 export function ScreenHeader({ title, subtitle, onBack, right }: ScreenHeaderProps) {
   const insets = useSafeAreaInsets();
+  const { isTablet, gutter } = useLayout();
 
   return (
-    <View style={[styles.header, { paddingTop: insets.top + Spacing.three }]}>
+    <View
+      style={[
+        styles.header,
+        {
+          paddingTop: insets.top + Spacing.three,
+          paddingHorizontal: gutter,
+          paddingBottom: isTablet ? Spacing.five : Spacing.four,
+        },
+      ]}
+    >
       <View style={styles.headerRow}>
         {onBack ? (
           <Pressable onPress={onBack} hitSlop={10} style={styles.headerBack}>
@@ -45,11 +60,14 @@ export function ScreenHeader({ title, subtitle, onBack, right }: ScreenHeaderPro
           </Pressable>
         ) : null}
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
+          <Text style={[styles.headerTitle, isTablet && styles.headerTitleWide]} numberOfLines={1}>
             {title}
           </Text>
           {subtitle ? (
-            <Text style={styles.headerSubtitle} numberOfLines={1}>
+            <Text
+              style={[styles.headerSubtitle, isTablet && styles.headerSubtitleWide]}
+              numberOfLines={1}
+            >
               {subtitle}
             </Text>
           ) : null}
@@ -382,8 +400,6 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 const styles = StyleSheet.create({
   header: {
     backgroundColor: AppColors.brand,
-    paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.four,
   },
   headerRow: {
     flexDirection: 'row',
@@ -406,10 +422,17 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
   },
+  headerTitleWide: {
+    fontSize: 28,
+  },
   headerSubtitle: {
     color: 'rgba(255,255,255,0.85)',
     fontSize: 13,
     marginTop: 2,
+  },
+  headerSubtitleWide: {
+    fontSize: 15,
+    marginTop: 3,
   },
   headerButton: {
     width: 38,
