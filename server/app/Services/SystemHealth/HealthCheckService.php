@@ -71,11 +71,24 @@ class HealthCheckService
     public function runSchemaChecks(): array
     {
         $expected = [
+            // Core CRM / sales
             'users', 'customers', 'properties', 'estimates', 'estimate_line_items',
-            'invoices', 'invoice_credits', 'jobs', 'vendors', 'services', 'packages',
-            'crews', 'crew_members', 'employees', 'time_logs', 'chemical_logs',
-            'messages', 'notifications', 'settings', 'roles', 'role_permissions',
-            'property_media', 'marketing_campaigns',
+            'invoices', 'invoice_line_items', 'invoice_credits', 'payments',
+            'vendors', 'services', 'service_options', 'packages',
+            // Field operations. The domain jobs table is `service_jobs`; the
+            // bare `jobs` table belongs to the queue, so checking it here told
+            // us nothing about the jobs feature.
+            'service_jobs', 'job_services', 'job_media', 'job_statuses',
+            'recurring_job_templates', 'routes', 'route_stops',
+            'crews', 'crew_members', 'employees', 'employee_locations',
+            'time_logs', 'chemical_logs',
+            // Native app + comms
+            'push_tokens', 'employee_login_codes', 'chat_messages',
+            'customer_messages', 'messages', 'notifications', 'notification_templates',
+            'sms_templates', 'translations',
+            // Platform
+            'settings', 'roles', 'role_permissions', 'property_media',
+            'marketing_campaigns',
         ];
 
         $checks = [];

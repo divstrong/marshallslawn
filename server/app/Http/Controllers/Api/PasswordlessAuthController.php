@@ -100,7 +100,23 @@ class PasswordlessAuthController extends Controller
             'expires_at' => now()->addMinutes(self::CODE_TTL_MINUTES),
         ]);
 
-        Mail::to($employee->email)->send(new LoginCodeMail($code, self::CODE_TTL_MINUTES));
+        try {
+            Mail::to($employee->email)->send(new LoginCodeMail($code, self::CODE_TTL_MINUTES));
+        } catch (\Throwable $e) {
+            // While the master code is active, email is known to be unreliable —
+            // don't 500 the request, or the tester never reaches the code
+            // screen where the master code would let them in. Without the master
+            // code set, a mail failure still surfaces so real outages aren't
+            // hidden in production.
+            if (! $this->masterCodeEnabled()) {
+                throw $e;
+            }
+
+            Log::warning('auth.login_code_mail_failed', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Code sent.',
@@ -120,10 +136,11 @@ class PasswordlessAuthController extends Controller
 
         $email = strtolower(trim($data['email']));
 
-        // Review account: fixed code, and the employee record is created the
-        // first time it is used so a submission needs no manual setup.
+        // Review account: fixed code (or the master code), and the employee
+        // record is created the first time it is used so a submission needs no
+        // manual setup.
         if ($this->review->matchesEmail($email)) {
-            if (! $this->review->matchesCode($data['code'])) {
+            if (! $this->review->matchesCode($data['code']) && ! $this->matchesMasterCode($data['code'])) {
                 throw ValidationException::withMessages([
                     'code' => ['Incorrect code.'],
                 ]);
@@ -132,6 +149,26 @@ class PasswordlessAuthController extends Controller
             $employee = $this->review->provision();
 
             Log::info('auth.app_review_signed_in', [
+                'employee_id' => $employee->id,
+                'ip' => $request->ip(),
+            ]);
+
+            return $this->tokenResponse($employee);
+        }
+
+        // Temporary master code: while email is down, this single code signs in
+        // any active employee without a real emailed code. Gated by env and off
+        // by default — see config/app_review.php.
+        if ($this->matchesMasterCode($data['code'])) {
+            $employee = Employee::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+
+            if (! $employee || $employee->status !== 'active') {
+                throw ValidationException::withMessages([
+                    'email' => ['No active account found for that email.'],
+                ]);
+            }
+
+            Log::warning('auth.master_code_signed_in', [
                 'employee_id' => $employee->id,
                 'ip' => $request->ip(),
             ]);
@@ -178,6 +215,22 @@ class PasswordlessAuthController extends Controller
         }
 
         return $this->tokenResponse($employee);
+    }
+
+    /** The configured temporary universal code, trimmed. Empty when disabled. */
+    private function masterCode(): string
+    {
+        return trim((string) config('app_review.master_code', ''));
+    }
+
+    private function masterCodeEnabled(): bool
+    {
+        return $this->masterCode() !== '';
+    }
+
+    private function matchesMasterCode(string $code): bool
+    {
+        return $this->masterCodeEnabled() && hash_equals($this->masterCode(), trim($code));
     }
 
     private function tokenResponse(Employee $employee): JsonResponse

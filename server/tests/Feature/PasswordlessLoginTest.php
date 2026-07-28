@@ -433,4 +433,111 @@ class PasswordlessLoginTest extends TestCase
             'code' => '123456',
         ])->assertStatus(422)->assertJsonValidationErrors('code');
     }
+
+    /* -------------------------------------------------------------------- */
+    /* Temporary universal master code (email-outage stopgap)               */
+    /* -------------------------------------------------------------------- */
+
+    /** Simulate the mailer throwing, the way a Postmark outage would. */
+    private function breakTheMailer(): void
+    {
+        $pending = \Mockery::mock();
+        $pending->shouldReceive('send')->andThrow(new \RuntimeException('smtp down'));
+        Mail::shouldReceive('to')->andReturn($pending);
+    }
+
+    public function test_the_master_code_signs_in_any_active_employee(): void
+    {
+        config(['app_review.master_code' => '999999']);
+        $employee = $this->employee();
+
+        $response = $this->postJson('/api/auth/verify-code', [
+            'email' => 'crew@marshallslawn.com',
+            'code' => '999999',
+        ]);
+
+        $response->assertOk()->assertJsonPath('employee.id', $employee->id);
+        $this->assertNotEmpty($response->json('token'));
+    }
+
+    public function test_the_master_code_does_nothing_when_unset(): void
+    {
+        // Not configured — the shipped default.
+        $this->employee();
+
+        $this->postJson('/api/auth/verify-code', [
+            'email' => 'crew@marshallslawn.com',
+            'code' => '999999',
+        ])->assertStatus(422)->assertJsonValidationErrors('code');
+    }
+
+    public function test_the_master_code_is_rejected_for_an_inactive_employee(): void
+    {
+        config(['app_review.master_code' => '999999']);
+        $this->employee(['status' => 'terminated']);
+
+        $this->postJson('/api/auth/verify-code', [
+            'email' => 'crew@marshallslawn.com',
+            'code' => '999999',
+        ])->assertStatus(422)->assertJsonValidationErrors('email');
+    }
+
+    public function test_the_master_code_is_rejected_for_an_unknown_email(): void
+    {
+        config(['app_review.master_code' => '999999']);
+
+        $this->postJson('/api/auth/verify-code', [
+            'email' => 'nobody@marshallslawn.com',
+            'code' => '999999',
+        ])->assertStatus(422)->assertJsonValidationErrors('email');
+    }
+
+    public function test_a_real_emailed_code_still_works_while_the_master_code_is_set(): void
+    {
+        config(['app_review.master_code' => '999999']);
+        $this->employee();
+
+        $this->postJson('/api/auth/request-code', ['email' => 'crew@marshallslawn.com'])->assertOk();
+
+        // The genuine per-request code is still accepted alongside the master.
+        $this->postJson('/api/auth/verify-code', [
+            'email' => 'crew@marshallslawn.com',
+            'code' => $this->sentCode(),
+        ])->assertOk();
+    }
+
+    public function test_a_wrong_code_is_still_rejected_while_the_master_code_is_set(): void
+    {
+        config(['app_review.master_code' => '999999']);
+        $this->employee();
+
+        $this->postJson('/api/auth/request-code', ['email' => 'crew@marshallslawn.com'])->assertOk();
+
+        $this->postJson('/api/auth/verify-code', [
+            'email' => 'crew@marshallslawn.com',
+            'code' => '111111',
+        ])->assertStatus(422)->assertJsonValidationErrors('code');
+    }
+
+    public function test_request_code_succeeds_despite_a_mailer_failure_while_the_master_code_is_set(): void
+    {
+        config(['app_review.master_code' => '999999']);
+        $this->employee();
+        $this->breakTheMailer();
+
+        // The tester must still reach the code screen even though email is down.
+        $this->postJson('/api/auth/request-code', ['email' => 'crew@marshallslawn.com'])
+            ->assertOk()
+            ->assertJsonPath('expires_in_minutes', 10);
+    }
+
+    public function test_request_code_surfaces_a_mailer_failure_when_the_master_code_is_unset(): void
+    {
+        // Without the stopgap, a real mail outage must not be silently hidden.
+        $this->employee();
+        $this->breakTheMailer();
+
+        $this->postJson('/api/auth/request-code', ['email' => 'crew@marshallslawn.com'])
+            ->assertStatus(500);
+    }
 }

@@ -285,11 +285,32 @@ class SmokeTestService
     protected function employeeCrud(): array
     {
         $steps = [];
+
+        // Mirror what the Filament create form actually submits: every optional
+        // field present but empty. Filament dehydrates a blank field to an
+        // explicit NULL, so this reproduces the real insert — a plain
+        // Employee::create() that *omits* these keys would silently fall back
+        // to column defaults and hide NOT-NULL-without-nullable regressions
+        // (this is exactly how the hourly_rate=NULL production bug slipped by).
         $employee = Employee::create([
-            'name' => '_smoke emp',
             'first_name' => '_smoke',
             'last_name' => 'emp',
             'email' => 'smoke_' . uniqid() . '@healthcheck.local',
+            'phone' => null,
+            'mobile_phone' => null,
+            'alt_phone' => null,
+            'address' => null,
+            'city' => null,
+            'state' => null,
+            'zip' => null,
+            'hire_date' => null,
+            'date_of_birth' => null,
+            'role' => 'estimator',
+            'status' => 'active',
+            'hourly_rate' => null,
+            'emergency_contact_name' => null,
+            'emergency_contact_phone' => null,
+            'notes' => null,
         ]);
         $steps[] = $this->step('create', (bool) $employee->id, "id={$employee->id}");
 

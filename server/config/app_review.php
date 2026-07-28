@@ -28,6 +28,26 @@ return [
     'code' => env('APP_REVIEW_CODE', ''),
 
     /*
+    |--------------------------------------------------------------------------
+    | Temporary universal login code
+    |--------------------------------------------------------------------------
+    |
+    | A stopgap for when outbound email is down and no one can receive a real
+    | one-time code. When set, this single code signs in ANY active employee by
+    | email, and `request-code` stops failing if the mailer throws so testers
+    | can still reach the code screen.
+    |
+    | This is a master key to every account. It is empty by default and MUST be
+    | cleared the moment email delivery is restored — never carry it into a
+    | real launch.
+    |
+    |   APP_LOGIN_MASTER_CODE=999999
+    |
+    */
+
+    'master_code' => env('APP_LOGIN_MASTER_CODE', ''),
+
+    /*
     | Role the provisioned account is given. Foreman is the role that has
     | background location tracking, which App Review needs to be able to reach.
     */
