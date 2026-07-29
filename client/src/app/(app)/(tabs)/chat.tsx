@@ -436,6 +436,9 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.two,
     fontSize: 15,
     color: AppColors.text,
+    // See the note in jobs.tsx — explicit 0 kern so iOS leaves the placeholder
+    // at normal tracking.
+    letterSpacing: 0,
   },
   send: {
     width: 40,

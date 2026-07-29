@@ -538,6 +538,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     fontSize: 15,
     color: AppColors.text,
+    // See the note in jobs.tsx: an explicit 0 keeps iOS from kerning the
+    // placeholder. Every TextField in the app inherits this.
+    letterSpacing: 0,
   },
   inputError: {
     borderColor: AppColors.danger,

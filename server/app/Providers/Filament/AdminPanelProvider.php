@@ -11,6 +11,7 @@ use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Width;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
@@ -36,6 +37,11 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(asset('img/logo.png'))
             ->brandLogoHeight('4rem')
             ->sidebarCollapsibleOnDesktop()
+            // Filament otherwise caps every page at max-w-7xl, which leaves dead
+            // gutters on wide monitors — the tables here (employees, jobs,
+            // invoices) have the columns to use the room. Login and password
+            // reset are unaffected: the simple layout has its own width.
+            ->maxContentWidth(Width::Full)
             ->colors([
                 'primary' => [
                     50 => '#fef1f3',

@@ -48,11 +48,6 @@ class Scheduling extends Page
         }
     }
 
-    public function getMaxContentWidth(): \Filament\Support\Enums\Width
-    {
-        return \Filament\Support\Enums\Width::Full;
-    }
-
     protected function getHeaderActions(): array
     {
         $selectedCrewName = $this->selectedCrew['name'] ?? null;

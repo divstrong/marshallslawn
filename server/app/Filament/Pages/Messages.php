@@ -21,9 +21,4 @@ class Messages extends Page
 
         return $user ? $user->hasAccessTo('Messages') : false;
     }
-
-    public function getMaxContentWidth(): \Filament\Support\Enums\Width
-    {
-        return \Filament\Support\Enums\Width::Full;
-    }
 }

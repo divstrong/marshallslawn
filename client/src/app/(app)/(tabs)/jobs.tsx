@@ -185,6 +185,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: AppColors.text,
     paddingVertical: 0,
+    // Without an explicit value RN leaves kerning off the iOS text attributes,
+    // and UIKit spaces the placeholder out on device. Pinning it to 0 writes an
+    // explicit zero kern so the placeholder tracks like every other label.
+    letterSpacing: 0,
   },
   list: {
     gap: Spacing.three,
