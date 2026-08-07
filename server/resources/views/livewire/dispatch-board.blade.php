@@ -5,6 +5,14 @@
     $pins = array_merge($stops, $unroutedJobs);
     $foremen = $this->foremanPins;
     $crewColors = $this->crewColorMap;
+    $activeCrewIds = $this->activeCrewIds;
+    // The dropdown button reads as the filter's current state: "All crews",
+    // the crew's own name when only one is ticked, or "N of M crews".
+    $crewFilterLabel = match (true) {
+        count($activeCrewIds) === count($crewColors) => 'All crews',
+        count($activeCrewIds) === 1 => $crewColors[$activeCrewIds[0]]['name'] ?? '1 crew',
+        default => count($activeCrewIds) . ' of ' . count($crewColors) . ' crews',
+    };
     $summary = $this->summary;
     $unmapped = $this->unmappedStops;
     $selected = $this->selectedStop;
@@ -560,51 +568,48 @@
                         <option value="completed">Completed</option>
                         <option value="skipped">Skipped</option>
                     </select>
-                </div>
 
-                {{-- Crews on their own row beneath the date selection. The "Crews" button is
-                     pinned at the left so it never shifts as crew chips are toggled (issue #24). --}}
-                <div class="d-row-wrap" style="margin-top: 8px;">
-                    {{-- Crew visibility manager (issue #24): show/hide which crew chips appear. --}}
+                    {{-- The crew filter, in full: one dropdown of checkboxes. It
+                         replaced the row of crew chips that used to sit below —
+                         the ticks say the same thing without the extra row. --}}
                     <div x-data="{ open: false }" style="position: relative;">
-                        <button type="button" @click="open = !open" class="d-btn" style="height:28px;padding:0 10px;font-size:12px;display:inline-flex;align-items:center;gap:4px;" title="Choose which crews are visible">
-                            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                            Crews
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="d-btn"
+                            style="height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;"
+                            title="Choose which crews the board shows"
+                            :aria-expanded="open"
+                            aria-haspopup="true"
+                        >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.36-1.86M17 20H7m10 0v-2c0-.66-.13-1.3-.36-1.86m0 0A5 5 0 0012 13a5 5 0 00-4.64 3.14M7 20H2v-2a3 3 0 015.36-1.86M7 20v-2c0-.66.13-1.3.36-1.86m0 0A5 5 0 0112 13m3-5a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            {{ $crewFilterLabel }}
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div x-show="open" x-cloak @click.outside="open = false" style="position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:200px;background:var(--d-card-bg);border:1px solid var(--d-border);border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);padding:8px;">
-                            <div class="d-label" style="padding:4px 8px;">Visible crews</div>
+                        <div x-show="open" x-cloak @click.outside="open = false" style="position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:220px;background:var(--d-card-bg);border:1px solid var(--d-border);border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);padding:8px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;">
+                                <span class="d-label">Crews</span>
+                                @if (count($activeCrewIds) < count($crewColors))
+                                    <button type="button" wire:click="showAllCrews" style="font-size:11px;color:var(--d-accent);background:none;border:none;padding:0;cursor:pointer;">Show all</button>
+                                @endif
+                            </div>
                             @foreach ($crewColors as $cId => $c)
                                 <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-size:13px;border-radius:6px;">
                                     <input
                                         type="checkbox"
                                         wire:click="toggleCrewVisibility({{ $cId }})"
-                                        @checked(! in_array((int) $cId, array_map('intval', $this->hiddenCrewIds), true))
+                                        @checked(in_array((int) $cId, $activeCrewIds, true))
                                         style="width:16px;height:16px;accent-color:var(--d-accent);"
                                     >
                                     <span class="d-dot" style="background-color: {{ $c['color'] }}"></span>
                                     {{ $c['name'] }}
                                 </label>
                             @endforeach
+                            @if (empty($crewColors))
+                                <div class="d-muted" style="padding:6px 8px;font-size:12px;">No crews yet.</div>
+                            @endif
                         </div>
                     </div>
-
-                    @foreach ($this->visibleCrews as $crewId => $crew)
-                        @php
-                            $crewIds = array_map('intval', $this->crewIds);
-                            $isActive = in_array($crewId, $crewIds, true);
-                        @endphp
-                        <button
-                            type="button"
-                            wire:click="toggleCrew({{ $crewId }})"
-                            class="d-chip {{ $isActive ? 'is-active' : '' }}"
-                            @if ($isActive)
-                                style="background: {{ $crew['color'] }};"
-                            @endif
-                        >
-                            <span class="d-dot" style="background-color: {{ $crew['color'] }}"></span>
-                            {{ $crew['name'] }}
-                        </button>
-                    @endforeach
                 </div>
 
                 {{-- Service-group filters (issue #15): show only jobs offering these services. --}}

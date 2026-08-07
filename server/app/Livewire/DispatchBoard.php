@@ -146,6 +146,29 @@ class DispatchBoard extends Component
         return $map;
     }
 
+    /**
+     * The crews the board is showing: every crew minus the ones unticked in the
+     * Crews dropdown, narrowed further by an explicit ?crews= URL filter when
+     * one is present. Every view filters on this single list, so unticking a
+     * crew drops it from the map, the agenda and the month grid alike.
+     *
+     * @return array<int, int>
+     */
+    #[Computed]
+    public function activeCrewIds(): array
+    {
+        $ids = array_diff(
+            array_keys($this->crewColorMap()),
+            array_map('intval', $this->hiddenCrewIds),
+        );
+
+        if (! empty($this->crewIds)) {
+            $ids = array_intersect($ids, array_map('intval', $this->crewIds));
+        }
+
+        return array_values($ids);
+    }
+
     /** Whether the "Service Icons" admin toggle is enabled. */
     #[Computed]
     public function serviceIconsEnabled(): bool
@@ -170,9 +193,7 @@ class DispatchBoard extends Component
             ])
             ->whereHas('route', function ($q) {
                 $q->whereDate('route_date', $this->date);
-                if (! empty($this->crewIds)) {
-                    $q->whereIn('crew_id', $this->crewIds);
-                }
+                $q->whereIn('crew_id', $this->activeCrewIds);
             })
             ->whereHas('property', fn ($q) => $q->whereNotNull('latitude')->whereNotNull('longitude'))
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
@@ -347,7 +368,7 @@ class DispatchBoard extends Component
         }
 
         $crews = Crew::with(['foreman.latestLocation'])
-            ->whereIn('id', array_keys($crewMap))
+            ->whereIn('id', $this->activeCrewIds)
             ->whereNotNull('foreman_id')
             ->get();
 
@@ -379,10 +400,6 @@ class DispatchBoard extends Component
         foreach ($crews as $crew) {
             $foreman = $crew->foreman;
             if (! $foreman) {
-                continue;
-            }
-
-            if (! empty($this->crewIds) && ! in_array((int) $crew->id, array_map('intval', $this->crewIds), true)) {
                 continue;
             }
 
@@ -461,9 +478,7 @@ class DispatchBoard extends Component
             ->with(['customer', 'property', 'route'])
             ->whereHas('route', function ($q) {
                 $q->whereDate('route_date', $this->date);
-                if (! empty($this->crewIds)) {
-                    $q->whereIn('crew_id', $this->crewIds);
-                }
+                $q->whereIn('crew_id', $this->activeCrewIds);
             })
             ->where(function ($q) {
                 $q->whereDoesntHave('property')
@@ -524,9 +539,7 @@ class DispatchBoard extends Component
         $stops = RouteStop::with('property')
             ->whereHas('route', function ($q) {
                 $q->whereDate('route_date', $this->date);
-                if (! empty($this->crewIds)) {
-                    $q->whereIn('crew_id', $this->crewIds);
-                }
+                $q->whereIn('crew_id', $this->activeCrewIds);
             })
             ->whereHas('property', fn ($p) => $p->whereNull('latitude')->orWhereNull('longitude'))
             ->get();
@@ -665,24 +678,18 @@ class DispatchBoard extends Component
             ->whereHas('route', function ($q) use ($start, $end) {
                 $q->whereDate('route_date', '>=', $start)
                   ->whereDate('route_date', '<=', $end);
-                if (! empty($this->crewIds)) {
-                    $q->whereIn('crew_id', $this->crewIds);
-                }
+                $q->whereIn('crew_id', $this->activeCrewIds);
             })
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->orderBy('sort_order')
             ->get();
 
-        $hidden = array_map('intval', $this->hiddenCrewIds);
         $search = trim(mb_strtolower($this->listSearch));
 
-        // Group stops by date; each stop renders as its own job card.
+        // Group stops by date; each stop renders as its own job card. Crews are
+        // already narrowed by the query above.
         $byDay = [];
         foreach ($stops as $stop) {
-            $crewId = (int) ($stop->route?->crew_id ?? 0);
-            if (in_array($crewId, $hidden, true)) {
-                continue;
-            }
             if (! empty($this->serviceGroups)
                 && array_intersect($this->stopServiceGroups($stop), $this->serviceGroups) === []) {
                 continue;
@@ -754,16 +761,14 @@ class DispatchBoard extends Component
         $gridStart = $anchor->copy()->startOfWeek(Carbon::SUNDAY);
         $gridEnd = $anchor->copy()->endOfMonth()->endOfWeek(Carbon::SATURDAY);
 
-        $hidden = array_map('intval', $this->hiddenCrewIds);
         $crewMap = $this->crewColorMap();
 
-        // Stops per day AND crew (respecting the active + hidden crew filters), so
+        // Stops per day AND crew (respecting the crew filter), so
         // each day is broken out by crew with its count + color rather than one lump sum.
         $rows = RouteStop::query()
             ->join('routes', 'routes.id', '=', 'route_stops.route_id')
             ->whereBetween('routes.route_date', [$gridStart->toDateString(), $gridEnd->toDateString()])
-            ->when(! empty($this->crewIds), fn ($q) => $q->whereIn('routes.crew_id', $this->crewIds))
-            ->when(! empty($hidden), fn ($q) => $q->whereNotIn('routes.crew_id', $hidden))
+            ->whereIn('routes.crew_id', $this->activeCrewIds)
             ->selectRaw('DATE(routes.route_date) as d, routes.crew_id as crew_id, COUNT(*) as c')
             ->groupBy('d', 'routes.crew_id')
             ->get();
@@ -1069,21 +1074,10 @@ class DispatchBoard extends Component
     }
 
     /**
-     * Crews currently shown on the board (all crews minus the user's hidden set).
-     * Drives which crew filter chips render (issue #24).
+     * Tick/untick a crew in the Crews dropdown. This is the board's only crew
+     * control now — the row of crew chips it replaced said the same thing twice
+     * and cost a full row of vertical space.
      */
-    #[Computed]
-    public function visibleCrews(): array
-    {
-        $hidden = array_map('intval', $this->hiddenCrewIds);
-
-        return array_filter(
-            $this->crewColorMap(),
-            fn ($crew) => ! in_array((int) $crew['id'], $hidden, true),
-        );
-    }
-
-    /** Show/hide a crew on the board and remember the choice for this user. */
     public function toggleCrewVisibility(int $id): void
     {
         $hidden = array_map('intval', $this->hiddenCrewIds);
@@ -1092,14 +1086,13 @@ class DispatchBoard extends Component
             $this->hiddenCrewIds = array_values(array_filter($hidden, fn ($cid) => $cid !== $id));
         } else {
             $this->hiddenCrewIds = [...$hidden, $id];
-            // A hidden crew also drops out of the active crew filter.
-            $this->crewIds = array_values(array_filter(
-                array_map('intval', $this->crewIds),
-                fn ($cid) => $cid !== $id,
-            ));
         }
 
-        unset($this->visibleCrews);
+        // A drill-in from the Month view narrows ?crews= to one crew; once the
+        // checkboxes are touched they take over as the filter.
+        $this->crewIds = [];
+
+        unset($this->activeCrewIds);
         $this->persistDispatchPrefs();
         $this->emitStopsUpdated();
     }
@@ -1153,25 +1146,38 @@ class DispatchBoard extends Component
 
     /**
      * Jump from a Month-view crew row straight into that day's Map, filtered to
-     * the chosen crew. Un-hides the crew if it was hidden so its pins actually show.
+     * the chosen crew. Every other crew is unticked rather than the filter being
+     * held somewhere invisible, so the Crews dropdown shows what happened — and
+     * ticking them back is how you undo it.
      */
     public function goToDayCrewMap(string $date, int $crewId): void
     {
         $this->date = Carbon::parse($date)->toDateString();
         $this->viewMode = 'map';
-        $this->crewIds = [$crewId];
+        $this->crewIds = [];
         $this->hiddenCrewIds = array_values(array_filter(
-            array_map('intval', $this->hiddenCrewIds),
-            fn ($id) => $id !== $crewId,
+            array_keys($this->crewColorMap()),
+            fn (int $id): bool => $id !== $crewId,
         ));
         $this->selectedStopId = null;
         $this->persistDispatchPrefs();
 
         unset(
             $this->monthDays, $this->monthLabel, $this->listDays, $this->listRangeLabel,
-            $this->stops, $this->summary, $this->foremanPins, $this->visibleCrews,
+            $this->stops, $this->summary, $this->foremanPins, $this->activeCrewIds,
         );
         $this->dispatch('dispatch:view-changed', mode: 'map');
+        $this->emitStopsUpdated();
+    }
+
+    /** Tick every crew back on — the escape hatch from a one-crew drill-in. */
+    public function showAllCrews(): void
+    {
+        $this->hiddenCrewIds = [];
+        $this->crewIds = [];
+
+        unset($this->activeCrewIds);
+        $this->persistDispatchPrefs();
         $this->emitStopsUpdated();
     }
 
@@ -1241,17 +1247,6 @@ class DispatchBoard extends Component
                 'list_range' => $this->listRange,
             ],
         ])->save();
-    }
-
-    public function toggleCrew(int $id): void
-    {
-        $crewIds = array_map('intval', $this->crewIds);
-        if (in_array($id, $crewIds, true)) {
-            $this->crewIds = array_values(array_filter($crewIds, fn ($cid) => $cid !== $id));
-        } else {
-            $this->crewIds = [...$crewIds, $id];
-        }
-        $this->emitStopsUpdated();
     }
 
     public function toggleServiceGroup(string $group): void
@@ -1352,7 +1347,7 @@ class DispatchBoard extends Component
         if ($this->selectedForemanId) {
             $defaultCrew = Crew::where('foreman_id', $this->selectedForemanId)->value('id');
         }
-        $defaultCrew ??= array_key_first($this->visibleCrews) ?: array_key_first($this->crewColorMap());
+        $defaultCrew ??= ($this->activeCrewIds[0] ?? null) ?: array_key_first($this->crewColorMap());
 
         $this->newJobCustomerSearch = '';
         $this->newJob = [

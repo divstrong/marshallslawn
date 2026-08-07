@@ -44,6 +44,9 @@ class Customer extends Authenticatable implements FilamentUser, HasName
         'first_name',
         'last_name',
         'email',
+        'estimate_email',
+        'billing_email',
+        'service_email',
         'password',
         'phone',
         'address',
@@ -64,6 +67,24 @@ class Customer extends Authenticatable implements FilamentUser, HasName
         'sms_opt_in_sent_at',
         'sms_consent_at',
     ];
+
+    /**
+     * The address to use for one of the customer-facing streams, falling back to
+     * the primary contact email when no dedicated one is on file.
+     *
+     * @param  'estimate'|'billing'|'service'  $stream
+     */
+    public function emailFor(string $stream): ?string
+    {
+        $dedicated = match ($stream) {
+            'estimate' => $this->estimate_email,
+            'billing' => $this->billing_email,
+            'service' => $this->service_email,
+            default => null,
+        };
+
+        return filled($dedicated) ? $dedicated : $this->email;
+    }
 
     /** SMS consent states (A2P / CTIA). */
     public const SMS_PENDING = 'pending';

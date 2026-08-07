@@ -14,9 +14,12 @@ use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Actions;
+
+use function Filament\Support\original_request;
 
 class JobResource extends Resource
 {
@@ -40,12 +43,18 @@ class JobResource extends Resource
                         ->icon('heroicon-o-information-circle')
                         ->columns(2)
                         ->schema([
+                            // Title and status share the top row at half width each,
+                            // so the status is the first thing seen on an edit.
                             Forms\Components\TextInput::make('title')
                                 ->label('Job title')
                                 ->required()
                                 ->maxLength(255)
-                                ->placeholder('Mowing, Mulch install, Spring cleanup…')
-                                ->columnSpanFull(),
+                                ->placeholder('Mowing, Mulch install, Spring cleanup…'),
+                            Forms\Components\Select::make('status')
+                                ->options(fn (): array => \App\Models\JobStatus::options())
+                                ->default('pending')
+                                ->native(false)
+                                ->required(),
                             Forms\Components\Select::make('customer_id')
                                 ->relationship('customer', 'last_name')
                                 ->getOptionLabelFromRecordUsing(function ($record): string {
@@ -101,10 +110,6 @@ class JobResource extends Resource
                                 ->relationship('crew', 'name')
                                 ->searchable()
                                 ->preload(),
-                            Forms\Components\Select::make('status')
-                                ->options(fn (): array => \App\Models\JobStatus::options())
-                                ->default('pending')
-                                ->required(),
                             Forms\Components\Select::make('priority')
                                 ->options([
                                     'low' => 'Low',
@@ -156,23 +161,26 @@ class JobResource extends Resource
                                 ->live()
                                 ->visibleOn('create')
                                 ->columnSpanFull(),
+                            // Two plain rows: when it repeats, then how long for.
+                            // No stop date — a series ends by visit count or runs on.
                             Fieldset::make('Recurrence')
                                 // Only on the create form, and only when Recurring is chosen.
                                 ->visible(fn (Get $get, string $operation): bool => $operation === 'create'
                                     && $get('job_type') === 'recurring')
-                                ->columns(2)
+                                ->columns(3)
                                 ->schema([
                                     Forms\Components\Select::make('recur_frequency')
-                                        ->label('Frequency')
+                                        ->label('Repeats')
                                         ->options([
                                             'weekly' => 'Weekly',
                                             'monthly' => 'Monthly',
                                         ])
                                         ->default('weekly')
+                                        ->native(false)
                                         ->live()
                                         ->required(fn (Get $get): bool => $get('job_type') === 'recurring'),
                                     Forms\Components\Select::make('recur_day_of_week')
-                                        ->label('Preferred day of week')
+                                        ->label('On day')
                                         ->options([
                                             0 => 'Sunday',
                                             1 => 'Monday',
@@ -182,26 +190,33 @@ class JobResource extends Resource
                                             5 => 'Friday',
                                             6 => 'Saturday',
                                         ])
+                                        ->native(false)
                                         ->visible(fn (Get $get): bool => $get('recur_frequency') === 'weekly')
                                         ->placeholder('Any day'),
-                                    Forms\Components\Toggle::make('recur_indefinite')
-                                        ->label('Indefinite (no fixed count)')
+                                    Forms\Components\DatePicker::make('recur_start')
+                                        ->label('First visit')
+                                        ->default(now())
+                                        ->required(fn (Get $get): bool => $get('job_type') === 'recurring'),
+                                    // Stored as the boolean recur_indefinite; a select
+                                    // states both outcomes plainly instead of a toggle
+                                    // whose "off" meaning had to be inferred.
+                                    Forms\Components\Select::make('recur_indefinite')
+                                        ->label('Ends')
+                                        ->options([
+                                            0 => 'After a set number of visits',
+                                            1 => 'Never — keep generating',
+                                        ])
+                                        ->default(0)
+                                        ->native(false)
                                         ->live()
-                                        ->default(false),
+                                        ->columnSpan(2),
                                     Forms\Components\TextInput::make('recur_occurrences')
-                                        ->label('Number of occurrences')
+                                        ->label('Number of visits')
                                         ->numeric()
                                         ->minValue(1)
                                         ->maxValue(260)
                                         ->visible(fn (Get $get): bool => ! $get('recur_indefinite'))
                                         ->required(fn (Get $get): bool => $get('job_type') === 'recurring' && ! $get('recur_indefinite')),
-                                    Forms\Components\DatePicker::make('recur_start')
-                                        ->label('Start date')
-                                        ->default(now())
-                                        ->required(fn (Get $get): bool => $get('job_type') === 'recurring'),
-                                    Forms\Components\DatePicker::make('recur_end')
-                                        ->label('Stop date (optional)')
-                                        ->helperText('Caps the series even if the count/indefinite setting would continue.'),
                                 ]),
 
                             Forms\Components\Radio::make('is_scheduled')
@@ -227,13 +242,6 @@ class JobResource extends Resource
                                 ->label('Scheduled date')
                                 ->visible(fn (Get $get): bool => $get('is_scheduled') === 'yes')
                                 ->required(fn (Get $get): bool => $get('is_scheduled') === 'yes'),
-                            Forms\Components\Select::make('tagRecords')
-                                ->label('Tags')
-                                ->relationship('tagRecords', 'name')
-                                ->multiple()
-                                ->searchable()
-                                ->preload()
-                                ->columnSpanFull(),
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
                         ]),
@@ -340,6 +348,47 @@ class JobResource extends Resource
         });
     }
 
+    /**
+     * Copy a job and its service lines. The copy starts fresh: pending, never
+     * run, with no timer or completion history carried over, and it is always a
+     * one-off — duplicating a job should not clone a recurring series.
+     */
+    public static function duplicateJob(Job $record, ?string $scheduledDate = null): Job
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($record, $scheduledDate): Job {
+            $copy = $record->replicate([
+                'status',
+                'type',
+                'recurring_job_template_id',
+                'scheduled_date',
+                'completed_date',
+                'started_at',
+                'finished_at',
+            ]);
+
+            $copy->fill([
+                'status' => 'pending',
+                'type' => 'one_time',
+                'recurring_job_template_id' => null,
+                'scheduled_date' => $scheduledDate ?: null,
+            ]);
+            $copy->save();
+
+            foreach ($record->jobServices()->orderBy('sort_order')->get() as $line) {
+                $copy->jobServices()->create([
+                    'service_id' => $line->service_id,
+                    'quantity' => $line->quantity,
+                    'unit_price' => $line->unit_price,
+                    'price' => $line->price,
+                    'description' => $line->description,
+                    'sort_order' => $line->sort_order,
+                ]);
+            }
+
+            return $copy;
+        });
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -409,10 +458,11 @@ class JobResource extends Resource
                         'high' => 'High',
                         'urgent' => 'Urgent',
                     ]),
-                // The waiting list is no longer a place jobs are moved to — it's simply
-                // the work that has neither a crew nor a date yet (issues #52, #53).
+                // Work with neither a crew nor a date. Named for what it matches,
+                // not "waiting list" — that is now the Waiting List *status*, which
+                // has its own view in the sidebar.
                 Tables\Filters\Filter::make('waiting_list')
-                    ->label('Waiting list (unassigned + unscheduled)')
+                    ->label('Unassigned + unscheduled')
                     ->toggle()
                     ->query(fn ($query) => $query->whereNull('crew_id')->whereNull('scheduled_date')),
                 Tables\Filters\Filter::make('unassigned')
@@ -473,8 +523,32 @@ class JobResource extends Resource
                         ),
                     )),
             ])
+            // Filters sit in the top row of the index rather than behind the
+            // funnel dropdown, so the toggles are one click away.
+            ->filtersLayout(FiltersLayout::AboveContent)
+            ->filtersFormColumns(4)
             ->defaultPaginationPageOption(50)
             ->actions([
+                Actions\Action::make('duplicate')
+                    ->label('Copy')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('gray')
+                    ->modalHeading('Duplicate job')
+                    ->modalSubmitActionLabel('Duplicate')
+                    ->schema([
+                        Forms\Components\DatePicker::make('scheduled_date')
+                            ->label('Scheduled date')
+                            ->helperText('Leave blank to create the copy as unscheduled (TBD).'),
+                    ])
+                    ->action(function (Job $record, array $data): void {
+                        $copy = static::duplicateJob($record, $data['scheduled_date'] ?? null);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Job duplicated')
+                            ->body("Created job #{$copy->id}.")
+                            ->success()
+                            ->send();
+                    }),
                 Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -516,8 +590,46 @@ class JobResource extends Resource
     {
         return [
             'index' => Pages\ListJobs::route('/'),
+            'waiting-list' => Pages\ListWaitingListJobs::route('/waiting-list'),
             'create' => Pages\CreateJob::route('/create'),
             'edit' => Pages\EditJob::route('/{record}/edit'),
+        ];
+    }
+
+    /**
+     * Jobs, plus the Waiting List as its own sidebar entry. Filament only
+     * registers a resource's index page by default, so the second item is added
+     * here rather than by the page class.
+     *
+     * @return array<\Filament\Navigation\NavigationItem>
+     */
+    public static function getNavigationItems(): array
+    {
+        return [
+            ...parent::getNavigationItems(),
+            \Filament\Navigation\NavigationItem::make('Waiting List')
+                ->group(static::getNavigationGroup())
+                ->icon('heroicon-o-queue-list')
+                // Same sort as Jobs so it sits directly beneath it.
+                ->sort(static::getNavigationSort())
+                ->badge(function (): ?string {
+                    $count = Job::where('status', 'waiting_list')->count();
+
+                    return $count ? (string) $count : null;
+                }, color: 'warning')
+                ->isActiveWhen(fn (): bool => original_request()->routeIs(static::getRouteBaseName() . '.waiting-list'))
+                ->visible(fn (): bool => static::canAccess())
+                ->url(fn (): string => static::getUrl('waiting-list')),
+        ];
+    }
+
+    /** Keep the main Jobs item from lighting up while the Waiting List is open. */
+    public static function getNavigationItemActiveRoutePattern(): string | array
+    {
+        return [
+            static::getRouteBaseName() . '.index',
+            static::getRouteBaseName() . '.create',
+            static::getRouteBaseName() . '.edit',
         ];
     }
 }

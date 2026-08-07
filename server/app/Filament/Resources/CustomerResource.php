@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CustomerResource\Pages;
 use App\Models\Customer;
 use Filament\Forms;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\View;
@@ -46,6 +47,7 @@ class CustomerResource extends Resource
                                 ->required()
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('email')
+                                ->label('Primary email')
                                 ->email()
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('password')
@@ -67,6 +69,31 @@ class CustomerResource extends Resource
                                     Customer::SMS_OPTED_OUT => 'Opted out',
                                     default => 'Pending — no confirmed opt-in',
                                 }),
+                            // Optional per-stream routing. Each falls back to the
+                            // primary email when left blank (Customer::emailFor()).
+                            Fieldset::make('Additional contact emails')
+                                ->columnSpanFull()
+                                ->columns(3)
+                                ->schema([
+                                    Forms\Components\TextInput::make('estimate_email')
+                                        ->label('Estimates')
+                                        ->email()
+                                        ->maxLength(255)
+                                        ->placeholder(fn (?Customer $record): string => $record?->email ?: 'Uses primary email')
+                                        ->helperText('Where estimates are sent.'),
+                                    Forms\Components\TextInput::make('billing_email')
+                                        ->label('Billing')
+                                        ->email()
+                                        ->maxLength(255)
+                                        ->placeholder(fn (?Customer $record): string => $record?->email ?: 'Uses primary email')
+                                        ->helperText('Where invoices and payment reminders are sent.'),
+                                    Forms\Components\TextInput::make('service_email')
+                                        ->label('Service notifications')
+                                        ->email()
+                                        ->maxLength(255)
+                                        ->placeholder(fn (?Customer $record): string => $record?->email ?: 'Uses primary email')
+                                        ->helperText('Where job/service notices are sent.'),
+                                ]),
                             Forms\Components\TextInput::make('address')
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('city')
@@ -101,10 +128,6 @@ class CustomerResource extends Resource
                                 ->required()
                                 ->helperText('Firm = hold scheduled dates; Flexible = dates may shift.'),
                             Forms\Components\TextInput::make('account_number')
-                                ->maxLength(255),
-                            Forms\Components\TextInput::make('division')
-                                ->maxLength(255),
-                            Forms\Components\TextInput::make('source')
                                 ->maxLength(255),
                             Forms\Components\TextInput::make('legacy_id')
                                 ->label('Legacy ID')

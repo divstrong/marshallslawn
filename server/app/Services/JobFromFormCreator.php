@@ -47,11 +47,10 @@ class JobFromFormCreator
             'indefinite' => (bool) ($data['recur_indefinite'] ?? false),
             'occurrences' => $data['recur_occurrences'] ?? null,
             'start' => $data['recur_start'] ?? now()->toDateString(),
-            'end' => $data['recur_end'] ?? null,
         ];
 
         // Drop the form-only control fields before touching the Job model.
-        foreach (['job_type', 'service_lines', 'services_draft_id', 'recur_frequency', 'recur_day_of_week', 'recur_indefinite', 'recur_occurrences', 'recur_start', 'recur_end'] as $key) {
+        foreach (['job_type', 'service_lines', 'services_draft_id', 'recur_frequency', 'recur_day_of_week', 'recur_indefinite', 'recur_occurrences', 'recur_start'] as $key) {
             unset($data[$key]);
         }
 
@@ -82,7 +81,8 @@ class JobFromFormCreator
                     : null,
                 'occurrences' => $recur['indefinite'] ? null : max(1, (int) ($recur['occurrences'] ?? 1)),
                 'start_date' => $start->toDateString(),
-                'end_date' => $recur['end'] ?: null,
+                // A series ends by visit count (or not at all) — there is no stop date.
+                'end_date' => null,
                 'active' => true,
             ]);
 

@@ -9,6 +9,7 @@ use App\Models\RecurringJobTemplate;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
@@ -39,109 +40,144 @@ class RecurringJobTemplateResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
+        // Three named sections — what the work is, when it repeats, and when it
+        // runs — rather than one flat list of fifteen fields.
         return $schema->schema([
-            Forms\Components\TextInput::make('title')
-                ->required()
-                ->maxLength(255)
-                ->placeholder('Weekly Mow — Smith Property')
-                ->columnSpanFull(),
+            Section::make('Work')
+                ->columns(2)
+                ->schema([
+                    Forms\Components\TextInput::make('title')
+                        ->required()
+                        ->maxLength(255)
+                        ->placeholder('Weekly Mow — Smith Property')
+                        ->columnSpanFull(),
 
-            Forms\Components\Select::make('customer_id')
-                ->relationship('customer', 'last_name')
-                ->getOptionLabelFromRecordUsing(fn ($record) => trim(
-                    ($record->company_name ? $record->company_name . ' — ' : '')
-                    . trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? ''))
-                ))
-                ->searchable(['first_name', 'last_name', 'company_name', 'email'])
-                ->preload()
-                ->required()
-                ->live()
-                ->afterStateUpdated(fn (Set $set) => $set('property_id', null)),
+                    Forms\Components\Select::make('customer_id')
+                        ->relationship('customer', 'last_name')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => trim(
+                            ($record->company_name ? $record->company_name . ' — ' : '')
+                            . trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? ''))
+                        ))
+                        ->searchable(['first_name', 'last_name', 'company_name', 'email'])
+                        ->preload()
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(fn (Set $set) => $set('property_id', null)),
 
-            Forms\Components\Select::make('property_id')
-                ->label('Property')
-                ->options(fn (Get $get) => $get('customer_id')
-                    ? Property::query()
-                        ->where('customer_id', $get('customer_id'))
-                        ->orderByDesc('is_primary')
-                        ->orderBy('address')
-                        ->pluck('address', 'id')
-                        ->all()
-                    : [])
-                ->searchable()
-                ->required()
-                ->placeholder('Select a customer first'),
+                    Forms\Components\Select::make('property_id')
+                        ->label('Property')
+                        ->options(fn (Get $get) => $get('customer_id')
+                            ? Property::query()
+                                ->where('customer_id', $get('customer_id'))
+                                ->orderByDesc('is_primary')
+                                ->orderBy('address')
+                                ->pluck('address', 'id')
+                                ->all()
+                            : [])
+                        ->searchable()
+                        ->required()
+                        ->placeholder('Select a customer first'),
 
-            Forms\Components\Select::make('service_id')
-                ->relationship('service', 'name')
-                ->searchable()
-                ->preload()
-                ->required(),
+                    Forms\Components\Select::make('service_id')
+                        ->relationship('service', 'name')
+                        ->searchable()
+                        ->preload()
+                        ->required(),
 
-            Forms\Components\Select::make('crew_id')
-                ->label('Default crew')
-                ->relationship('crew', 'name')
-                ->searchable()
-                ->preload(),
+                    Forms\Components\Select::make('crew_id')
+                        ->label('Default crew')
+                        ->relationship('crew', 'name')
+                        ->searchable()
+                        ->preload(),
+                ]),
 
-            Forms\Components\Select::make('interval_days')
-                ->label('Frequency')
-                ->options([
-                    7 => 'Weekly (7 days)',
-                    14 => 'Biweekly (14 days)',
-                    21 => 'Every 3 weeks',
-                    28 => 'Every 4 weeks',
-                    30 => 'Monthly (~30 days)',
-                ])
-                ->default(7)
-                ->required()
-                ->helperText('Use a custom value below for other intervals.'),
+            Section::make('Schedule')
+                ->columns(3)
+                ->schema([
+                    // Preset intervals cover almost every series; anything else is
+                    // typed into the custom box, which shares the same column.
+                    Forms\Components\Select::make('interval_preset')
+                        ->label('Repeats')
+                        ->options([
+                            7 => 'Weekly',
+                            14 => 'Biweekly',
+                            21 => 'Every 3 weeks',
+                            28 => 'Every 4 weeks',
+                            30 => 'Monthly',
+                            0 => 'Custom…',
+                        ])
+                        ->native(false)
+                        ->required()
+                        ->dehydrated(false)
+                        ->live()
+                        ->afterStateHydrated(function ($component, ?RecurringJobTemplate $record): void {
+                            $days = (int) ($record?->interval_days ?? 7);
+                            $component->state(in_array($days, [7, 14, 21, 28, 30], true) ? $days : 0);
+                        })
+                        ->afterStateUpdated(function ($state, Set $set): void {
+                            if ((int) $state !== 0) {
+                                $set('interval_days', (int) $state);
+                            }
+                        }),
 
-            Forms\Components\TextInput::make('interval_days')
-                ->label('Custom interval (days)')
-                ->numeric()
-                ->minValue(1)
-                ->maxValue(365)
-                ->visible(fn (Get $get) => ! in_array((int) $get('interval_days'), [7, 14, 21, 28, 30], true)),
+                    Forms\Components\TextInput::make('interval_days')
+                        ->label('Every (days)')
+                        ->numeric()
+                        ->minValue(1)
+                        ->maxValue(365)
+                        ->default(7)
+                        ->required(fn (Get $get): bool => (int) $get('interval_preset') === 0)
+                        ->visible(fn (Get $get): bool => (int) $get('interval_preset') === 0)
+                        // Picking a preset writes the interval here while this box
+                        // is hidden — it still has to reach the model.
+                        ->dehydratedWhenHidden(),
 
-            Forms\Components\Select::make('preferred_day_of_week')
-                ->label('Preferred day of week')
-                ->options([
-                    0 => 'Sunday',
-                    1 => 'Monday',
-                    2 => 'Tuesday',
-                    3 => 'Wednesday',
-                    4 => 'Thursday',
-                    5 => 'Friday',
-                    6 => 'Saturday',
-                ])
-                ->placeholder('Any')
-                ->helperText('If set, jobs always land on this day.'),
+                    Forms\Components\Select::make('preferred_day_of_week')
+                        ->label('On day')
+                        ->options([
+                            0 => 'Sunday',
+                            1 => 'Monday',
+                            2 => 'Tuesday',
+                            3 => 'Wednesday',
+                            4 => 'Thursday',
+                            5 => 'Friday',
+                            6 => 'Saturday',
+                        ])
+                        ->native(false)
+                        ->placeholder('Any')
+                        ->helperText('If set, jobs always land on this day.'),
 
-            Forms\Components\DatePicker::make('start_date')
-                ->required()
-                ->default(now()),
+                    Forms\Components\DatePicker::make('start_date')
+                        ->label('First visit')
+                        ->required()
+                        ->default(now()),
+                ]),
 
-            Forms\Components\DatePicker::make('end_date')
-                ->helperText('Leave blank for indefinite.'),
+            Section::make('Season & status')
+                ->columns(3)
+                ->schema([
+                    Forms\Components\Select::make('season_start_month')
+                        ->label('Season start')
+                        ->options(self::monthOptions())
+                        ->native(false)
+                        ->placeholder('All year'),
 
-            Forms\Components\Select::make('season_start_month')
-                ->label('Season start (month)')
-                ->options(self::monthOptions())
-                ->placeholder('All year'),
+                    Forms\Components\Select::make('season_end_month')
+                        ->label('Season end')
+                        ->options(self::monthOptions())
+                        ->native(false)
+                        ->placeholder('All year')
+                        ->helperText('e.g. Leaf Removal: Oct–Dec.'),
 
-            Forms\Components\Select::make('season_end_month')
-                ->label('Season end (month)')
-                ->options(self::monthOptions())
-                ->placeholder('All year')
-                ->helperText('e.g. Leaf Removal: Oct–Dec.'),
+                    Forms\Components\Toggle::make('active')
+                        ->default(true)
+                        ->required()
+                        ->inline(false),
 
-            Forms\Components\Toggle::make('active')
-                ->default(true)
-                ->required(),
-
-            Forms\Components\Textarea::make('notes')
-                ->columnSpanFull(),
+                    Forms\Components\Textarea::make('notes')
+                        ->rows(3)
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 

@@ -205,7 +205,7 @@ class InvoiceResource extends Resource
                             ->label('Recipient Email')
                             ->email()
                             ->required()
-                            ->default(fn (Invoice $record) => $record->customer?->email),
+                            ->default(fn (Invoice $record) => $record->customer?->emailFor('billing')),
                         Forms\Components\Textarea::make('message')
                             ->label('Notes (optional)')
                             ->rows(3),

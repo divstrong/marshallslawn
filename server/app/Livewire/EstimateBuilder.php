@@ -105,8 +105,8 @@ class EstimateBuilder extends Component
             $this->recalculate();
 
             // Pre-fill share email
-            if ($estimate->customer?->email) {
-                $this->shareEmail = $estimate->customer->email;
+            if ($estimate->customer?->emailFor('estimate')) {
+                $this->shareEmail = $estimate->customer->emailFor('estimate');
             }
         } else {
             $this->validUntil = now()->addDays(30)->format('Y-m-d');
@@ -139,8 +139,8 @@ class EstimateBuilder extends Component
         $this->propertyId = null;
 
         $customer = Customer::find($id);
-        if ($customer?->email) {
-            $this->shareEmail = $customer->email;
+        if ($customer?->emailFor('estimate')) {
+            $this->shareEmail = $customer->emailFor('estimate');
         }
 
         // Auto-select primary property
@@ -608,7 +608,7 @@ class EstimateBuilder extends Component
         }
 
         $customer = $this->selectedCustomer;
-        $this->shareEmail = $customer?->email ?? '';
+        $this->shareEmail = $customer?->emailFor('estimate') ?? '';
         $this->shareMessage = "Hi {$customer?->first_name},\n\nPlease find your estimate from Marshall's Lawn & Landscape attached. Click the link below to view the details.\n\nThank you for your business!";
         $this->shareSent = false;
         $this->showShareModal = true;

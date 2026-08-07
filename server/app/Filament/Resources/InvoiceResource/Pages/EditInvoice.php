@@ -33,7 +33,7 @@ class EditInvoice extends EditRecord
                         ->label('Recipient Email')
                         ->email()
                         ->required()
-                        ->default(fn () => $this->record->customer?->email),
+                        ->default(fn () => $this->record->customer?->emailFor('billing')),
                     Forms\Components\Textarea::make('message')
                         ->label('Notes (optional)')
                         ->rows(3),
