@@ -1211,24 +1211,48 @@
                             </select>
                         </div>
 
-                        {{-- Title --}}
+                        {{-- Job type decides what the rest of the modal asks for:
+                             a service scope, or one flat price and a note. --}}
                         <div>
-                            <div class="d-label">Job title</div>
-                            <input type="text" wire:model="newJob.title" placeholder="Mowing, Mulch install, Spring cleanup…" autocomplete="off"
-                                style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;">
-                            @error('newJob.title') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
+                            <div class="d-label">Job type</div>
+                            <div class="d-row" style="gap:8px;">
+                                @foreach (\App\Models\Job::kindOptions() as $value => $label)
+                                    <button
+                                        type="button"
+                                        wire:click="$set('newJob.kind', '{{ $value }}')"
+                                        class="d-chip {{ $newJob['kind'] === $value ? 'is-active' : '' }}"
+                                        @if ($newJob['kind'] === $value) style="background: var(--d-accent); color:#fff; border-color: var(--d-accent);" @endif
+                                    >{{ $label }}</button>
+                                @endforeach
+                            </div>
                         </div>
 
-                        {{-- Services (added as TBD; priced later on the job) --}}
-                        <div>
-                            <div class="d-label">Services <span class="d-muted" style="font-weight:400;">(optional — priced later)</span></div>
-                            <select wire:model="newJob.service_ids" multiple size="4"
-                                style="width:100%; border:1px solid var(--d-border); border-radius:8px; padding:6px; font-size:13px; background:#fff; color:#0f172a;">
-                                @foreach ($this->newJobServiceOptions as $id => $name)
-                                    <option value="{{ $id }}">{{ $name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        @if ($newJob['kind'] === \App\Models\Job::KIND_QUICK)
+                            {{-- Quick: a flat price, and a note that becomes the label. --}}
+                            <div>
+                                <div class="d-label">Price <span class="d-muted" style="font-weight:400;">(optional — quote it later)</span></div>
+                                <input type="number" min="0" step="0.01" wire:model="newJob.price" placeholder="0.00"
+                                    style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;">
+                                @error('newJob.price') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
+                            </div>
+                            <div>
+                                <div class="d-label">Notes</div>
+                                <textarea wire:model="newJob.notes" rows="3" placeholder="What needs doing…"
+                                    style="width:100%; border:1px solid var(--d-border); border-radius:8px; padding:8px 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;"></textarea>
+                                <div class="d-muted" style="font-size:11px; margin-top:4px;">The first line becomes the job's label on the board.</div>
+                            </div>
+                        @else
+                            {{-- Service: services are added as TBD and priced later on the job. --}}
+                            <div>
+                                <div class="d-label">Services <span class="d-muted" style="font-weight:400;">(optional — priced later)</span></div>
+                                <select wire:model="newJob.service_ids" multiple size="4"
+                                    style="width:100%; border:1px solid var(--d-border); border-radius:8px; padding:6px; font-size:13px; background:#fff; color:#0f172a;">
+                                    @foreach ($this->newJobServiceOptions as $id => $name)
+                                        <option value="{{ $id }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
 
                         <div class="d-row" style="gap:12px;">
                             <div style="flex:1;">

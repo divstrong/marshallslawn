@@ -69,7 +69,6 @@ class DispatchBoardActionsTest extends TestCase
         Livewire::test(DispatchBoard::class)
             ->call('openNewJobModal')
             ->call('selectNewJobCustomer', $this->customer->id)
-            ->set('newJob.title', 'On-the-fly mow')
             ->set('newJob.property_id', $this->property->id)
             ->set('newJob.scheduled_date', '2026-07-20')
             ->set('newJob.crew_id', $crew->id)
@@ -77,8 +76,10 @@ class DispatchBoardActionsTest extends TestCase
             ->call('createNewJob')
             ->assertHasNoErrors();
 
-        $job = Job::firstWhere('title', 'On-the-fly mow');
-        $this->assertNotNull($job);
+        $job = Job::sole();
+        // The label is derived from the services, not typed.
+        $this->assertSame('Mowing', $job->title);
+        $this->assertSame(Job::KIND_SERVICE, $job->kind);
         $this->assertSame($crew->id, $job->crew_id);
         $this->assertSame($this->customer->id, $job->customer_id);
 
@@ -93,12 +94,33 @@ class DispatchBoardActionsTest extends TestCase
         $this->assertNotNull($route);
     }
 
-    public function test_new_job_requires_a_customer_and_title(): void
+    public function test_new_job_requires_a_customer(): void
     {
         Livewire::test(DispatchBoard::class)
             ->call('openNewJobModal')
-            ->set('newJob.title', '')
             ->call('createNewJob')
-            ->assertHasErrors(['newJob.customer_id', 'newJob.title']);
+            ->assertHasErrors(['newJob.customer_id']);
+    }
+
+    public function test_the_modal_creates_a_quick_job_from_a_flat_price_and_notes(): void
+    {
+        Livewire::test(DispatchBoard::class)
+            ->call('openNewJobModal')
+            ->call('selectNewJobCustomer', $this->customer->id)
+            ->set('newJob.kind', Job::KIND_QUICK)
+            ->set('newJob.property_id', $this->property->id)
+            ->set('newJob.price', '125.50')
+            ->set('newJob.notes', "Haul off storm debris
+Back gate code 1234")
+            ->call('createNewJob')
+            ->assertHasNoErrors();
+
+        $job = Job::sole();
+        $this->assertSame(Job::KIND_QUICK, $job->kind);
+        $this->assertSame(125.5, (float) $job->price);
+        $this->assertSame(125.5, $job->total(), 'a quick job totals to its flat price');
+        // The label is the first line of the notes.
+        $this->assertSame('Haul off storm debris', $job->title);
+        $this->assertCount(0, $job->jobServices, 'a quick job carries no services');
     }
 }

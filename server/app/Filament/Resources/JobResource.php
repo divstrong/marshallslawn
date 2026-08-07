@@ -43,13 +43,22 @@ class JobResource extends Resource
                         ->icon('heroicon-o-information-circle')
                         ->columns(2)
                         ->schema([
-                            // Title and status share the top row at half width each,
-                            // so the status is the first thing seen on an edit.
-                            Forms\Components\TextInput::make('title')
-                                ->label('Job title')
+                            // The first decision on the form, because it decides what
+                            // the rest of it asks for: a service job is priced by its
+                            // service lines, a quick job by a single flat price.
+                            Forms\Components\Radio::make('kind')
+                                ->label('Job type')
+                                ->options(Job::kindOptions())
+                                ->descriptions([
+                                    Job::KIND_SERVICE => 'Build a scope from services, each priced. Can repeat.',
+                                    Job::KIND_QUICK => 'One flat price plus notes for an existing customer. No services.',
+                                ])
+                                ->default(Job::KIND_SERVICE)
                                 ->required()
-                                ->maxLength(255)
-                                ->placeholder('Mowing, Mulch install, Spring cleanup…'),
+                                ->inline()
+                                ->inlineLabel(false)
+                                ->live()
+                                ->columnSpanFull(),
                             Forms\Components\Select::make('status')
                                 ->options(fn (): array => \App\Models\JobStatus::options())
                                 ->default('pending')
@@ -97,15 +106,18 @@ class JobResource extends Resource
                                 ->searchable()
                                 ->preload()
                                 ->live(),
-                            // Optional direct price — only when no estimate is attached (issue #23).
+                            // The quick job's whole scope: one flat price. Service
+                            // jobs total up from their lines instead, and an attached
+                            // estimate already carries the price (issue #23).
                             Forms\Components\TextInput::make('price')
                                 ->label('Price')
                                 ->numeric()
                                 ->minValue(0)
                                 ->prefix('$')
                                 ->placeholder('0.00')
-                                ->helperText('Optional. Set a direct price for this job when no estimate is assigned.')
-                                ->visible(fn (Get $get): bool => blank($get('estimate_id'))),
+                                ->helperText('Leave blank to quote it later.')
+                                ->visible(fn (Get $get): bool => $get('kind') === Job::KIND_QUICK
+                                    && blank($get('estimate_id'))),
                             Forms\Components\Select::make('crew_id')
                                 ->relationship('crew', 'name')
                                 ->searchable()
@@ -148,9 +160,10 @@ class JobResource extends Resource
                                 ->helperText("Locks this job's scheduled date — flags admins not to reschedule it.")
                                 ->inline(false),
 
-                            // --- Type & recurrence (create only) — issue #13 ---
+                            // --- Recurrence (create only) — issue #13. A series is
+                            // generated from a service, so quick jobs are one-offs.
                             Forms\Components\Radio::make('job_type')
-                                ->label('Type')
+                                ->label('Frequency')
                                 ->options([
                                     'one_time' => 'One Time',
                                     'recurring' => 'Recurring',
@@ -159,7 +172,8 @@ class JobResource extends Resource
                                 ->inline()
                                 ->inlineLabel(false)
                                 ->live()
-                                ->visibleOn('create')
+                                ->visible(fn (Get $get, string $operation): bool => $operation === 'create'
+                                    && $get('kind') !== Job::KIND_QUICK)
                                 ->columnSpanFull(),
                             // Two plain rows: when it repeats, then how long for.
                             // No stop date — a series ends by visit count or runs on.
@@ -243,6 +257,9 @@ class JobResource extends Resource
                                 ->visible(fn (Get $get): bool => $get('is_scheduled') === 'yes')
                                 ->required(fn (Get $get): bool => $get('is_scheduled') === 'yes'),
                             Forms\Components\Textarea::make('notes')
+                                ->helperText(fn (Get $get): ?string => $get('kind') === Job::KIND_QUICK
+                                    ? 'The first line becomes the job\'s label on the board, the app and time logs.'
+                                    : null)
                                 ->columnSpanFull(),
                         ]),
                     // Available from the very first save (issue #52): on create the lines
@@ -255,6 +272,9 @@ class JobResource extends Resource
                     Tab::make('Services')
                         ->icon('heroicon-o-wrench-screwdriver')
                         ->badge(fn (?Job $record): ?string => $record?->jobServices()->count() ?: null)
+                        // A quick job is priced by the flat Price field on General;
+                        // it has no scope to build here.
+                        ->hidden(fn (Get $get): bool => $get('kind') === Job::KIND_QUICK)
                         ->schema([
                             Forms\Components\Hidden::make('services_draft_id')
                                 // Create-only: the draft buffer id the grid writes to. On
@@ -414,8 +434,14 @@ class JobResource extends Resource
                     ->limitList(3)
                     ->expandableLimitedList()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('kind')
+                    ->label('Job type')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => Job::kindOptions()[$state] ?? 'Service Job')
+                    ->color(fn (?string $state): string => $state === Job::KIND_QUICK ? 'warning' : 'gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('type')
-                    ->label('Type')
+                    ->label('Frequency')
                     ->badge()
                     ->formatStateUsing(fn (?string $state) => $state === 'recurring' ? 'Recurring' : 'One Time')
                     ->color(fn (?string $state) => $state === 'recurring' ? 'info' : 'gray')
@@ -450,6 +476,9 @@ class JobResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options(fn (): array => \App\Models\JobStatus::options()),
+                Tables\Filters\SelectFilter::make('kind')
+                    ->label('Job type')
+                    ->options(fn (): array => Job::kindOptions()),
                 Tables\Filters\SelectFilter::make('priority')
                     ->label('Priority')
                     ->options([

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CustomerResource\RelationManagers;
 
 use App\Filament\Resources\JobResource;
+use App\Models\Job;
 use App\Services\JobFromFormCreator;
 use Filament\Actions;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -72,8 +73,16 @@ class JobsRelationManager extends RelationManager
                     ->icon('heroicon-o-plus')
                     ->modalWidth(\Filament\Support\Enums\Width::FiveExtraLarge)
                     // The customer is already known — pre-select it so the shared
-                    // picker is valid and shows the right account.
-                    ->fillForm(fn (): array => ['customer_id' => $this->getOwnerRecord()->getKey()])
+                    // picker is valid and shows the right account. fillForm()
+                    // replaces the schema's own defaults rather than merging with
+                    // them, so the ones the form relies on are restored here.
+                    ->fillForm(fn (): array => [
+                        'customer_id' => $this->getOwnerRecord()->getKey(),
+                        'kind' => Job::KIND_SERVICE,
+                        'status' => 'pending',
+                        'priority' => 'normal',
+                        'job_type' => 'one_time',
+                    ])
                     // Pin the customer to this tab's owner, then run the same
                     // creation path (services + recurrence) as the Jobs resource.
                     ->using(fn (array $data): \Illuminate\Database\Eloquent\Model => app(JobFromFormCreator::class)

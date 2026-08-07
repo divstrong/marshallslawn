@@ -50,7 +50,6 @@ class CreateJobServicesTabTest extends TestCase
             ->fillForm([
                 'customer_id' => $this->customer->id,
                 'property_id' => $this->property->id,
-                'title' => 'Spring visit',
                 'status' => 'pending',
                 'job_type' => 'one_time',
             ]);
@@ -64,8 +63,10 @@ class CreateJobServicesTabTest extends TestCase
 
         $component->call('create')->assertHasNoFormErrors();
 
-        $job = Job::firstWhere('title', 'Spring visit');
-        $this->assertNotNull($job);
+        $job = Job::sole();
+
+        // Nobody types a title any more — it is derived from the services.
+        $this->assertSame('Mowing +1 more', $job->title);
 
         $this->assertDatabaseHas('job_services', [
             'job_id' => $job->id, 'service_id' => $mowing->id, 'quantity' => 2, 'unit_price' => 45, 'price' => 90,
@@ -83,7 +84,6 @@ class CreateJobServicesTabTest extends TestCase
             ->fillForm([
                 'customer_id' => $this->customer->id,
                 'property_id' => $this->property->id,
-                'title' => 'No priority set',
                 'status' => 'pending',
                 'job_type' => 'one_time',
                 'priority' => null,
@@ -91,7 +91,12 @@ class CreateJobServicesTabTest extends TestCase
             ->call('create')
             ->assertHasNoFormErrors();
 
-        $this->assertDatabaseHas('service_jobs', ['title' => 'No priority set']);
+        // A service job with no lines yet still gets a usable label.
+        $this->assertDatabaseHas('service_jobs', [
+            'customer_id' => $this->customer->id,
+            'kind' => Job::KIND_SERVICE,
+            'title' => 'Service job',
+        ]);
     }
 
     public function test_a_recurring_job_requires_at_least_one_service(): void
@@ -100,7 +105,6 @@ class CreateJobServicesTabTest extends TestCase
             ->fillForm([
                 'customer_id' => $this->customer->id,
                 'property_id' => $this->property->id,
-                'title' => 'Weekly mow',
                 'status' => 'pending',
                 'job_type' => 'recurring',
                 'recur_frequency' => 'weekly',
@@ -111,7 +115,7 @@ class CreateJobServicesTabTest extends TestCase
             ->call('create')
             ->assertHasErrors('services');
 
-        $this->assertDatabaseMissing('service_jobs', ['title' => 'Weekly mow']);
+        $this->assertDatabaseCount('service_jobs', 0);
     }
 
     public function test_a_customer_can_be_created_inline_from_the_job_form(): void

@@ -16,6 +16,21 @@ class JobObserver
     ) {
     }
 
+    /**
+     * The title is derived, never typed. A quick job's label tracks its notes,
+     * which live on the row itself, so it is recomputed on every save; a service
+     * job's comes from its lines, so it is refreshed by whoever edits those
+     * (JobFromFormCreator, JobServiceLines) and only defaulted here — that keeps
+     * an ordinary save from firing an extra query. Either way the NOT NULL
+     * column never ends up blank.
+     */
+    public function saving(Job $job): void
+    {
+        if ($job->isQuick() || blank($job->title)) {
+            $job->title = $job->deriveTitle();
+        }
+    }
+
     public function created(Job $job): void
     {
         $this->routeAssigner->sync($job);

@@ -29,8 +29,15 @@ class JobFromFormCreator
      */
     public function create(array $data, array $overrides = []): array
     {
-        $type = $data['job_type'] ?? 'one_time';
-        $lines = $this->resolveLines($data);
+        $kind = ($data['kind'] ?? Job::KIND_SERVICE) === Job::KIND_QUICK
+            ? Job::KIND_QUICK
+            : Job::KIND_SERVICE;
+        $data['kind'] = $kind;
+
+        // A quick job is a flat price and some notes — it carries no services,
+        // and a series needs one, so it is always a one-off.
+        $type = $kind === Job::KIND_QUICK ? 'one_time' : ($data['job_type'] ?? 'one_time');
+        $lines = $kind === Job::KIND_QUICK ? [] : $this->resolveLines($data);
         $serviceIds = array_values(array_filter(array_column($lines, 'service_id')));
 
         // The service grid on create requires a recurring series to carry at least
@@ -73,7 +80,7 @@ class JobFromFormCreator
                 'property_id' => $data['property_id'] ?? null,
                 'crew_id' => $data['crew_id'] ?? null,
                 'service_id' => $serviceIds[0] ?? null,
-                'title' => $this->recurringTitle($data, $serviceIds),
+                'title' => $this->recurringTitle($serviceIds),
                 'frequency' => $recur['frequency'],
                 'interval_days' => $recur['frequency'] === 'weekly' ? 7 : 30,
                 'preferred_day_of_week' => $recur['frequency'] === 'weekly' && $recur['day_of_week'] !== null
@@ -201,15 +208,10 @@ class JobFromFormCreator
     }
 
     /**
-     * @param  array<string, mixed>  $data
      * @param  array<int, int>  $serviceIds
      */
-    private function recurringTitle(array $data, array $serviceIds): string
+    private function recurringTitle(array $serviceIds): string
     {
-        if (! empty($data['title'])) {
-            return $data['title'];
-        }
-
         if (! empty($serviceIds) && ($name = Service::whereKey($serviceIds[0])->value('name'))) {
             return $name;
         }
@@ -221,6 +223,17 @@ class JobFromFormCreator
      * @param  array<int, ServiceLine>  $lines
      */
     private function attachServices(Job $job, array $lines): void
+    {
+        $this->writeLines($job, $lines);
+
+        // The job's label comes from its services, which only exist now.
+        $job->refreshTitle();
+    }
+
+    /**
+     * @param  array<int, ServiceLine>  $lines
+     */
+    private function writeLines(Job $job, array $lines): void
     {
         foreach (array_values($lines) as $order => $line) {
             JobService::create([

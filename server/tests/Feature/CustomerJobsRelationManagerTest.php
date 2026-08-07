@@ -34,16 +34,12 @@ class CustomerJobsRelationManagerTest extends TestCase
             'ownerRecord' => $customer,
             'pageClass' => EditCustomer::class,
         ])
-            ->callTableAction('create', data: [
-                'title' => 'From the customer tab',
-                'property_id' => $property->id,
-                'status' => 'pending',
-                'job_type' => 'one_time',
-            ])
+            // Only the property is supplied: the modal pre-fills the customer and
+            // the form's defaults (job type, status, priority, frequency).
+            ->callTableAction('create', data: ['property_id' => $property->id])
             ->assertHasNoTableActionErrors();
 
-        $job = Job::firstWhere('title', 'From the customer tab');
-        $this->assertNotNull($job);
+        $job = Job::sole();
         $this->assertSame($customer->id, $job->customer_id);
     }
 }

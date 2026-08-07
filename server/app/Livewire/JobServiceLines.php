@@ -261,7 +261,15 @@ class JobServiceLines extends Component
     /** Mirror the working rows into the draft cache (create flow only). */
     private function persistDraft(): void
     {
-        if ($this->isEdit() || ! $this->draftId) {
+        // On edit the lines are already in the database — but the job's derived
+        // title is built from them, so it has to follow them.
+        if ($this->isEdit()) {
+            Job::find($this->jobId)?->refreshTitle();
+
+            return;
+        }
+
+        if (! $this->draftId) {
             return;
         }
 

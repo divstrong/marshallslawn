@@ -96,11 +96,16 @@ class Scheduling extends Page
                         ->required()
                         ->placeholder('Select a customer first'),
 
-                    Forms\Components\TextInput::make('title')
-                        ->label('Job title')
-                        ->required()
-                        ->maxLength(255)
-                        ->placeholder('Mowing, Mulch install, Spring cleanup…'),
+                    // This form has no service picker, so what it creates is a quick
+                    // job by definition: a flat price and some notes. Build a full
+                    // service scope from Jobs → New Job instead.
+                    Forms\Components\TextInput::make('price')
+                        ->label('Price')
+                        ->numeric()
+                        ->minValue(0)
+                        ->prefix('$')
+                        ->placeholder('0.00')
+                        ->helperText('Leave blank to quote it later.'),
 
                     Forms\Components\Textarea::make('description')
                         ->rows(2)
@@ -137,7 +142,8 @@ class Scheduling extends Page
                             'customer_id' => $data['customer_id'],
                             'property_id' => $data['property_id'],
                             'crew_id' => $addToRoute ? $this->crewId : null,
-                            'title' => $data['title'],
+                            'kind' => Job::KIND_QUICK,
+                            'price' => $data['price'] ?? null,
                             'description' => $data['description'] ?? null,
                             'priority' => $data['priority'] ?? 'normal',
                             'status' => 'scheduled',

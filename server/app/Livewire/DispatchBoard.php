@@ -103,13 +103,16 @@ class DispatchBoard extends Component
     public string $newJobCustomerSearch = '';
 
     /**
-     * @var array{customer_id: ?int, property_id: ?int, title: string, priority: string,
-     *     scheduled_date: ?string, crew_id: ?int, service_ids: array<int, int>}
+     * @var array{customer_id: ?int, property_id: ?int, kind: string, price: ?string,
+     *     notes: ?string, priority: string, scheduled_date: ?string, crew_id: ?int,
+     *     service_ids: array<int, int>}
      */
     public array $newJob = [
         'customer_id' => null,
         'property_id' => null,
-        'title' => '',
+        'kind' => Job::KIND_SERVICE,
+        'price' => null,
+        'notes' => null,
         'priority' => 'normal',
         'scheduled_date' => null,
         'crew_id' => null,
@@ -1353,7 +1356,9 @@ class DispatchBoard extends Component
         $this->newJob = [
             'customer_id' => null,
             'property_id' => null,
-            'title' => '',
+            'kind' => Job::KIND_SERVICE,
+            'price' => null,
+            'notes' => null,
             'priority' => 'normal',
             'scheduled_date' => $this->date,
             'crew_id' => $defaultCrew ? (int) $defaultCrew : null,
@@ -1457,7 +1462,9 @@ class DispatchBoard extends Component
         $data = $this->validate([
             'newJob.customer_id' => ['required', 'integer', 'exists:customers,id'],
             'newJob.property_id' => ['nullable', 'integer', 'exists:properties,id'],
-            'newJob.title' => ['required', 'string', 'max:255'],
+            'newJob.kind' => ['required', 'in:' . Job::KIND_SERVICE . ',' . Job::KIND_QUICK],
+            'newJob.price' => ['nullable', 'numeric', 'min:0'],
+            'newJob.notes' => ['nullable', 'string'],
             'newJob.priority' => ['nullable', 'in:low,normal,high,urgent'],
             'newJob.scheduled_date' => ['nullable', 'date'],
             'newJob.crew_id' => ['nullable', 'integer', 'exists:crews,id'],
@@ -1465,16 +1472,22 @@ class DispatchBoard extends Component
             'newJob.service_ids.*' => ['integer', 'exists:services,id'],
         ])['newJob'];
 
+        $isQuick = $data['kind'] === Job::KIND_QUICK;
+
         // Services come in as TBD lines; pricing is set later on the job.
-        $serviceLines = array_map(
+        $serviceLines = $isQuick ? [] : array_map(
             fn ($id) => ['service_id' => (int) $id, 'pricing' => 'tbd'],
             $data['service_ids'],
         );
 
         app(\App\Services\JobFromFormCreator::class)->create([
-            'title' => $data['title'],
             'customer_id' => $data['customer_id'],
             'property_id' => $data['property_id'],
+            'kind' => $data['kind'],
+            // A flat price and notes belong to a quick job only; a service job
+            // totals up from its lines.
+            'price' => $isQuick ? ($data['price'] ?: null) : null,
+            'notes' => $isQuick ? ($data['notes'] ?: null) : null,
             'priority' => $data['priority'] ?: 'normal',
             'status' => $data['scheduled_date'] ? 'scheduled' : 'pending',
             'scheduled_date' => $data['scheduled_date'],

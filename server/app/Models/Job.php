@@ -18,6 +18,25 @@ class Job extends Model
     public const MAX_TIMER_HOURS = 12;
 
     /**
+     * How a job is priced. A service job is built from priced service lines that
+     * sum to a scope; a quick job is a flat price plus notes for an existing
+     * customer, with no services at all. The choice drives which fields the job
+     * form offers.
+     */
+    public const KIND_SERVICE = 'service';
+
+    public const KIND_QUICK = 'quick';
+
+    /** @return array<string, string> */
+    public static function kindOptions(): array
+    {
+        return [
+            self::KIND_SERVICE => 'Service Job',
+            self::KIND_QUICK => 'Quick Job',
+        ];
+    }
+
+    /**
      * The table associated with the model.
      *
      * @var string
@@ -40,6 +59,7 @@ class Job extends Model
         'description',
         'status',
         'type',
+        'kind',
         'waiting_list',
         'priority',
         'estimated_minutes',
@@ -68,6 +88,57 @@ class Job extends Model
             'estimated_minutes' => 'integer',
             'price' => 'decimal:2',
         ];
+    }
+
+    public function isQuick(): bool
+    {
+        return $this->kind === self::KIND_QUICK;
+    }
+
+    /**
+     * The job's display label. Nobody types this any more — the "Job title" input
+     * was removed from every job form — so it is derived from what the job is:
+     * its services for a service job, the first line of its notes for a quick
+     * one. Everything downstream (mobile app, SMS/push, dispatch cards, time
+     * logs) still reads `title`, so it always holds a sensible label.
+     */
+    public function deriveTitle(): string
+    {
+        if ($this->isQuick()) {
+            $firstLine = trim(explode("\n", (string) ($this->notes ?? ''))[0]);
+
+            return $firstLine !== ''
+                ? \Illuminate\Support\Str::limit($firstLine, 60)
+                : 'Quick job';
+        }
+
+        $names = $this->jobServices()
+            ->with('service:id,name')
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn (JobService $line): ?string => $line->service?->name ?: $line->description)
+            ->filter()
+            ->values();
+
+        return match (true) {
+            $names->isEmpty() => 'Service job',
+            $names->count() === 1 => (string) $names[0],
+            default => $names[0] . ' +' . ($names->count() - 1) . ' more',
+        };
+    }
+
+    /**
+     * Recompute the derived title after the job's service lines change. Saved
+     * quietly: this is a label refresh, not a change worth re-running the
+     * observer's route sync and customer notifications over.
+     */
+    public function refreshTitle(): void
+    {
+        $title = $this->deriveTitle();
+
+        if ($title !== $this->title) {
+            $this->forceFill(['title' => $title])->saveQuietly();
+        }
     }
 
     /**
