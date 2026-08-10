@@ -60,6 +60,20 @@ class PropertyResource extends Resource
                                 ->suffix('sq ft'),
                             Forms\Components\Toggle::make('is_primary')
                                 ->default(false),
+                            Forms\Components\FileUpload::make('primary_image_path')
+                                ->label('Primary image')
+                                ->helperText('A reference photo of the home, shown on the properties list and the customer overview.')
+                                ->image()
+                                ->imageEditor()
+                                ->disk('public')
+                                ->directory('property-images')
+                                // Stored downsized: this is a thumbnail everywhere it's
+                                // used, so a full phone-camera original earns nothing.
+                                ->imageResizeMode('cover')
+                                ->imageResizeTargetWidth(1200)
+                                ->imageResizeTargetHeight(800)
+                                ->maxSize(8192)
+                                ->columnSpanFull(),
                             Forms\Components\Textarea::make('notes')
                                 ->columnSpanFull(),
                         ]),
@@ -78,6 +92,14 @@ class PropertyResource extends Resource
     {
         return $table
             ->columns([
+                // Leads the row: the photo is the fastest way to recognise an address.
+                Tables\Columns\ImageColumn::make('primary_image_path')
+                    ->label('Photo')
+                    ->disk('public')
+                    ->height(44)
+                    ->width(64)
+                    ->extraImgAttributes(['style' => 'object-fit: cover; border-radius: 6px;'])
+                    ->defaultImageUrl(fn (): string => Property::placeholderImageUrl()),
                 Tables\Columns\TextColumn::make('address')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('city')

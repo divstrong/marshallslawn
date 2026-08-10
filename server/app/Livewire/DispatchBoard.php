@@ -119,6 +119,32 @@ class DispatchBoard extends Component
         'service_ids' => [],
     ];
 
+    /**
+     * Inline "add on the fly" sub-forms for the New Job modal, so a job for a
+     * brand-new customer or a property we don't have yet doesn't mean leaving
+     * the board for the Customers screen and starting over.
+     */
+    public bool $showNewCustomerForm = false;
+
+    /** @var array{first_name: string, last_name: string, company_name: string, email: string, phone: string} */
+    public array $newCustomer = [
+        'first_name' => '',
+        'last_name' => '',
+        'company_name' => '',
+        'email' => '',
+        'phone' => '',
+    ];
+
+    public bool $showNewPropertyForm = false;
+
+    /** @var array{address: string, city: string, state: string, zip: string} */
+    public array $newProperty = [
+        'address' => '',
+        'city' => '',
+        'state' => '',
+        'zip' => '',
+    ];
+
     public function mount(): void
     {
         $user = Auth::user();
@@ -1364,12 +1390,145 @@ class DispatchBoard extends Component
             'crew_id' => $defaultCrew ? (int) $defaultCrew : null,
             'service_ids' => [],
         ];
+        $this->resetNewCustomerForm();
+        $this->resetNewPropertyForm();
+        $this->resetValidation();
         $this->showNewJobModal = true;
     }
 
     public function closeNewJobModal(): void
     {
         $this->showNewJobModal = false;
+    }
+
+    private function resetNewCustomerForm(): void
+    {
+        $this->showNewCustomerForm = false;
+        $this->newCustomer = [
+            'first_name' => '',
+            'last_name' => '',
+            'company_name' => '',
+            'email' => '',
+            'phone' => '',
+        ];
+    }
+
+    private function resetNewPropertyForm(): void
+    {
+        $this->showNewPropertyForm = false;
+        $this->newProperty = [
+            'address' => '',
+            'city' => '',
+            'state' => '',
+            'zip' => '',
+        ];
+    }
+
+    /** Open (or dismiss) the inline new-customer form behind the Customer field's + button. */
+    public function toggleNewCustomerForm(): void
+    {
+        $open = ! $this->showNewCustomerForm;
+        $this->resetNewCustomerForm();
+        $this->showNewCustomerForm = $open;
+        $this->resetValidation();
+
+        // Seed the name from whatever was typed in the search box — the usual
+        // path here is "searched, found nothing, so add them".
+        if ($open && ! $this->newJob['customer_id']) {
+            $typed = trim($this->newJobCustomerSearch);
+            if ($typed !== '') {
+                $parts = preg_split('/\s+/', $typed, 2);
+                $this->newCustomer['first_name'] = $parts[0];
+                $this->newCustomer['last_name'] = $parts[1] ?? '';
+            }
+        }
+    }
+
+    /** Open (or dismiss) the inline new-property form behind the Property field's + button. */
+    public function toggleNewPropertyForm(): void
+    {
+        $open = ! $this->showNewPropertyForm;
+        $this->resetNewPropertyForm();
+        $this->showNewPropertyForm = $open && (bool) $this->newJob['customer_id'];
+        $this->resetValidation();
+    }
+
+    /**
+     * Create a customer from the inline form and make it this job's selection.
+     * Status is 'active' rather than the column default of 'lead' — we're
+     * booking work for them, which is not a lead.
+     */
+    public function createNewJobCustomer(): void
+    {
+        $data = $this->validate([
+            'newCustomer.first_name' => ['required', 'string', 'max:255'],
+            'newCustomer.last_name' => ['required', 'string', 'max:255'],
+            'newCustomer.company_name' => ['nullable', 'string', 'max:255'],
+            'newCustomer.email' => ['nullable', 'email', 'max:255'],
+            'newCustomer.phone' => ['nullable', 'string', 'max:50'],
+        ])['newCustomer'];
+
+        $customer = \App\Models\Customer::create([
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'company_name' => $data['company_name'] ?: null,
+            'email' => $data['email'] ?: null,
+            'phone' => $data['phone'] ?: null,
+            'status' => 'active',
+        ]);
+
+        $this->resetNewCustomerForm();
+        // Becomes the default choice; the customer has no properties yet, so the
+        // property step opens straight onto its own add form.
+        $this->selectNewJobCustomer($customer->id);
+        $this->showNewPropertyForm = true;
+    }
+
+    /**
+     * Create a property for the chosen customer and make it this job's selection.
+     * Geocoding is handled by PropertyObserver on save, so the new stop can land
+     * on the map without another step.
+     */
+    public function createNewJobProperty(): void
+    {
+        if (! $this->newJob['customer_id']) {
+            return;
+        }
+
+        $data = $this->validate([
+            'newProperty.address' => ['required', 'string', 'max:255'],
+            'newProperty.city' => ['nullable', 'string', 'max:255'],
+            'newProperty.state' => ['nullable', 'string', 'max:255'],
+            'newProperty.zip' => ['nullable', 'string', 'max:20'],
+        ])['newProperty'];
+
+        $customerId = (int) $this->newJob['customer_id'];
+        $isFirst = ! \App\Models\Property::where('customer_id', $customerId)->exists();
+
+        $property = \App\Models\Property::create([
+            'customer_id' => $customerId,
+            'address' => $data['address'],
+            'city' => $data['city'] ?: null,
+            'state' => $data['state'] ?: null,
+            'zip' => $data['zip'] ?: null,
+            'is_primary' => $isFirst,
+        ]);
+
+        $this->resetNewPropertyForm();
+        unset($this->newJobProperties);
+        $this->newJob['property_id'] = $property->id;
+    }
+
+    /** Drop the chosen customer so a mis-pick can be corrected without reopening the modal. */
+    public function clearNewJobCustomer(): void
+    {
+        $this->newJob['customer_id'] = null;
+        $this->newJob['property_id'] = null;
+        $this->newJobCustomerSearch = '';
+        $this->resetNewCustomerForm();
+        $this->resetNewPropertyForm();
+        unset($this->newJobProperties);
+        $this->resetValidation();
     }
 
     /**
@@ -1412,6 +1571,10 @@ class DispatchBoard extends Component
             ? (trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')) ?: ($customer->company_name ?? ''))
             : '';
 
+        // Switching customer invalidates any half-typed property.
+        $this->resetNewPropertyForm();
+        unset($this->newJobProperties);
+
         // Default to the customer's primary property so the form is usable in one pick.
         $this->newJob['property_id'] = \App\Models\Property::where('customer_id', $customerId)
             ->orderByDesc('is_primary')
@@ -1451,6 +1614,45 @@ class DispatchBoard extends Component
             ->orderBy('name')
             ->pluck('name', 'id')
             ->all();
+    }
+
+    /**
+     * Add a service to the New Job modal's list. The picker is a plain dropdown
+     * that appends here — a multi-select made adding a second service a
+     * ctrl-click guessing game.
+     */
+    public function addNewJobService($serviceId): void
+    {
+        $id = (int) $serviceId;
+        if ($id <= 0 || in_array($id, $this->newJobServiceIds(), true)) {
+            return;
+        }
+
+        if (! Service::where('id', $id)->where('is_active', true)->exists()) {
+            return;
+        }
+
+        $this->newJob['service_ids'][] = $id;
+    }
+
+    public function removeNewJobService($serviceId): void
+    {
+        $id = (int) $serviceId;
+        $this->newJob['service_ids'] = array_values(array_filter(
+            $this->newJobServiceIds(),
+            fn (int $existing) => $existing !== $id,
+        ));
+    }
+
+    /**
+     * The chosen service ids, normalised to ints — they can arrive as strings
+     * from the browser.
+     *
+     * @return array<int, int>
+     */
+    public function newJobServiceIds(): array
+    {
+        return array_map('intval', array_values($this->newJob['service_ids'] ?? []));
     }
 
     /**

@@ -366,12 +366,22 @@
             position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); z-index: 1000;
             display: flex; align-items: center; justify-content: center; padding: 16px;
         }
+        {{-- Capped to the viewport and laid out as a column so the title row and the
+             action buttons stay put while a long form scrolls between them — otherwise
+             tall content (a job with several services) pushes Save off screen. --}}
         .dispatch-page .d-modal {
             background: var(--d-card-bg); border-radius: 12px; padding: 24px;
             max-width: 440px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            max-height: calc(100vh - 32px); display: flex; flex-direction: column;
         }
+        {{-- Only the body gives up height; the title row and buttons keep theirs. --}}
+        .dispatch-page .d-modal > * { flex-shrink: 0; }
+        .dispatch-page .d-modal > .d-modal-body { flex-shrink: 1; }
         .dispatch-page .d-modal-title { font-size: 16px; font-weight: 600; }
-        .dispatch-page .d-modal-body { font-size: 14px; color: var(--d-muted); margin-top: 8px; line-height: 1.5; }
+        .dispatch-page .d-modal-body {
+            font-size: 14px; color: var(--d-muted); margin-top: 8px; line-height: 1.5;
+            overflow-y: auto; min-height: 0;
+        }
         .dispatch-page .d-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
         .dispatch-page .d-btn-danger {
             background: #dc2626; color: #fff; border-color: #dc2626;
@@ -469,6 +479,21 @@
                             $yesterday = now()->subDay()->toDateString();
                             $activeStyle = 'background: var(--d-accent); color: #fff; border-color: var(--d-accent);';
                         @endphp
+                        {{-- View-aware period label — single source of truth for every view.
+                             Leads the row so the bar reads left-to-right: what you're
+                             looking at, then the controls that change it. --}}
+                        <div class="d-weekday" style="margin-right:8px; line-height:1.1;">
+                            @if ($this->viewMode === 'month')
+                                <div style="font-size:15px; font-weight:700;">{{ $this->monthLabel }}</div>
+                            @elseif ($this->viewMode === 'list' && $this->listRange === 'week')
+                                <div style="font-size:15px; font-weight:700;">{{ $this->listRangeLabel }}</div>
+                                <div style="font-size:12px; color:var(--d-muted);">Week view</div>
+                            @else
+                                <div style="font-size:15px; font-weight:700;">{{ \Carbon\Carbon::parse($this->date)->format('l') }}</div>
+                                <div style="font-size:12px; color:var(--d-muted);">{{ \Carbon\Carbon::parse($this->date)->format('M j, Y') }}</div>
+                            @endif
+                        </div>
+
                         <button type="button" wire:click="shiftPeriod(-1)" class="d-icon-btn" title="Previous {{ $unit }}">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         </button>
@@ -489,19 +514,6 @@
                         @if ($dayGranularity)
                             <button type="button" wire:click="$set('date', '{{ $tomorrow }}')" class="d-btn" @if ($this->date === $tomorrow) style="{{ $activeStyle }}" @endif>Tomorrow</button>
                         @endif
-
-                        {{-- View-aware period label — single source of truth for every view. --}}
-                        <div class="d-weekday" style="margin-left:8px; line-height:1.1;">
-                            @if ($this->viewMode === 'month')
-                                <div style="font-size:15px; font-weight:700;">{{ $this->monthLabel }}</div>
-                            @elseif ($this->viewMode === 'list' && $this->listRange === 'week')
-                                <div style="font-size:15px; font-weight:700;">{{ $this->listRangeLabel }}</div>
-                                <div style="font-size:12px; color:var(--d-muted);">Week view</div>
-                            @else
-                                <div style="font-size:15px; font-weight:700;">{{ \Carbon\Carbon::parse($this->date)->format('l') }}</div>
-                                <div style="font-size:12px; color:var(--d-muted);">{{ \Carbon\Carbon::parse($this->date)->format('M j, Y') }}</div>
-                            @endif
-                        </div>
 
                         {{-- Create a job on the fly (issue #55). Sits right by the date so
                              it's easy to reach; sized to match the Today button. --}}
@@ -550,24 +562,63 @@
                         >Month</button>
                     </div>
 
-                    <button
-                        type="button"
-                        wire:click="toggleGps"
-                        class="d-chip"
-                        @if ($this->showGps) style="background: var(--d-accent); color: #fff; border-color: var(--d-accent);" @endif
-                        title="Show or hide live crew foreman GPS pins"
-                    >
-                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                        Show GPS
-                    </button>
+                    {{-- GPS pins are drawn on the map, so the toggle only makes sense
+                         in Map view — Day/Week/Month have nothing to pin. --}}
+                    @if ($this->viewMode === 'map')
+                        <button
+                            type="button"
+                            wire:click="toggleGps"
+                            class="d-chip"
+                            @if ($this->showGps) style="background: var(--d-accent); color: #fff; border-color: var(--d-accent);" @endif
+                            title="Show or hide live crew foreman GPS pins"
+                        >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                            Show GPS
+                        </button>
+                    @endif
+                </div>
 
-                    <select wire:model.live="statusFilter" class="d-select">
-                        <option value="">All statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="skipped">Skipped</option>
-                    </select>
+                {{-- Second row, fixed shape regardless of view: service-group filters
+                     (issue #15) on the left, status/crew filters on the right. Pinning
+                     them to their own row keeps the bar from reflowing when the top
+                     row's controls change (e.g. the Map-only GPS toggle). --}}
+                <div class="d-row-wrap" style="margin-top: 8px;">
+                    <span class="d-label" style="align-self:center;">Services</span>
+                    @foreach (['spraying', 'mowing', 'mulching'] as $group)
+                        @php $isGroupActive = in_array($group, $this->serviceGroups, true); @endphp
+                        <button
+                            type="button"
+                            wire:click="toggleServiceGroup('{{ $group }}')"
+                            class="d-chip {{ $isGroupActive ? 'is-active' : '' }}"
+                            @if ($isGroupActive) style="background: var(--d-accent); color: #fff; border-color: var(--d-accent);" @endif
+                        >{{ $serviceGroups[$group] }}</button>
+                    @endforeach
+                    @if (! empty($this->serviceGroups))
+                        {{-- The × matches the other "remove this selection" affordances,
+                             so it reads as dropping the filter, not hiding the jobs. --}}
+                        <button type="button" wire:click="$set('serviceGroups', [])" class="d-btn"
+                            style="height:28px;padding:0 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px;"
+                            title="Clear the service filter and show every service again">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            Clear
+                        </button>
+                    @endif
+
+                    <div class="d-spacer"></div>
+
+                    {{-- Icon sits inside the select (click-through) and the height is
+                         pinned to 32px so this reads as a pair with the crew filter
+                         beside it, which is a button rather than a select. --}}
+                    <div class="d-row" style="position:relative; gap:0;">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="position:absolute; left:10px; pointer-events:none; flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <select wire:model.live="statusFilter" class="d-select" style="height:32px; padding-left:32px;" title="Filter the board by job status">
+                            <option value="">All statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="skipped">Skipped</option>
+                        </select>
+                    </div>
 
                     {{-- The crew filter, in full: one dropdown of checkboxes. It
                          replaced the row of crew chips that used to sit below —
@@ -586,7 +637,9 @@
                             {{ $crewFilterLabel }}
                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div x-show="open" x-cloak @click.outside="open = false" style="position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:220px;background:var(--d-card-bg);border:1px solid var(--d-border);border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);padding:8px;">
+                        {{-- Anchored right: the button now sits at the bar's right edge,
+                             so a left-anchored panel would hang off the viewport. --}}
+                        <div x-show="open" x-cloak @click.outside="open = false" style="position:absolute;z-index:40;top:calc(100% + 4px);right:0;min-width:220px;background:var(--d-card-bg);border:1px solid var(--d-border);border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);padding:8px;">
                             <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;">
                                 <span class="d-label">Crews</span>
                                 @if (count($activeCrewIds) < count($crewColors))
@@ -610,23 +663,6 @@
                             @endif
                         </div>
                     </div>
-                </div>
-
-                {{-- Service-group filters (issue #15): show only jobs offering these services. --}}
-                <div class="d-row-wrap" style="margin-top: 8px;">
-                    <span class="d-label" style="align-self:center;">Services</span>
-                    @foreach (['spraying', 'mowing', 'mulching'] as $group)
-                        @php $isGroupActive = in_array($group, $this->serviceGroups, true); @endphp
-                        <button
-                            type="button"
-                            wire:click="toggleServiceGroup('{{ $group }}')"
-                            class="d-chip {{ $isGroupActive ? 'is-active' : '' }}"
-                            @if ($isGroupActive) style="background: var(--d-accent); color: #fff; border-color: var(--d-accent);" @endif
-                        >{{ $serviceGroups[$group] }}</button>
-                    @endforeach
-                    @if (! empty($this->serviceGroups))
-                        <button type="button" wire:click="$set('serviceGroups', [])" class="d-btn" style="height:28px;padding:0 10px;font-size:12px;">Clear</button>
-                    @endif
                 </div>
             </div>
 
@@ -1181,14 +1217,39 @@
                         <div class="d-modal-title" id="newjob-modal-title">New job</div>
                         <button type="button" wire:click="closeNewJobModal" class="d-btn" style="height:28px; padding:0 10px; font-size:12px;">Close</button>
                     </div>
+                    @php
+                        // The modal reveals itself a step at a time: customer, then that
+                        // customer's property, then the job itself. A customer with no
+                        // property on file still gets through — the property is optional.
+                        $njField = 'width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;';
+                        $njAddBtn = 'flex-shrink:0; width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; padding:0;';
+                        $njSub = 'border:1px dashed var(--d-border); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:8px; background:var(--d-hover);';
+                        $njHasCustomer = (bool) $newJob['customer_id'];
+                        $njProperties = $njHasCustomer ? $this->newJobProperties : [];
+                        $njShowRest = $njHasCustomer && ($newJob['property_id'] || count($njProperties) === 0);
+                    @endphp
                     <div class="d-modal-body" style="display:flex; flex-direction:column; gap:12px;">
-                        {{-- Customer search --}}
+                        {{-- Step 1 — customer. Search existing, or add one on the fly. --}}
                         <div style="position:relative;">
                             <div class="d-label">Customer</div>
-                            <input type="text" wire:model.live.debounce.300ms="newJobCustomerSearch" placeholder="Search customers…" autocomplete="off"
-                                style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;">
-                            @if (! $newJob['customer_id'] && count($this->newJobCustomerResults) > 0)
-                                <div style="position:absolute; z-index:40; left:0; right:0; margin-top:4px; background:var(--d-card-bg); border:1px solid var(--d-border); border-radius:10px; box-shadow:0 10px 25px rgba(0,0,0,0.15); max-height:220px; overflow-y:auto;">
+                            <div class="d-row" style="gap:8px;">
+                                <input type="text" wire:model.live.debounce.300ms="newJobCustomerSearch" placeholder="Search customers…" autocomplete="off"
+                                    @readonly($njHasCustomer) style="{{ $njField }}{{ $njHasCustomer ? ' font-weight:600;' : '' }}">
+                                @if ($njHasCustomer)
+                                    <button type="button" wire:click="clearNewJobCustomer" class="d-btn" style="{{ $njAddBtn }}" title="Choose a different customer" aria-label="Choose a different customer">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                @else
+                                    <button type="button" wire:click="toggleNewCustomerForm" class="d-btn" style="{{ $njAddBtn }}{{ $showNewCustomerForm ? 'background:var(--d-accent); color:#fff; border-color:var(--d-accent);' : '' }}" title="Add a new customer" aria-label="Add a new customer">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+                                    </button>
+                                @endif
+                            </div>
+                            @if (! $njHasCustomer && ! $showNewCustomerForm && count($this->newJobCustomerResults) > 0)
+                                {{-- In flow, not floating: the modal body scrolls now, which
+                                     would clip an absolutely positioned panel. Nothing sits
+                                     below this field until a customer is picked anyway. --}}
+                                <div style="margin-top:4px; margin-right:46px; background:var(--d-card-bg); border:1px solid var(--d-border); border-radius:10px; max-height:220px; overflow-y:auto;">
                                     @foreach ($this->newJobCustomerResults as $c)
                                         <button type="button" wire:click="selectNewJobCustomer({{ $c['id'] }})"
                                             style="display:block; width:100%; text-align:left; padding:9px 12px; border:0; background:transparent; cursor:pointer; font-size:13px; color:var(--d-text);"
@@ -1199,22 +1260,78 @@
                             @error('newJob.customer_id') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
                         </div>
 
-                        {{-- Property --}}
-                        <div>
-                            <div class="d-label">Property</div>
-                            <select wire:model="newJob.property_id" @disabled(! $newJob['customer_id'])
-                                style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a;">
-                                <option value="">{{ $newJob['customer_id'] ? 'Select a property' : 'Pick a customer first' }}</option>
-                                @foreach ($this->newJobProperties as $id => $label)
-                                    <option value="{{ $id }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        @if ($showNewCustomerForm)
+                            {{-- Inline new customer. Enter saves the customer, not the job. --}}
+                            <div style="{{ $njSub }}">
+                                <div class="d-label" style="margin:0;">New customer</div>
+                                <div class="d-row" style="gap:8px;">
+                                    <input type="text" wire:model="newCustomer.first_name" wire:keydown.enter.prevent="createNewJobCustomer" placeholder="First name" style="{{ $njField }}">
+                                    <input type="text" wire:model="newCustomer.last_name" wire:keydown.enter.prevent="createNewJobCustomer" placeholder="Last name" style="{{ $njField }}">
+                                </div>
+                                @error('newCustomer.first_name') <div style="color:#dc2626; font-size:12px;">{{ $message }}</div> @enderror
+                                @error('newCustomer.last_name') <div style="color:#dc2626; font-size:12px;">{{ $message }}</div> @enderror
+                                <input type="text" wire:model="newCustomer.company_name" wire:keydown.enter.prevent="createNewJobCustomer" placeholder="Company (optional)" style="{{ $njField }}">
+                                <div class="d-row" style="gap:8px;">
+                                    <input type="email" wire:model="newCustomer.email" wire:keydown.enter.prevent="createNewJobCustomer" placeholder="Email (optional)" style="{{ $njField }}">
+                                    <input type="text" wire:model="newCustomer.phone" wire:keydown.enter.prevent="createNewJobCustomer" placeholder="Phone (optional)" style="{{ $njField }}">
+                                </div>
+                                @error('newCustomer.email') <div style="color:#dc2626; font-size:12px;">{{ $message }}</div> @enderror
+                                <div class="d-row" style="gap:8px; justify-content:flex-end;">
+                                    <button type="button" wire:click="toggleNewCustomerForm" class="d-btn" style="height:32px; padding:0 12px; font-size:12px;">Cancel</button>
+                                    <button type="button" wire:click="createNewJobCustomer" class="d-btn" style="height:32px; padding:0 14px; font-size:12px; font-weight:600; background:var(--d-accent); color:#fff; border-color:var(--d-accent);">Add customer</button>
+                                </div>
+                            </div>
+                        @endif
 
+                        {{-- Step 2 — property, once we know whose it is. --}}
+                        @if ($njHasCustomer)
+                            <div>
+                                <div class="d-label">Property</div>
+                                <div class="d-row" style="gap:8px;">
+                                    <select wire:model.live="newJob.property_id" style="{{ $njField }}padding:0 10px;">
+                                        <option value="">{{ count($njProperties) ? 'Select a property' : 'No property on file' }}</option>
+                                        @foreach ($njProperties as $id => $label)
+                                            <option value="{{ $id }}">{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="toggleNewPropertyForm" class="d-btn" style="{{ $njAddBtn }}{{ $showNewPropertyForm ? 'background:var(--d-accent); color:#fff; border-color:var(--d-accent);' : '' }}" title="Add a new property" aria-label="Add a new property">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+                                    </button>
+                                </div>
+                                @error('newJob.property_id') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
+                            </div>
+
+                            @if ($showNewPropertyForm)
+                                {{-- Inline new property. Saving geocodes it, so the stop can hit the map. --}}
+                                <div style="{{ $njSub }}">
+                                    <div class="d-label" style="margin:0;">New property</div>
+                                    <input type="text" wire:model="newProperty.address" wire:keydown.enter.prevent="createNewJobProperty" placeholder="Street address" style="{{ $njField }}">
+                                    @error('newProperty.address') <div style="color:#dc2626; font-size:12px;">{{ $message }}</div> @enderror
+                                    <div class="d-row" style="gap:8px;">
+                                        <input type="text" wire:model="newProperty.city" wire:keydown.enter.prevent="createNewJobProperty" placeholder="City" style="{{ $njField }}">
+                                        <input type="text" wire:model="newProperty.state" wire:keydown.enter.prevent="createNewJobProperty" placeholder="State" style="{{ $njField }} max-width:90px;">
+                                        <input type="text" wire:model="newProperty.zip" wire:keydown.enter.prevent="createNewJobProperty" placeholder="ZIP" style="{{ $njField }} max-width:110px;">
+                                    </div>
+                                    <div class="d-row" style="gap:8px; justify-content:flex-end;">
+                                        <button type="button" wire:click="toggleNewPropertyForm" class="d-btn" style="height:32px; padding:0 12px; font-size:12px;">Cancel</button>
+                                        <button type="button" wire:click="createNewJobProperty" class="d-btn" style="height:32px; padding:0 14px; font-size:12px; font-weight:600; background:var(--d-accent); color:#fff; border-color:var(--d-accent);">Add property</button>
+                                    </div>
+                                </div>
+                            @endif
+                        @endif
+
+                        {{-- Step 3 — the job itself, revealed once there's somewhere to send it. --}}
+                        @if (! $njShowRest)
+                            <p class="d-muted" style="font-size:12px; margin:0;">
+                                {{ $njHasCustomer ? 'Pick the property this job is for.' : 'Start by choosing the customer — use + to add one that isn’t on file yet.' }}
+                            </p>
+                        @endif
+
+                        @if ($njShowRest)
                         {{-- Job type decides what the rest of the modal asks for:
                              a service scope, or one flat price and a note. --}}
-                        <div>
-                            <div class="d-label">Job type</div>
+                        <div class="d-row" style="gap:12px;">
+                            <div class="d-label" style="margin:0;">Job type</div>
                             <div class="d-row" style="gap:8px;">
                                 @foreach (\App\Models\Job::kindOptions() as $value => $label)
                                     <button
@@ -1242,15 +1359,42 @@
                                 <div class="d-muted" style="font-size:11px; margin-top:4px;">The first line becomes the job's label on the board.</div>
                             </div>
                         @else
-                            {{-- Service: services are added as TBD and priced later on the job. --}}
+                            {{-- Service: pick one at a time from the dropdown; each lands in
+                                 the list below. Added as TBD lines and priced later on the job. --}}
+                            @php
+                                $njChosenServices = $this->newJobServiceIds();
+                                $njAvailableServices = array_diff_key($this->newJobServiceOptions, array_flip($njChosenServices));
+                            @endphp
                             <div>
                                 <div class="d-label">Services <span class="d-muted" style="font-weight:400;">(optional — priced later)</span></div>
-                                <select wire:model="newJob.service_ids" multiple size="4"
-                                    style="width:100%; border:1px solid var(--d-border); border-radius:8px; padding:6px; font-size:13px; background:#fff; color:#0f172a;">
-                                    @foreach ($this->newJobServiceOptions as $id => $name)
+                                <select wire:change="addNewJobService($event.target.value)" @disabled(empty($njAvailableServices))
+                                    style="{{ $njField }}padding:0 10px;">
+                                    <option value="">{{ empty($njAvailableServices) ? (count($njChosenServices) ? 'All services added' : 'No active services') : 'Add a service…' }}</option>
+                                    @foreach ($njAvailableServices as $id => $name)
                                         <option value="{{ $id }}">{{ $name }}</option>
                                     @endforeach
                                 </select>
+
+                                @if (count($njChosenServices))
+                                    {{-- Chips wrap instead of stacking, and the strip scrolls past
+                                         a few rows, so a long service list can't push the modal's
+                                         buttons out of reach. --}}
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; max-height:96px; overflow-y:auto;">
+                                        @foreach ($njChosenServices as $sid)
+                                            <span wire:key="njsvc-{{ $sid }}" style="display:inline-flex; align-items:center; gap:6px; border:1px solid var(--d-border); border-radius:999px; padding:3px 4px 3px 10px; font-size:12px; background:var(--d-card-bg);">
+                                                {{ $this->newJobServiceOptions[$sid] ?? 'Service #' . $sid }}
+                                                <button type="button" wire:click="removeNewJobService({{ $sid }})"
+                                                    style="flex-shrink:0; width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; padding:0; border:0; border-radius:999px; background:transparent; color:var(--d-muted); cursor:pointer;"
+                                                    title="Remove {{ $this->newJobServiceOptions[$sid] ?? 'this service' }}" aria-label="Remove {{ $this->newJobServiceOptions[$sid] ?? 'this service' }}">
+                                                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                </button>
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <div class="d-muted" style="font-size:11px; margin-top:4px;">No services yet — the job's label comes from the first one you add.</div>
+                                @endif
+                                @error('newJob.service_ids') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
                             </div>
                         @endif
 
@@ -1286,10 +1430,13 @@
                         <p class="d-muted" style="font-size:12px; margin:0;">
                             A date and crew place the job straight onto that crew's route. Leave them blank to drop it into the Unassigned pile.
                         </p>
+                        @endif
                     </div>
                     <div class="d-row" style="justify-content:flex-end; gap:8px; margin-top:6px;">
                         <button type="button" wire:click="closeNewJobModal" class="d-btn" style="height:36px; padding:0 14px; font-size:13px;">Cancel</button>
-                        <button type="submit" class="d-btn" style="height:36px; padding:0 18px; font-size:13px; font-weight:600; background:var(--d-accent); color:#fff; border-color:var(--d-accent);">Create job</button>
+                        {{-- Stays visible but inert until the customer/property steps are
+                             done, so the modal never looks like a dead end. --}}
+                        <button type="submit" @disabled(! $njShowRest) class="d-btn" style="height:36px; padding:0 18px; font-size:13px; font-weight:600; background:var(--d-accent); color:#fff; border-color:var(--d-accent);{{ $njShowRest ? '' : ' opacity:.45; cursor:not-allowed;' }}">Create job</button>
                     </div>
                 </form>
             </div>

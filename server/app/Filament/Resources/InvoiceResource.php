@@ -169,12 +169,6 @@ class InvoiceResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
-                Tables\Columns\TextColumn::make('subtotal')
-                    ->money('usd')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('credits_total')
-                    ->label('Credits')
-                    ->money('usd'),
                 Tables\Columns\TextColumn::make('total')
                     ->money('usd')
                     ->sortable(),

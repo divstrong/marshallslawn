@@ -13,6 +13,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\Width;
 use Filament\Tables;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
@@ -412,6 +413,9 @@ class JobResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            // Newest work first. Unscheduled (TBD) jobs have a null date, which MySQL
+            // sorts last on a descending sort — they belong at the bottom, not the top.
+            ->defaultSort('scheduled_date', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('scheduled_date')
                     ->label('Scheduled')
@@ -552,10 +556,11 @@ class JobResource extends Resource
                         ),
                     )),
             ])
-            // Filters sit in the top row of the index rather than behind the
-            // funnel dropdown, so the toggles are one click away.
-            ->filtersLayout(FiltersLayout::AboveContent)
-            ->filtersFormColumns(4)
+            // Behind the funnel button: there are enough filters here that laid out
+            // above the table they pushed the jobs themselves off the screen.
+            ->filtersLayout(FiltersLayout::Dropdown)
+            ->filtersFormColumns(2)
+            ->filtersFormWidth(Width::ExtraLarge)
             ->defaultPaginationPageOption(50)
             ->actions([
                 Actions\Action::make('duplicate')

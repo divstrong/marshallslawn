@@ -30,6 +30,7 @@ class Property extends Model
         'square_footage',
         'notes',
         'is_primary',
+        'primary_image_path',
     ];
 
     /**
@@ -51,6 +52,25 @@ class Property extends Model
     public function hasCoordinates(): bool
     {
         return $this->latitude !== null && $this->longitude !== null;
+    }
+
+    /**
+     * Public URL for the property's reference photo, or null when none is set so
+     * callers can fall back to the "needs a photo" placeholder.
+     */
+    public function primaryImageUrl(): ?string
+    {
+        if (blank($this->primary_image_path)) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->primary_image_path);
+    }
+
+    /** The stand-in shown wherever a property has no photo on file yet. */
+    public static function placeholderImageUrl(): string
+    {
+        return asset('img/property-placeholder.svg');
     }
 
     public function customer(): BelongsTo
