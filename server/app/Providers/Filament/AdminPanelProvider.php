@@ -72,6 +72,15 @@ class AdminPanelProvider extends PanelProvider
                     ->group('Operations')
                     ->sort(1)
                     ->visible(fn () => Auth::user()?->hasAccessTo('Dispatch') ?? false),
+                // The waiting list is a JobResource page, so it needs its own nav entry
+                // to sit alongside Jobs in Operations.
+                NavigationItem::make('Waiting List')
+                    ->url(fn () => route('filament.admin.resources.jobs.waiting-list'))
+                    ->icon('heroicon-o-clock')
+                    ->group('Operations')
+                    ->sort(3)
+                    ->isActiveWhen(fn () => request()->routeIs('filament.admin.resources.jobs.waiting-list'))
+                    ->visible(fn () => Auth::user()?->hasAccessTo('JobResource') ?? false),
             ])
             ->middleware([
                 EncryptCookies::class,

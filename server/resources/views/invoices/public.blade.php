@@ -191,20 +191,35 @@
                         $oneTimeWithFee = round($invoice->total + $oneTimeFee, 2);
                     @endphp
 
+                    {{-- Invoice terms, straight from Settings → Terms, immediately above the
+                         payment form so the customer reads them before paying. --}}
+                    @php $invoiceTerms = \App\Livewire\SettingsTerms::invoiceTerms(); @endphp
+                    @if (filled($invoiceTerms))
+                        <div style="margin-bottom: 20px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px;">
+                            <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Payment Terms</div>
+                            <div style="font-size: 13px; color: #374151; line-height: 1.6;">
+                                {!! nl2br(e($invoiceTerms)) !!}
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="pay-section">
                         <div class="pay-header">Pay Invoice</div>
                         <div class="pay-body">
 
-                            {{-- Payment Plan Toggle --}}
-                            <div class="toggle-wrap" id="plan-toggle" onclick="togglePaymentPlan()">
-                                <div class="toggle-track" id="plan-track">
-                                    <div class="toggle-thumb"></div>
+                            {{-- Payment Plan Toggle — only when the office allows a plan on
+                                 this invoice (Invoices → Payment options). --}}
+                            @if ($invoice->paymentPlanAvailable())
+                                <div class="toggle-wrap" id="plan-toggle" onclick="togglePaymentPlan()">
+                                    <div class="toggle-track" id="plan-track">
+                                        <div class="toggle-thumb"></div>
+                                    </div>
+                                    <div>
+                                        <div class="toggle-label">Payment Plan</div>
+                                        <div class="toggle-sub">Split into {{ $installments }} monthly payments billed every 30 days</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div class="toggle-label">Payment Plan</div>
-                                    <div class="toggle-sub">Split into {{ $installments }} monthly payments billed every 30 days</div>
-                                </div>
-                            </div>
+                            @endif
 
                             {{-- Payment Plan Summary (hidden by default) --}}
                             <div class="plan-summary" id="plan-summary" style="display: none;">
@@ -290,6 +305,12 @@
                         let currentTab = 'card';
 
                         function togglePaymentPlan() {
+                            // The toggle isn't rendered when plans are switched off for this
+                            // invoice, so bail rather than reaching for missing nodes.
+                            if (! document.getElementById('plan-track')) {
+                                return;
+                            }
+
                             planEnabled = !planEnabled;
 
                             document.getElementById('plan-track').classList.toggle('on', planEnabled);

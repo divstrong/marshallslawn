@@ -32,6 +32,12 @@ class Scheduling extends Page
 
     protected static ?int $navigationSort = 2;
 
+    /**
+     * Hidden from the menu: the Dispatch board covers this ground. The page and its
+     * route stay registered so it can be linked directly or brought back later.
+     */
+    protected static bool $shouldRegisterNavigation = false;
+
     protected string $view = 'filament.pages.scheduling';
 
     #[Url(as: 'date')]

@@ -13,6 +13,7 @@ class Invoice extends Model
 
     protected $fillable = [
         'customer_id',
+        'estimate_id',
         'invoice_number',
         'share_token',
         'status',
@@ -25,6 +26,7 @@ class Invoice extends Model
         'paid_at',
         'sent_at',
         'is_payment_plan',
+        'allows_payment_plan',
         'payment_plan_installments',
         'payment_plan_amount',
         'cc_fee_rate',
@@ -63,6 +65,7 @@ class Invoice extends Model
             'paid_at' => 'date',
             'sent_at' => 'datetime',
             'is_payment_plan' => 'boolean',
+            'allows_payment_plan' => 'boolean',
             'payment_plan_amount' => 'decimal:2',
             'cc_fee_rate' => 'decimal:4',
             'payment_plan_started_at' => 'date',
@@ -72,6 +75,21 @@ class Invoice extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /** The estimate this invoice was raised from, when there was one. */
+    public function estimate(): BelongsTo
+    {
+        return $this->belongsTo(Estimate::class);
+    }
+
+    /**
+     * Whether the customer may split this invoice into installments: the office has
+     * to allow it, and a plan can't already be running.
+     */
+    public function paymentPlanAvailable(): bool
+    {
+        return (bool) $this->allows_payment_plan && ! $this->is_payment_plan;
     }
 
     public function credits(): HasMany

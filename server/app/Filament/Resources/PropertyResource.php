@@ -59,6 +59,8 @@ class PropertyResource extends Resource
                                 ->numeric()
                                 ->suffix('sq ft'),
                             Forms\Components\Toggle::make('is_primary')
+                                ->label('Primary property')
+                                ->helperText("A customer's first property becomes primary automatically. Switching this on moves it off whichever property holds it now.")
                                 ->default(false),
                             Forms\Components\FileUpload::make('primary_image_path')
                                 ->label('Primary image')

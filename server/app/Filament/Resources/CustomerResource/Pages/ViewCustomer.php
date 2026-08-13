@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\CustomerResource\Pages;
 
 use App\Filament\Resources\CustomerResource;
+use App\Filament\Resources\EstimateResource;
+use App\Filament\Resources\JobResource;
 use App\Models\Job;
 use Filament\Actions;
 use Filament\Infolists\Components\TextEntry;
@@ -30,17 +32,8 @@ class ViewCustomer extends ViewRecord
         return $this->customerName();
     }
 
-    public function getSubheading(): ?string
-    {
-        $record = $this->getRecord();
-        $parts = array_filter([
-            $record->customer_type,
-            $record->account_number ? "Account {$record->account_number}" : null,
-            'Customer since ' . ($record->created_at?->format('M Y') ?? '—'),
-        ]);
-
-        return implode('  ·  ', $parts);
-    }
+    // No subheading: the identity card at the top of the page carries the account
+    // meta (type, account number, customer since) with room to lay it out properly.
 
     protected function getHeaderActions(): array
     {
@@ -55,6 +48,18 @@ class ViewCustomer extends ViewRecord
                 ->modalContent(fn () => view('filament.customer-chat-modal', ['customerId' => $this->record->id]))
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Close'),
+            // Both carry ?customer_id= so the create screens open already pointed at
+            // this customer rather than asking who it's for.
+            Actions\Action::make('newEstimate')
+                ->label('New Estimate')
+                ->icon('heroicon-o-document-text')
+                ->color('gray')
+                ->url(fn (): string => EstimateResource::getUrl('create', ['customer_id' => $this->record->id])),
+            Actions\Action::make('newJob')
+                ->label('New Job')
+                ->icon('heroicon-o-clipboard-document-list')
+                ->color('gray')
+                ->url(fn (): string => JobResource::getUrl('create', ['customer_id' => $this->record->id])),
             Actions\EditAction::make(),
         ];
     }
@@ -65,7 +70,12 @@ class ViewCustomer extends ViewRecord
         // Filament otherwise gives a ViewRecord's infolist two columns, which packed
         // both rows of cards side by side into five narrow slivers.
         return $schema->columns(1)->components([
-            // Headline numbers first — the "how is this account doing" row.
+            // Who this is, at a glance: monogram, name, standing, and the contact
+            // details you need while the customer is on the phone.
+            View::make('filament.resources.customer.overview-header')
+                ->columnSpanFull(),
+
+            // Then the headline numbers — the "how is this account doing" row.
             View::make('filament.resources.customer.overview-stats')
                 ->columnSpanFull(),
 

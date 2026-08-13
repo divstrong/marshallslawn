@@ -28,7 +28,7 @@ class RecurringJobTemplateResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-path';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Operations';
+    protected static string | \UnitEnum | null $navigationGroup = 'Administration';
 
     protected static ?string $navigationLabel = 'Recurring Jobs';
 

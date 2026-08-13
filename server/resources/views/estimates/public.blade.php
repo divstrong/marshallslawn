@@ -171,13 +171,27 @@
                     <div style="margin-top: 24px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px;">
                         <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Terms & Conditions</div>
                         <div style="font-size: 13px; color: #374151; line-height: 1.5; max-height: 120px; overflow-y: auto; margin-bottom: 12px;">
-                            {!! nl2br(e(\App\Models\Setting::get('estimate_terms', \App\Livewire\SettingsTerms::DEFAULT_ESTIMATE_TERMS))) !!}
+                            {!! nl2br(e(\App\Livewire\SettingsTerms::estimateTerms())) !!}
                         </div>
+                        {{-- form="accept-form" submits this with the acceptance even though
+                             the box sits outside the <form>, so agreement is recorded and
+                             validated server-side rather than only gating the button. --}}
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: #111827;">
-                            <input type="checkbox" id="terms-check" style="width: 18px; height: 18px; accent-color: #059669;" />
-                            <span>I agree to the Terms & Conditions</span>
+                            <input
+                                type="checkbox"
+                                id="terms-check"
+                                name="terms_accepted"
+                                value="1"
+                                form="accept-form"
+                                style="width: 18px; height: 18px; accent-color: #059669;"
+                            />
+                            <span>I agree to the Terms &amp; Conditions</span>
                         </label>
                     </div>
+
+                    @error('terms_accepted')
+                        <div style="margin-top: 8px; font-size: 13px; color: #991b1b; text-align: center;">{{ $message }}</div>
+                    @enderror
 
                     <div style="margin-top: 8px; font-size: 13px; color: #6b7280; text-align: center;" id="accept-hint">
                         Please select at least one service and accept the terms to continue.

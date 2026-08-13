@@ -103,21 +103,37 @@ class DispatchBoard extends Component
     public string $newJobCustomerSearch = '';
 
     /**
-     * @var array{customer_id: ?int, property_id: ?int, kind: string, price: ?string,
-     *     notes: ?string, priority: string, scheduled_date: ?string, crew_id: ?int,
-     *     service_ids: array<int, int>}
+     * The three states a job can be created in from the board. Anything further
+     * along (in progress, completed) is reached by working the job, not by filing it.
+     */
+    public const NEW_JOB_STATUSES = [
+        'scheduled' => 'Scheduled',
+        'pending' => 'Unassigned',
+        'waiting_list' => 'Waiting',
+    ];
+
+    /**
+     * @var array{customer_id: ?int, property_id: ?int, notes: ?string, priority: string,
+     *     status: string, scheduled_date: ?string, crew_id: ?int}
      */
     public array $newJob = [
         'customer_id' => null,
         'property_id' => null,
-        'kind' => Job::KIND_SERVICE,
-        'price' => null,
         'notes' => null,
         'priority' => 'normal',
+        'status' => 'pending',
         'scheduled_date' => null,
         'crew_id' => null,
-        'service_ids' => [],
     ];
+
+    /**
+     * Service lines for the new job, each priced. The rate is seeded from the
+     * service's default so the common case is one click, but stays editable —
+     * pricing varies by property.
+     *
+     * @var array<int, array{service_id: int, price: ?string}>
+     */
+    public array $newJobServices = [];
 
     /**
      * Inline "add on the fly" sub-forms for the New Job modal, so a job for a
@@ -205,6 +221,25 @@ class DispatchBoard extends Component
         return Setting::bool('dispatch_service_icons');
     }
 
+    /**
+     * The crew to focus on: set by clicking a foreman's avatar on the map, which
+     * narrows the board to that crew's work. Returns null when no foreman is
+     * selected, or when the selected one leads no crew.
+     */
+    #[Computed]
+    public function focusedCrewId(): ?int
+    {
+        if (! $this->selectedForemanId) {
+            return null;
+        }
+
+        $crewId = Crew::where('foreman_id', $this->selectedForemanId)
+            ->whereIn('id', $this->activeCrewIds)
+            ->value('id');
+
+        return $crewId ? (int) $crewId : null;
+    }
+
     #[Computed]
     public function stops(): array
     {
@@ -223,6 +258,10 @@ class DispatchBoard extends Component
             ->whereHas('route', function ($q) {
                 $q->whereDate('route_date', $this->date);
                 $q->whereIn('crew_id', $this->activeCrewIds);
+                // Clicking a foreman on the map narrows the board to their crew.
+                if ($focused = $this->focusedCrewId) {
+                    $q->where('crew_id', $focused);
+                }
             })
             ->whereHas('property', fn ($q) => $q->whereNotNull('latitude')->whereNotNull('longitude'))
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
@@ -312,6 +351,12 @@ class DispatchBoard extends Component
     #[Computed]
     public function unroutedJobs(): array
     {
+        // Focused on one crew: unrouted jobs belong to no crew, so they aren't
+        // that foreman's work and drop out of the view with everyone else's.
+        if ($this->focusedCrewId) {
+            return [];
+        }
+
         $assignedJobIds = RouteStop::query()
             ->whereHas('route', fn ($q) => $q->whereDate('route_date', $this->date))
             ->whereNotNull('job_id')
@@ -970,6 +1015,7 @@ class DispatchBoard extends Component
         $this->selectedStopId = $id;
         $this->selectedJobId = null;
         $this->selectedForemanId = null;
+        $this->forgetCrewFocus();
     }
 
     public function selectJob(int $id): void
@@ -977,6 +1023,7 @@ class DispatchBoard extends Component
         $this->selectedJobId = $id;
         $this->selectedStopId = null;
         $this->selectedForemanId = null;
+        $this->forgetCrewFocus();
     }
 
     public function selectForeman(int $id): void
@@ -988,6 +1035,21 @@ class DispatchBoard extends Component
         $this->chatPanelOpen = false;
 
         unset($this->chatMessages, $this->selectedForeman);
+        // The board now shows this crew only, so the cached lists are stale.
+        $this->forgetCrewFocus();
+    }
+
+    /** Drop the caches that depend on which crew (if any) the board is focused on. */
+    private function forgetCrewFocus(): void
+    {
+        unset(
+            $this->focusedCrewId,
+            $this->stops,
+            $this->unroutedJobs,
+            $this->summary,
+            $this->listDays,
+            $this->unmappedStops,
+        );
     }
 
     #[Computed]
@@ -1100,6 +1162,7 @@ class DispatchBoard extends Component
         $this->selectedJobId = null;
         $this->selectedForemanId = null;
         $this->chatPanelOpen = false;
+        $this->forgetCrewFocus();
     }
 
     /**
@@ -1382,18 +1445,42 @@ class DispatchBoard extends Component
         $this->newJob = [
             'customer_id' => null,
             'property_id' => null,
-            'kind' => Job::KIND_SERVICE,
-            'price' => null,
             'notes' => null,
             'priority' => 'normal',
+            'status' => 'pending',
             'scheduled_date' => $this->date,
             'crew_id' => $defaultCrew ? (int) $defaultCrew : null,
-            'service_ids' => [],
         ];
+        $this->newJobServices = [];
+        $this->syncNewJobStatus();
         $this->resetNewCustomerForm();
         $this->resetNewPropertyForm();
         $this->resetValidation();
         $this->showNewJobModal = true;
+    }
+
+    /**
+     * Keep the status honest about the date and crew: both present means the job is
+     * Scheduled, otherwise it's Unassigned. Waiting is an explicit filing decision,
+     * so it is never overwritten here.
+     */
+    public function syncNewJobStatus(): void
+    {
+        if (($this->newJob['status'] ?? null) === 'waiting_list') {
+            return;
+        }
+
+        $this->newJob['status'] = filled($this->newJob['scheduled_date'] ?? null) && filled($this->newJob['crew_id'] ?? null)
+            ? 'scheduled'
+            : 'pending';
+    }
+
+    /** Re-derive the status whenever the date or crew behind it changes. */
+    public function updatedNewJob(mixed $value, string $key): void
+    {
+        if (in_array($key, ['scheduled_date', 'crew_id'], true)) {
+            $this->syncNewJobStatus();
+        }
     }
 
     public function closeNewJobModal(): void
@@ -1502,16 +1589,14 @@ class DispatchBoard extends Component
             'newProperty.zip' => ['nullable', 'string', 'max:20'],
         ])['newProperty'];
 
-        $customerId = (int) $this->newJob['customer_id'];
-        $isFirst = ! \App\Models\Property::where('customer_id', $customerId)->exists();
-
+        // PropertyObserver decides is_primary: the customer's first property becomes
+        // primary, later ones don't steal it.
         $property = \App\Models\Property::create([
-            'customer_id' => $customerId,
+            'customer_id' => (int) $this->newJob['customer_id'],
             'address' => $data['address'],
             'city' => $data['city'] ?: null,
             'state' => $data['state'] ?: null,
             'zip' => $data['zip'] ?: null,
-            'is_primary' => $isFirst,
         ]);
 
         $this->resetNewPropertyForm();
@@ -1617,9 +1702,9 @@ class DispatchBoard extends Component
     }
 
     /**
-     * Add a service to the New Job modal's list. The picker is a plain dropdown
-     * that appends here — a multi-select made adding a second service a
-     * ctrl-click guessing game.
+     * Add a service row, seeded with the service's default rate so the usual case
+     * needs no typing. The picker is a plain dropdown that appends here — a
+     * multi-select made adding a second service a ctrl-click guessing game.
      */
     public function addNewJobService($serviceId): void
     {
@@ -1628,19 +1713,26 @@ class DispatchBoard extends Component
             return;
         }
 
-        if (! Service::where('id', $id)->where('is_active', true)->exists()) {
+        $service = Service::where('id', $id)->where('is_active', true)->first();
+        if (! $service) {
             return;
         }
 
-        $this->newJob['service_ids'][] = $id;
+        $this->newJobServices[] = [
+            'service_id' => $id,
+            // Null default price means "quote it later"; leave the input blank.
+            'price' => $service->default_price === null
+                ? null
+                : number_format((float) $service->default_price, 2, '.', ''),
+        ];
     }
 
     public function removeNewJobService($serviceId): void
     {
         $id = (int) $serviceId;
-        $this->newJob['service_ids'] = array_values(array_filter(
-            $this->newJobServiceIds(),
-            fn (int $existing) => $existing !== $id,
+        $this->newJobServices = array_values(array_filter(
+            $this->newJobServices,
+            fn (array $row): bool => (int) ($row['service_id'] ?? 0) !== $id,
         ));
     }
 
@@ -1652,7 +1744,19 @@ class DispatchBoard extends Component
      */
     public function newJobServiceIds(): array
     {
-        return array_map('intval', array_values($this->newJob['service_ids'] ?? []));
+        return array_map(
+            fn (array $row): int => (int) ($row['service_id'] ?? 0),
+            array_values($this->newJobServices),
+        );
+    }
+
+    /** Running total of the service rows, for the modal's footer. */
+    public function newJobTotal(): float
+    {
+        return round(array_sum(array_map(
+            fn (array $row): float => (float) ($row['price'] ?? 0),
+            $this->newJobServices,
+        )), 2);
     }
 
     /**
@@ -1661,39 +1765,42 @@ class DispatchBoard extends Component
      */
     public function createNewJob(): void
     {
-        $data = $this->validate([
+        $validated = $this->validate([
             'newJob.customer_id' => ['required', 'integer', 'exists:customers,id'],
             'newJob.property_id' => ['nullable', 'integer', 'exists:properties,id'],
-            'newJob.kind' => ['required', 'in:' . Job::KIND_SERVICE . ',' . Job::KIND_QUICK],
-            'newJob.price' => ['nullable', 'numeric', 'min:0'],
             'newJob.notes' => ['nullable', 'string'],
             'newJob.priority' => ['nullable', 'in:low,normal,high,urgent'],
+            'newJob.status' => ['required', 'in:' . implode(',', array_keys(self::NEW_JOB_STATUSES))],
             'newJob.scheduled_date' => ['nullable', 'date'],
             'newJob.crew_id' => ['nullable', 'integer', 'exists:crews,id'],
-            'newJob.service_ids' => ['array'],
-            'newJob.service_ids.*' => ['integer', 'exists:services,id'],
-        ])['newJob'];
+            // At least one service: the job's scope and its label both come from here.
+            'newJobServices' => ['array', 'min:1'],
+            'newJobServices.*.service_id' => ['required', 'integer', 'exists:services,id'],
+            'newJobServices.*.price' => ['nullable', 'numeric', 'min:0'],
+        ], [
+            'newJobServices.min' => 'Add at least one service to this job.',
+        ]);
 
-        $isQuick = $data['kind'] === Job::KIND_QUICK;
+        $data = $validated['newJob'];
 
-        // Services come in as TBD lines; pricing is set later on the job.
-        $serviceLines = $isQuick ? [] : array_map(
-            fn ($id) => ['service_id' => (int) $id, 'pricing' => 'tbd'],
-            $data['service_ids'],
-        );
+        // A blank rate stays TBD so the office can quote it later.
+        $serviceLines = array_map(fn (array $row): array => [
+            'service_id' => (int) $row['service_id'],
+            'pricing' => filled($row['price'] ?? null) ? 'fixed' : 'tbd',
+            'price' => filled($row['price'] ?? null) ? (float) $row['price'] : null,
+        ], array_values($validated['newJobServices']));
 
         app(\App\Services\JobFromFormCreator::class)->create([
             'customer_id' => $data['customer_id'],
             'property_id' => $data['property_id'],
-            'kind' => $data['kind'],
-            // A flat price and notes belong to a quick job only; a service job
-            // totals up from its lines.
-            'price' => $isQuick ? ($data['price'] ?: null) : null,
-            'notes' => $isQuick ? ($data['notes'] ?: null) : null,
+            'kind' => Job::KIND_SERVICE,
+            'notes' => $data['notes'] ?: null,
             'priority' => $data['priority'] ?: 'normal',
-            'status' => $data['scheduled_date'] ? 'scheduled' : 'pending',
-            'scheduled_date' => $data['scheduled_date'],
-            'crew_id' => $data['crew_id'],
+            'status' => $data['status'],
+            // A job filed as Waiting or Unassigned holds no date, or it would land on
+            // a route and contradict its own status.
+            'scheduled_date' => $data['status'] === 'scheduled' ? $data['scheduled_date'] : null,
+            'crew_id' => $data['status'] === 'scheduled' ? $data['crew_id'] : null,
             'job_type' => 'one_time',
             'service_lines' => $serviceLines,
         ]);

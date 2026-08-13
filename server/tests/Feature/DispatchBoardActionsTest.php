@@ -70,9 +70,11 @@ class DispatchBoardActionsTest extends TestCase
             ->call('openNewJobModal')
             ->call('selectNewJobCustomer', $this->customer->id)
             ->set('newJob.property_id', $this->property->id)
+            ->call('addNewJobService', $service->id)
             ->set('newJob.scheduled_date', '2026-07-20')
             ->set('newJob.crew_id', $crew->id)
-            ->set('newJob.service_ids', [$service->id])
+            // A date plus a crew makes the job Scheduled without anyone picking that.
+            ->assertSet('newJob.status', 'scheduled')
             ->call('createNewJob')
             ->assertHasNoErrors();
 
@@ -80,13 +82,14 @@ class DispatchBoardActionsTest extends TestCase
         // The label is derived from the services, not typed.
         $this->assertSame('Mowing', $job->title);
         $this->assertSame(Job::KIND_SERVICE, $job->kind);
+        $this->assertSame('scheduled', $job->status);
         $this->assertSame($crew->id, $job->crew_id);
         $this->assertSame($this->customer->id, $job->customer_id);
 
-        // Service attached as a TBD line.
+        // The line carries the service default rate, seeded when it was added.
         $line = $job->jobServices()->sole();
         $this->assertSame($service->id, $line->service_id);
-        $this->assertNull($line->price);
+        $this->assertSame(45.0, (float) $line->price);
 
         // Placed straight onto the crew's route for that date.
         $this->assertDatabaseHas('route_stops', ['job_id' => $job->id]);
@@ -102,26 +105,71 @@ class DispatchBoardActionsTest extends TestCase
             ->assertHasErrors(['newJob.customer_id']);
     }
 
-    public function test_the_modal_creates_a_quick_job_from_a_flat_price_and_notes(): void
+    public function test_the_modal_requires_at_least_one_service(): void
     {
+        // The job type toggle is gone: every job raised from the board is a service
+        // job, so its scope cannot be left empty.
         Livewire::test(DispatchBoard::class)
             ->call('openNewJobModal')
             ->call('selectNewJobCustomer', $this->customer->id)
-            ->set('newJob.kind', Job::KIND_QUICK)
             ->set('newJob.property_id', $this->property->id)
-            ->set('newJob.price', '125.50')
-            ->set('newJob.notes', "Haul off storm debris
-Back gate code 1234")
+            ->call('createNewJob')
+            ->assertHasErrors(['newJobServices']);
+
+        $this->assertSame(0, Job::count());
+    }
+
+    public function test_a_service_rate_can_be_overridden_or_left_to_be_quoted(): void
+    {
+        $mowing = Service::create(['name' => 'Mowing', 'category' => 'Lawn', 'default_price' => 45, 'is_active' => true]);
+        $mulch = Service::create(['name' => 'Mulching', 'category' => 'Beds', 'default_price' => 90, 'is_active' => true]);
+
+        Livewire::test(DispatchBoard::class)
+            ->call('openNewJobModal')
+            ->call('selectNewJobCustomer', $this->customer->id)
+            ->set('newJob.property_id', $this->property->id)
+            ->call('addNewJobService', $mowing->id)
+            ->call('addNewJobService', $mulch->id)
+            // Default rates land in the rows...
+            ->assertSet('newJobServices.0.price', '45.00')
+            ->assertSet('newJobServices.1.price', '90.00')
+            // ...then one is repriced for this property and the other left blank.
+            ->set('newJobServices.0.price', '62.50')
+            ->set('newJobServices.1.price', '')
             ->call('createNewJob')
             ->assertHasNoErrors();
 
         $job = Job::sole();
-        $this->assertSame(Job::KIND_QUICK, $job->kind);
-        $this->assertSame(125.5, (float) $job->price);
-        $this->assertSame(125.5, $job->total(), 'a quick job totals to its flat price');
-        // The label is the first line of the notes.
-        $this->assertSame('Haul off storm debris', $job->title);
-        $this->assertCount(0, $job->jobServices, 'a quick job carries no services');
+        $lines = $job->jobServices()->orderBy('sort_order')->get();
+        $this->assertSame(62.5, (float) $lines[0]->price);
+        $this->assertNull($lines[1]->price, 'a blank rate stays TBD');
+        $this->assertSame(62.5, $job->total(), 'the total counts only the priced line');
+    }
+
+    public function test_a_waiting_job_is_filed_without_a_date_or_crew(): void
+    {
+        $crew = Crew::create(['name' => 'Crew A', 'status' => 'active']);
+        $service = Service::create(['name' => 'Mowing', 'category' => 'Lawn', 'default_price' => 45, 'is_active' => true]);
+
+        Livewire::test(DispatchBoard::class)
+            ->call('openNewJobModal')
+            ->call('selectNewJobCustomer', $this->customer->id)
+            ->set('newJob.property_id', $this->property->id)
+            ->call('addNewJobService', $service->id)
+            ->set('newJob.scheduled_date', '2026-07-20')
+            ->set('newJob.crew_id', $crew->id)
+            // Waiting is an explicit filing choice, so it survives a later date change.
+            ->set('newJob.status', 'waiting_list')
+            ->set('newJob.scheduled_date', '2026-07-21')
+            ->assertSet('newJob.status', 'waiting_list')
+            ->call('createNewJob')
+            ->assertHasNoErrors();
+
+        $job = Job::sole();
+        $this->assertSame('waiting_list', $job->status);
+        $this->assertNull($job->scheduled_date, 'a waiting job holds no date');
+        $this->assertNull($job->crew_id, 'a waiting job holds no crew');
+        $this->assertDatabaseMissing('route_stops', ['job_id' => $job->id]);
     }
 
     public function test_services_are_added_to_a_list_one_pick_at_a_time_and_can_be_removed(): void
@@ -136,19 +184,20 @@ Back gate code 1234")
             // Values arrive from the browser as strings.
             ->call('addNewJobService', (string) $mowing->id)
             ->call('addNewJobService', (string) $mulch->id)
-            ->assertSet('newJob.service_ids', [$mowing->id, $mulch->id]);
+            ->assertSet('newJobServices.0.service_id', $mowing->id)
+            ->assertSet('newJobServices.1.service_id', $mulch->id);
 
         // Re-picking the same service doesn't duplicate it, and the placeholder
         // option (value="") and inactive services are both ignored.
         $component
             ->call('addNewJobService', (string) $mowing->id)
             ->call('addNewJobService', '')
-            ->call('addNewJobService', (string) $retired->id)
-            ->assertSet('newJob.service_ids', [$mowing->id, $mulch->id]);
+            ->call('addNewJobService', (string) $retired->id);
+        $this->assertCount(2, $component->get('newJobServices'));
 
         $component
             ->call('removeNewJobService', $mowing->id)
-            ->assertSet('newJob.service_ids', [$mulch->id])
+            ->assertSet('newJobServices.0.service_id', $mulch->id)
             ->call('createNewJob')
             ->assertHasNoErrors();
 
@@ -182,6 +231,7 @@ Back gate code 1234")
     public function test_a_property_added_inline_becomes_the_jobs_selection_and_is_primary_when_first(): void
     {
         $newCustomer = Customer::create(['first_name' => 'Ann', 'last_name' => 'Poole', 'status' => 'active']);
+        $service = Service::create(['name' => 'Mowing', 'category' => 'Lawn', 'default_price' => 45, 'is_active' => true]);
 
         $component = Livewire::test(DispatchBoard::class)
             ->call('openNewJobModal')
@@ -202,7 +252,8 @@ Back gate code 1234")
         $component
             ->assertSet('newJob.property_id', $property->id)
             ->assertSet('showNewPropertyForm', false)
-            // And the job saves against it without any further picking.
+            // And the job saves against it once a service gives it a scope.
+            ->call('addNewJobService', $service->id)
             ->call('createNewJob')
             ->assertHasNoErrors();
 
@@ -248,7 +299,6 @@ Back gate code 1234")
             ->call('openNewJobModal')
             // Customer only: no property step, no job fields.
             ->assertSee('Customer')
-            ->assertDontSee('Job type')
             ->assertDontSee('Scheduled date')
             ->assertDontSee('Property');
 
@@ -256,14 +306,14 @@ Back gate code 1234")
             ->call('selectNewJobCustomer', $customer->id)
             ->assertSee('Property')
             // The customer's only property is pre-picked, so the rest opens up.
-            ->assertSee('Job type')
-            ->assertSee('Scheduled date');
+            ->assertSee('Scheduled date')
+            ->assertSee('Priority');
 
         // Deselecting the property folds the job fields away again.
         $component
             ->set('newJob.property_id', '')
             ->assertSee('Property')
-            ->assertDontSee('Job type');
+            ->assertDontSee('Scheduled date');
     }
 
     public function test_clearing_the_customer_resets_the_property_step(): void

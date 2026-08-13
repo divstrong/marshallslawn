@@ -32,6 +32,8 @@ class Estimate extends Model
         'notes',
         'sent_at',
         'accepted_at',
+        'terms_accepted_at',
+        'accepted_terms',
     ];
 
     protected static function booted(): void
@@ -67,6 +69,7 @@ class Estimate extends Model
             'valid_until' => 'date',
             'sent_at' => 'datetime',
             'accepted_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
         ];
     }
 

@@ -76,7 +76,12 @@ class EstimateBuilder extends Component
     public bool $showPricingCalc = false;
     public array $pricingRows = [];
 
-    public function mount(?Estimate $estimate = null): void
+    /**
+     * @param  int|null  $customerId  Pre-selects a customer on a new estimate, so the
+     *                                "New Estimate" button on a customer's page opens a
+     *                                builder already pointed at them.
+     */
+    public function mount(?Estimate $estimate = null, ?int $customerId = null): void
     {
         if ($estimate && $estimate->exists) {
             $this->estimate = $estimate;
@@ -110,6 +115,12 @@ class EstimateBuilder extends Component
             }
         } else {
             $this->validUntil = now()->addDays(30)->format('Y-m-d');
+
+            // Reuse the picker's own logic so an arriving customer is set up exactly
+            // as if it had been chosen by hand (primary property, share email, sq ft).
+            if ($customerId && Customer::whereKey($customerId)->exists()) {
+                $this->selectCustomer($customerId);
+            }
         }
     }
 

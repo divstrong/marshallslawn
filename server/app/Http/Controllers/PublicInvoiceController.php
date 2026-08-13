@@ -34,7 +34,10 @@ class PublicInvoiceController extends Controller
 
         $type = $validated['payment_type'] ?? 'card';
         $method = $type === 'ach' ? 'ach' : 'card';
-        $isPaymentPlan = (bool) ($validated['payment_plan'] ?? false);
+        // Honour the office's decision even if the request says otherwise: the toggle
+        // is hidden when plans aren't allowed, and hidden isn't the same as enforced.
+        $isPaymentPlan = (bool) ($validated['payment_plan'] ?? false)
+            && $invoice->paymentPlanAvailable();
 
         if ($isPaymentPlan) {
             // First installment of a 12-payment plan; 3.75% CC fee per installment.

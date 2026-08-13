@@ -1024,6 +1024,25 @@
                         </div>
                     @endif
 
+                    {{-- Clicking a foreman narrows the list to their crew; say so plainly
+                         and give the way back, or the empty-looking board reads as a bug. --}}
+                    @if ($this->focusedCrewId)
+                        @php $focusedCrew = $crewColors[$this->focusedCrewId] ?? null; @endphp
+                        <div class="d-row" style="justify-content:space-between; gap:8px; margin-bottom:8px; padding:8px 10px; border:1px solid var(--d-border); border-radius:8px; background:var(--d-hover);">
+                            <span style="font-size:12px; display:inline-flex; align-items:center; gap:6px; min-width:0;">
+                                @if ($focusedCrew)
+                                    <span class="d-dot" style="background-color: {{ $focusedCrew['color'] }}"></span>
+                                @endif
+                                <span class="d-truncate">
+                                    Showing {{ $focusedCrew['name'] ?? 'this crew' }} only
+                                </span>
+                            </span>
+                            <button type="button" wire:click="clearSelection" class="d-btn" style="flex-shrink:0; height:26px; padding:0 10px; font-size:11px;">
+                                Show all crews
+                            </button>
+                        </div>
+                    @endif
+
                     <div class="d-list">
                         <div class="d-list-header">
                             <div class="d-label">Pins on map ({{ count($pins) }})</div>
@@ -1328,85 +1347,80 @@
                         @endif
 
                         @if ($njShowRest)
-                        {{-- Job type decides what the rest of the modal asks for:
-                             a service scope, or one flat price and a note. --}}
-                        <div class="d-row" style="gap:12px;">
-                            <div class="d-label" style="margin:0;">Job type</div>
-                            <div class="d-row" style="gap:8px;">
-                                @foreach (\App\Models\Job::kindOptions() as $value => $label)
-                                    <button
-                                        type="button"
-                                        wire:click="$set('newJob.kind', '{{ $value }}')"
-                                        class="d-chip {{ $newJob['kind'] === $value ? 'is-active' : '' }}"
-                                        @if ($newJob['kind'] === $value) style="background: var(--d-accent); color:#fff; border-color: var(--d-accent);" @endif
-                                    >{{ $label }}</button>
+                        {{-- Services are the job's scope, its price, and its label — each pick
+                             becomes a row with the service's default rate, editable per job. --}}
+                        @php
+                            $njChosenServices = $this->newJobServiceIds();
+                            $njAvailableServices = array_diff_key($this->newJobServiceOptions, array_flip($njChosenServices));
+                            $njTotal = $this->newJobTotal();
+                        @endphp
+                        <div>
+                            <div class="d-label">Services</div>
+                            <select wire:change="addNewJobService($event.target.value)" @disabled(empty($njAvailableServices))
+                                style="{{ $njField }}padding:0 10px;">
+                                <option value="">{{ empty($njAvailableServices) ? (count($njChosenServices) ? 'All services added' : 'No active services') : 'Add a service…' }}</option>
+                                @foreach ($njAvailableServices as $id => $name)
+                                    <option value="{{ $id }}">{{ $name }}</option>
                                 @endforeach
-                            </div>
+                            </select>
+
+                            @if (count($newJobServices))
+                                {{-- Rows scroll past a few entries so a long scope can't push the
+                                     modal's buttons out of reach. --}}
+                                <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px; max-height:168px; overflow-y:auto;">
+                                    @foreach ($newJobServices as $i => $row)
+                                        @php $sid = (int) ($row['service_id'] ?? 0); @endphp
+                                        <div wire:key="njsvc-{{ $sid }}" class="d-row" style="gap:8px; border:1px solid var(--d-border); border-radius:8px; padding:6px 6px 6px 10px;">
+                                            <span style="flex:1; min-width:0; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                                {{ $this->newJobServiceOptions[$sid] ?? 'Service #' . $sid }}
+                                            </span>
+                                            <div class="d-row" style="gap:4px; flex-shrink:0;">
+                                                <span class="d-muted" style="font-size:12px;">$</span>
+                                                <input
+                                                    type="number" min="0" step="0.01"
+                                                    wire:model.lazy="newJobServices.{{ $i }}.price"
+                                                    placeholder="TBD"
+                                                    title="Blank leaves this line to be quoted later"
+                                                    style="width:88px; height:30px; border:1px solid var(--d-border); border-radius:6px; padding:0 8px; font-size:13px; text-align:right; background:#fff; color:#0f172a; box-sizing:border-box;"
+                                                >
+                                            </div>
+                                            <button type="button" wire:click="removeNewJobService({{ $sid }})"
+                                                style="flex-shrink:0; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; padding:0; border:0; border-radius:6px; background:transparent; color:var(--d-muted); cursor:pointer;"
+                                                title="Remove {{ $this->newJobServiceOptions[$sid] ?? 'this service' }}" aria-label="Remove {{ $this->newJobServiceOptions[$sid] ?? 'this service' }}">
+                                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="d-row" style="justify-content:space-between; margin-top:6px;">
+                                    <span class="d-muted" style="font-size:11px;">Blank rate = quote it later.</span>
+                                    <span style="font-size:13px; font-weight:700;">Total ${{ number_format($njTotal, 2) }}</span>
+                                </div>
+                            @else
+                                <div class="d-muted" style="font-size:11px; margin-top:4px;">Add at least one service — the job's label comes from the first one.</div>
+                            @endif
+                            @error('newJobServices') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
+                            @foreach ($newJobServices as $i => $row)
+                                @error('newJobServices.' . $i . '.price') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
+                            @endforeach
                         </div>
 
-                        @if ($newJob['kind'] === \App\Models\Job::KIND_QUICK)
-                            {{-- Quick: a flat price, and a note that becomes the label. --}}
-                            <div>
-                                <div class="d-label">Price <span class="d-muted" style="font-weight:400;">(optional — quote it later)</span></div>
-                                <input type="number" min="0" step="0.01" wire:model="newJob.price" placeholder="0.00"
-                                    style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;">
-                                @error('newJob.price') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
-                            </div>
-                            <div>
-                                <div class="d-label">Notes</div>
-                                <textarea wire:model="newJob.notes" rows="3" placeholder="What needs doing…"
-                                    style="width:100%; border:1px solid var(--d-border); border-radius:8px; padding:8px 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;"></textarea>
-                                <div class="d-muted" style="font-size:11px; margin-top:4px;">The first line becomes the job's label on the board.</div>
-                            </div>
-                        @else
-                            {{-- Service: pick one at a time from the dropdown; each lands in
-                                 the list below. Added as TBD lines and priced later on the job. --}}
-                            @php
-                                $njChosenServices = $this->newJobServiceIds();
-                                $njAvailableServices = array_diff_key($this->newJobServiceOptions, array_flip($njChosenServices));
-                            @endphp
-                            <div>
-                                <div class="d-label">Services <span class="d-muted" style="font-weight:400;">(optional — priced later)</span></div>
-                                <select wire:change="addNewJobService($event.target.value)" @disabled(empty($njAvailableServices))
-                                    style="{{ $njField }}padding:0 10px;">
-                                    <option value="">{{ empty($njAvailableServices) ? (count($njChosenServices) ? 'All services added' : 'No active services') : 'Add a service…' }}</option>
-                                    @foreach ($njAvailableServices as $id => $name)
-                                        <option value="{{ $id }}">{{ $name }}</option>
-                                    @endforeach
-                                </select>
+                        <div>
+                            <div class="d-label">Notes</div>
+                            <textarea wire:model="newJob.notes" rows="2" placeholder="Anything the crew should know…"
+                                style="width:100%; border:1px solid var(--d-border); border-radius:8px; padding:8px 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;"></textarea>
+                        </div>
 
-                                @if (count($njChosenServices))
-                                    {{-- Chips wrap instead of stacking, and the strip scrolls past
-                                         a few rows, so a long service list can't push the modal's
-                                         buttons out of reach. --}}
-                                    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; max-height:96px; overflow-y:auto;">
-                                        @foreach ($njChosenServices as $sid)
-                                            <span wire:key="njsvc-{{ $sid }}" style="display:inline-flex; align-items:center; gap:6px; border:1px solid var(--d-border); border-radius:999px; padding:3px 4px 3px 10px; font-size:12px; background:var(--d-card-bg);">
-                                                {{ $this->newJobServiceOptions[$sid] ?? 'Service #' . $sid }}
-                                                <button type="button" wire:click="removeNewJobService({{ $sid }})"
-                                                    style="flex-shrink:0; width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; padding:0; border:0; border-radius:999px; background:transparent; color:var(--d-muted); cursor:pointer;"
-                                                    title="Remove {{ $this->newJobServiceOptions[$sid] ?? 'this service' }}" aria-label="Remove {{ $this->newJobServiceOptions[$sid] ?? 'this service' }}">
-                                                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                </button>
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <div class="d-muted" style="font-size:11px; margin-top:4px;">No services yet — the job's label comes from the first one you add.</div>
-                                @endif
-                                @error('newJob.service_ids') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
-                            </div>
-                        @endif
-
+                        {{-- Date and crew drive the status below, so they come first. --}}
                         <div class="d-row" style="gap:12px;">
                             <div style="flex:1;">
                                 <div class="d-label">Scheduled date</div>
-                                <input type="date" wire:model="newJob.scheduled_date"
+                                <input type="date" wire:model.live="newJob.scheduled_date"
                                     style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;">
                             </div>
                             <div style="flex:1;">
                                 <div class="d-label">Crew</div>
-                                <select wire:model="newJob.crew_id"
+                                <select wire:model.live="newJob.crew_id"
                                     style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a;">
                                     <option value="">Unassigned</option>
                                     @foreach ($this->crewColorMap() as $crew)
@@ -1416,19 +1430,37 @@
                             </div>
                         </div>
 
-                        <div style="flex:1;">
-                            <div class="d-label">Priority</div>
-                            <select wire:model="newJob.priority"
-                                style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a;">
-                                <option value="low">Low</option>
-                                <option value="normal">Normal</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
-                            </select>
+                        <div class="d-row" style="gap:12px;">
+                            <div style="flex:1;">
+                                <div class="d-label">Priority</div>
+                                <select wire:model="newJob.priority"
+                                    style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a;">
+                                    <option value="low">Low</option>
+                                    <option value="normal">Normal</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                            <div style="flex:1;">
+                                <div class="d-label">Status</div>
+                                <select wire:model.live="newJob.status"
+                                    style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a;">
+                                    @foreach (\App\Livewire\DispatchBoard::NEW_JOB_STATUSES as $value => $label)
+                                        <option value="{{ $value }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                @error('newJob.status') <div style="color:#dc2626; font-size:12px; margin-top:4px;">{{ $message }}</div> @enderror
+                            </div>
                         </div>
 
                         <p class="d-muted" style="font-size:12px; margin:0;">
-                            A date and crew place the job straight onto that crew's route. Leave them blank to drop it into the Unassigned pile.
+                            @if ($newJob['status'] === 'scheduled')
+                                Scheduled — this job lands straight onto that crew's route for the date above.
+                            @elseif ($newJob['status'] === 'waiting_list')
+                                Waiting — parked on the waiting list; the date and crew above are ignored until it's scheduled.
+                            @else
+                                Unassigned — filed without a date or crew. Set both and the status follows automatically.
+                            @endif
                         </p>
                         @endif
                     </div>

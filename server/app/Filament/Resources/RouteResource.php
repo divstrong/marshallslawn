@@ -27,7 +27,7 @@ class RouteResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Operations';
+    protected static string | \UnitEnum | null $navigationGroup = 'Administration';
 
     protected static ?int $navigationSort = 4;
 

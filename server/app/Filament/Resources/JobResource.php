@@ -32,7 +32,7 @@ class JobResource extends Resource
 
     protected static string | \UnitEnum | null $navigationGroup = 'Operations';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     public static function form(Schema $schema): Schema
     {
@@ -535,6 +535,32 @@ class JobResource extends Resource
                         }
 
                         return $indicators;
+                    }),
+                // Crew filter, matching the Dispatch board's crew dropdown: tick the
+                // crews you want on screen, untick the rest. Multi-select rather than a
+                // single choice so two crews can be compared side by side.
+                Tables\Filters\SelectFilter::make('crew_id')
+                    ->label('Crews')
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->options(fn (): array => \App\Models\Crew::query()
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all())
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['values'] ?? [],
+                        fn ($q, array $crewIds) => $q->whereIn('crew_id', $crewIds),
+                    ))
+                    ->indicateUsing(function (array $data): array {
+                        $ids = $data['values'] ?? [];
+                        if (empty($ids)) {
+                            return [];
+                        }
+
+                        $names = \App\Models\Crew::whereKey($ids)->orderBy('name')->pluck('name')->all();
+
+                        return ['Crews: ' . implode(', ', $names)];
                     }),
                 // Searchable, multi-select service picker — the list is long, so it is
                 // searched rather than rendered as a flat wall of checkboxes (issue #52).

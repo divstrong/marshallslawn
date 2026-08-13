@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Livewire\SettingsTerms;
 use App\Models\Estimate;
 use Illuminate\Http\Request;
 
@@ -20,12 +21,24 @@ class PublicEstimateController extends Controller
     {
         $estimate = Estimate::where('share_token', $token)->firstOrFail();
 
+        // The terms box gates the button in the browser; validate it here too, so an
+        // acceptance can't arrive without agreement when scripting is off or bypassed.
+        $request->validate([
+            'terms_accepted' => ['accepted'],
+            'accepted_items' => ['array'],
+        ], [
+            'terms_accepted.accepted' => 'Please agree to the Terms & Conditions before accepting.',
+        ]);
+
         if (in_array($estimate->status, ['draft', 'sent'])) {
             $acceptedIds = $request->input('accepted_items', []);
 
             $estimate->update([
                 'status' => 'accepted',
                 'accepted_at' => now(),
+                'terms_accepted_at' => now(),
+                // Snapshot: Settings → Terms can change, the agreed wording can't.
+                'accepted_terms' => SettingsTerms::estimateTerms(),
                 'notes' => trim(
                     ($estimate->notes ?? '') . "\n\n--- Customer accepted line items: " .
                     implode(', ', $acceptedIds) . ' on ' . now()->format('M j, Y g:i A')

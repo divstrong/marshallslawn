@@ -25,9 +25,9 @@ class EstimateResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Customers';
+    protected static string | \UnitEnum | null $navigationGroup = 'Operations';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {
