@@ -88,6 +88,19 @@
             box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
         }
         .dispatch-page .d-dot { display: inline-block; height: 10px; width: 10px; border-radius: 9999px; }
+        {{-- Crew rows in the day summary are clickable filters. --}}
+        .dispatch-page .d-crew-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            width: 100%; padding: 6px 8px; margin: 0 -8px; border: 0; border-radius: 8px;
+            background: transparent; color: inherit; font: inherit; text-align: left;
+            cursor: pointer; transition: background 120ms ease;
+        }
+        .dispatch-page .d-crew-row:hover { background: var(--d-hover); }
+        .dispatch-page .d-crew-row.is-focused {
+            background: var(--d-hover);
+            box-shadow: inset 2px 0 0 var(--d-accent);
+            font-weight: 600;
+        }
         .dispatch-page .d-grid {
             display: grid; grid-template-columns: 1fr; gap: 16px;
         }
@@ -1002,16 +1015,27 @@
                         <div class="d-card">
                             <div class="d-card-title">{{ \Carbon\Carbon::parse($this->date)->format('l, M j') }}</div>
                             <div class="d-card-sub">{{ $summary['total'] }} {{ \Illuminate\Support\Str::plural('stop', $summary['total']) }} on the map</div>
-                            @if (! empty($summary['by_crew']))
+                            @php $crewRows = $this->crewDayCounts; @endphp
+                            @if (! empty($crewRows))
+                                {{-- Each crew is a button: click to view that route on its
+                                     own, click it again to go back to everyone. Always the
+                                     full list, so you can switch straight to another crew. --}}
                                 <div style="margin-top: 16px;">
-                                    @foreach ($summary['by_crew'] as $row)
-                                        <div class="d-row" style="justify-content: space-between; padding: 4px 0;">
-                                            <div class="d-row">
+                                    @foreach ($crewRows as $row)
+                                        @php $isFocused = $this->focusedCrewId === (int) $row['crew_id']; @endphp
+                                        <button
+                                            type="button"
+                                            wire:click="focusCrew({{ $row['crew_id'] }})"
+                                            class="d-crew-row {{ $isFocused ? 'is-focused' : '' }}"
+                                            title="{{ $isFocused ? 'Show every crew again' : 'Show only ' . $row['crew_name'] }}"
+                                            aria-pressed="{{ $isFocused ? 'true' : 'false' }}"
+                                        >
+                                            <span class="d-row" style="min-width:0;">
                                                 <span class="d-dot" style="background-color: {{ $row['color'] }}"></span>
-                                                <span>{{ $row['crew_name'] }}</span>
-                                            </div>
-                                            <span class="d-muted">{{ $row['count'] }}</span>
-                                        </div>
+                                                <span class="d-truncate">{{ $row['crew_name'] }}</span>
+                                            </span>
+                                            <span class="{{ $isFocused ? '' : 'd-muted' }}">{{ $row['count'] }}</span>
+                                        </button>
                                     @endforeach
                                 </div>
                             @endif
@@ -1405,12 +1429,6 @@
                             @endforeach
                         </div>
 
-                        <div>
-                            <div class="d-label">Notes</div>
-                            <textarea wire:model="newJob.notes" rows="2" placeholder="Anything the crew should know…"
-                                style="width:100%; border:1px solid var(--d-border); border-radius:8px; padding:8px 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;"></textarea>
-                        </div>
-
                         {{-- Date and crew drive the status below, so they come first. --}}
                         <div class="d-row" style="gap:12px;">
                             <div style="flex:1;">
@@ -1453,15 +1471,13 @@
                             </div>
                         </div>
 
-                        <p class="d-muted" style="font-size:12px; margin:0;">
-                            @if ($newJob['status'] === 'scheduled')
-                                Scheduled — this job lands straight onto that crew's route for the date above.
-                            @elseif ($newJob['status'] === 'waiting_list')
-                                Waiting — parked on the waiting list; the date and crew above are ignored until it's scheduled.
-                            @else
-                                Unassigned — filed without a date or crew. Set both and the status follows automatically.
-                            @endif
-                        </p>
+                        {{-- Last field before the buttons: notes are written once the
+                             rest of the job is settled. --}}
+                        <div>
+                            <div class="d-label">Notes</div>
+                            <textarea wire:model="newJob.notes" rows="2" placeholder="Anything the crew should know…"
+                                style="width:100%; border:1px solid var(--d-border); border-radius:8px; padding:8px 12px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;"></textarea>
+                        </div>
                         @endif
                     </div>
                     <div class="d-row" style="justify-content:flex-end; gap:8px; margin-top:6px;">

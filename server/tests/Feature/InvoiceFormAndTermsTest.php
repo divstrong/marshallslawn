@@ -2,12 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Resources\InvoiceResource\Pages\CreateInvoice;
+use App\Livewire\InvoiceBuilder;
 use App\Livewire\SettingsTerms;
 use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\Invoice;
 use App\Models\Role;
+use App\Models\Service;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,52 +31,32 @@ class InvoiceFormAndTermsTest extends TestCase
         $this->customer = Customer::create(['first_name' => 'Otto', 'last_name' => 'Kerr', 'status' => 'active']);
     }
 
-    public function test_creating_an_invoice_assigns_a_number_and_links_the_estimate(): void
+    /**
+     * Invoices are built through InvoiceBuilder now (see InvoiceBuilderTest for the
+     * line/discount/credit maths); this covers only the numbering, which the model
+     * assigns on create.
+     */
+    public function test_invoice_numbers_are_assigned_and_never_collide(): void
     {
-        $estimate = Estimate::create([
-            'customer_id' => $this->customer->id,
-            'estimate_number' => 'EST-900',
-            'share_token' => 'tok900',
-            'status' => 'accepted',
-            'subtotal' => 300,
-            'total' => 300,
+        $service = Service::create([
+            'name' => 'Mowing', 'category' => 'Lawn', 'default_price' => 60, 'is_active' => true,
         ]);
 
-        Livewire::test(CreateInvoice::class)
-            ->fillForm([
-                'customer_id' => $this->customer->id,
-                'estimate_id' => $estimate->id,
-                'status' => 'draft',
-                'subtotal' => 300,
-                'tax' => 24,
-            ])
-            ->call('create')
-            ->assertHasNoFormErrors();
-
-        $invoice = Invoice::sole();
-        $this->assertMatchesRegularExpression('/^INV-\d{5}$/', $invoice->invoice_number);
-        $this->assertSame($estimate->id, $invoice->estimate_id);
-        $this->assertSame(324.0, (float) $invoice->total);
-        $this->assertTrue($invoice->allows_payment_plan, 'plans are allowed unless switched off');
-    }
-
-    public function test_the_invoice_number_is_never_blank_even_across_several_creates(): void
-    {
-        foreach ([100, 200] as $amount) {
-            Livewire::test(CreateInvoice::class)
-                ->fillForm([
-                    'customer_id' => $this->customer->id,
-                    'status' => 'draft',
-                    'subtotal' => $amount,
-                ])
-                ->call('create')
-                ->assertHasNoFormErrors();
+        foreach ([1, 2] as $ignored) {
+            Livewire::test(InvoiceBuilder::class)
+                ->call('selectCustomer', $this->customer->id)
+                ->call('addService', $service->id)
+                ->call('save')
+                ->assertHasNoErrors();
         }
 
         $numbers = Invoice::pluck('invoice_number');
         $this->assertCount(2, $numbers);
         $this->assertCount(2, $numbers->unique(), 'numbers must not collide');
         $this->assertNotContains(null, $numbers->all());
+        foreach ($numbers as $number) {
+            $this->assertMatchesRegularExpression('/^INV-\d{5}$/', $number);
+        }
     }
 
     private function publicInvoice(array $attributes = []): Invoice

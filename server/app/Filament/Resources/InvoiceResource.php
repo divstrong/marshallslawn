@@ -101,18 +101,22 @@ class InvoiceResource extends Resource
                         ->label('Due Date'),
                 ]),
 
+            // Only tax is typed here. Subtotal comes from the line items below,
+            // credits from the credits list, and the total from all three — entering
+            // them by hand is how an invoice ends up disagreeing with itself.
             Section::make('Amounts')
                 ->icon('heroicon-o-calculator')
+                ->description('Subtotal and total are calculated from the line items, discounts and credits.')
                 ->columns(2)
                 ->columnSpanFull()
                 ->schema([
                     Forms\Components\TextInput::make('subtotal')
+                        ->helperText('Sum of the line items, discounts included.')
                         ->numeric()
                         ->prefix('$')
                         ->default(0)
-                        ->required()
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcTotal($get, $set)),
+                        ->disabled()
+                        ->dehydrated(false),
                     Forms\Components\TextInput::make('tax')
                         ->numeric()
                         ->prefix('$')
@@ -126,6 +130,7 @@ class InvoiceResource extends Resource
                         ->disabled()
                         ->dehydrated(false),
                     Forms\Components\TextInput::make('total')
+                        ->helperText('Subtotal + tax − credits.')
                         ->numeric()
                         ->prefix('$')
                         ->disabled()

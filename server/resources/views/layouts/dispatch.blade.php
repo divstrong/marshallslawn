@@ -47,14 +47,37 @@
                 <img src="{{ asset('img/logo.png') }}" alt="Marshall's Lawn" class="h-10 w-auto">
                 <span class="text-base font-semibold text-gray-800">Dispatch</span>
             </div>
-            <a href="/"
-               class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-brand-500 hover:text-brand-600 transition">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
-                </svg>
-                Back to Admin
-            </a>
+            <div class="flex items-center gap-2">
+                {{-- Opens in a new tab: pulling a job off the waiting list is a side
+                     errand, and the board's date/crew filters shouldn't be lost to it.
+                     Gated on the same permission as the Jobs resource it links to. --}}
+                @if (auth()->user()?->hasAccessTo('JobResource'))
+                    <a href="{{ route('filament.admin.resources.jobs.waiting-list') }}"
+                       target="_blank"
+                       rel="noopener"
+                       title="Open the waiting list in a new tab"
+                       class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-brand-500 hover:text-brand-600 transition">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                        </svg>
+                        Waiting List
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+                            <path d="M14 4h6v6"/><path d="M20 4l-8 8"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>
+                        </svg>
+                    </a>
+                @endif
+
+                <a href="/"
+                   class="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-brand-500 hover:text-brand-600 transition">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Admin
+                </a>
+            </div>
         </header>
 
         <main class="flex-1 p-4">

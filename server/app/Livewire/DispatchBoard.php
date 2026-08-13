@@ -64,6 +64,9 @@ class DispatchBoard extends Component
 
     public ?int $selectedForemanId = null;
 
+    /** Crew picked from the day summary to view on its own. */
+    public ?int $crewFocusId = null;
+
     /** Stop id awaiting Skip confirmation in the modal. */
     public ?int $confirmSkipStopId = null;
 
@@ -222,13 +225,17 @@ class DispatchBoard extends Component
     }
 
     /**
-     * The crew to focus on: set by clicking a foreman's avatar on the map, which
-     * narrows the board to that crew's work. Returns null when no foreman is
-     * selected, or when the selected one leads no crew.
+     * The crew to focus on, narrowing the board to that crew's work. Set either by
+     * clicking a crew in the day summary or by clicking a foreman's avatar on the
+     * map; an explicit crew pick wins over the foreman it was derived from.
      */
     #[Computed]
     public function focusedCrewId(): ?int
     {
+        if ($this->crewFocusId && in_array((int) $this->crewFocusId, $this->activeCrewIds, true)) {
+            return (int) $this->crewFocusId;
+        }
+
         if (! $this->selectedForemanId) {
             return null;
         }
@@ -240,8 +247,67 @@ class DispatchBoard extends Component
         return $crewId ? (int) $crewId : null;
     }
 
+    /**
+     * Focus one crew from the day summary. Clicking the crew already in focus
+     * releases it, so the same row toggles the view both ways.
+     */
+    public function focusCrew(int $crewId): void
+    {
+        $alreadyFocused = (int) $this->crewFocusId === $crewId;
+
+        $this->crewFocusId = $alreadyFocused ? null : $crewId;
+        // A foreman selection also drives focus; drop it so the two can't disagree.
+        $this->selectedForemanId = null;
+        $this->selectedStopId = null;
+        $this->selectedJobId = null;
+        $this->chatPanelOpen = false;
+
+        unset($this->selectedForeman, $this->chatMessages);
+        $this->forgetCrewFocus();
+    }
+
     #[Computed]
     public function stops(): array
+    {
+        // Focusing a crew (from the summary or a foreman pin) narrows the board.
+        return $this->loadStops($this->focusedCrewId);
+    }
+
+    /**
+     * Per-crew stop counts for the day, always covering every visible crew even
+     * while one is focused — the summary list is the filter control, so it has to
+     * keep offering the crews you might switch to.
+     *
+     * @return array<int, array{crew_id: int, crew_name: string, color: string, count: int}>
+     */
+    #[Computed]
+    public function crewDayCounts(): array
+    {
+        // Unfocused, the stops already on screen cover every crew — no second query.
+        $stops = $this->focusedCrewId ? $this->loadStops(null) : $this->stops;
+
+        $byCrew = [];
+        foreach ($stops as $stop) {
+            $crewId = (int) $stop['crew_id'];
+            if (! isset($byCrew[$crewId])) {
+                $byCrew[$crewId] = [
+                    'crew_id' => $crewId,
+                    'crew_name' => $stop['crew_name'] ?? 'Unassigned',
+                    'color' => $stop['color'],
+                    'count' => 0,
+                ];
+            }
+            $byCrew[$crewId]['count']++;
+        }
+
+        return array_values($byCrew);
+    }
+
+    /**
+     * @param  int|null  $onlyCrewId  Restrict to a single crew, or null for all visible crews.
+     * @return array<int, array<string, mixed>>
+     */
+    private function loadStops(?int $onlyCrewId): array
     {
         $crewMap = $this->crewColorMap();
 
@@ -255,12 +321,11 @@ class DispatchBoard extends Component
                 'route:id,name,route_date,crew_id',
                 'route.crew:id,name',
             ])
-            ->whereHas('route', function ($q) {
+            ->whereHas('route', function ($q) use ($onlyCrewId) {
                 $q->whereDate('route_date', $this->date);
                 $q->whereIn('crew_id', $this->activeCrewIds);
-                // Clicking a foreman on the map narrows the board to their crew.
-                if ($focused = $this->focusedCrewId) {
-                    $q->where('crew_id', $focused);
+                if ($onlyCrewId) {
+                    $q->where('crew_id', $onlyCrewId);
                 }
             })
             ->whereHas('property', fn ($q) => $q->whereNotNull('latitude')->whereNotNull('longitude'))
@@ -477,6 +542,13 @@ class DispatchBoard extends Component
                 continue;
             }
 
+            // No stops on the selected date means this crew isn't working it — a pin
+            // parked on the fallback coordinates only implies a crew that isn't there.
+            $stopsToday = $stopCentroids[$crew->id]['n'] ?? 0;
+            if ($stopsToday === 0) {
+                continue;
+            }
+
             $location = $foreman->latestLocation;
             $hasLocation = $location !== null;
             $isLive = false;
@@ -647,7 +719,7 @@ class DispatchBoard extends Component
     /** Recompute map data after coordinates change so pins/lists refresh immediately. */
     private function refreshAfterGeocode(): void
     {
-        unset($this->stops, $this->unroutedJobs, $this->unmappedStops, $this->summary, $this->selectedStop, $this->foremanPins);
+        unset($this->stops, $this->crewDayCounts, $this->unroutedJobs, $this->unmappedStops, $this->summary, $this->selectedStop, $this->foremanPins);
         $this->emitStopsUpdated();
     }
 
@@ -911,7 +983,7 @@ class DispatchBoard extends Component
 
         $stop->delete();
 
-        unset($this->stops, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary, $this->unmappedStops, $this->listDays);
+        unset($this->stops, $this->crewDayCounts, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary, $this->unmappedStops, $this->listDays);
         $this->emitStopsUpdated();
     }
 
@@ -1045,8 +1117,10 @@ class DispatchBoard extends Component
         unset(
             $this->focusedCrewId,
             $this->stops,
+            $this->crewDayCounts,
             $this->unroutedJobs,
             $this->summary,
+            $this->foremanPins,
             $this->listDays,
             $this->unmappedStops,
         );
@@ -1161,6 +1235,7 @@ class DispatchBoard extends Component
         $this->selectedStopId = null;
         $this->selectedJobId = null;
         $this->selectedForemanId = null;
+        $this->crewFocusId = null;
         $this->chatPanelOpen = false;
         $this->forgetCrewFocus();
     }
@@ -1256,7 +1331,7 @@ class DispatchBoard extends Component
 
         unset(
             $this->monthDays, $this->monthLabel, $this->listDays, $this->listRangeLabel,
-            $this->stops, $this->summary, $this->foremanPins, $this->activeCrewIds,
+            $this->stops, $this->crewDayCounts, $this->summary, $this->foremanPins, $this->activeCrewIds,
         );
         $this->dispatch('dispatch:view-changed', mode: 'map');
         $this->emitStopsUpdated();
@@ -1353,7 +1428,7 @@ class DispatchBoard extends Component
             $this->serviceGroups = [...$this->serviceGroups, $group];
         }
 
-        unset($this->stops, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary);
+        unset($this->stops, $this->crewDayCounts, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary);
         $this->emitStopsUpdated();
     }
 
@@ -1425,7 +1500,7 @@ class DispatchBoard extends Component
             }
         });
 
-        unset($this->stops, $this->listDays, $this->selectedStop, $this->summary, $this->foremanPins);
+        unset($this->stops, $this->crewDayCounts, $this->listDays, $this->selectedStop, $this->summary, $this->foremanPins);
         $this->emitStopsUpdated();
     }
 
@@ -1806,7 +1881,7 @@ class DispatchBoard extends Component
         ]);
 
         $this->showNewJobModal = false;
-        unset($this->stops, $this->listDays, $this->summary, $this->foremanPins, $this->unroutedJobs);
+        unset($this->stops, $this->crewDayCounts, $this->listDays, $this->summary, $this->foremanPins, $this->unroutedJobs);
         $this->emitStopsUpdated();
         $this->dispatch('dispatch:job-created');
     }
@@ -1831,7 +1906,7 @@ class DispatchBoard extends Component
         }
         $stop->save();
 
-        unset($this->stops, $this->selectedStop, $this->summary, $this->listDays);
+        unset($this->stops, $this->crewDayCounts, $this->selectedStop, $this->summary, $this->listDays);
         $this->emitStopsUpdated();
     }
 
@@ -1969,7 +2044,7 @@ class DispatchBoard extends Component
         $this->confirmSkipStopId = null;
         $this->selectedStopId = null;
 
-        unset($this->stops, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary, $this->unmappedStops, $this->listDays);
+        unset($this->stops, $this->crewDayCounts, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary, $this->unmappedStops, $this->listDays);
         $this->emitStopsUpdated();
     }
 
