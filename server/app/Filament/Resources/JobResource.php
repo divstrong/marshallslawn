@@ -480,9 +480,6 @@ class JobResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options(fn (): array => \App\Models\JobStatus::options()),
-                Tables\Filters\SelectFilter::make('kind')
-                    ->label('Job type')
-                    ->options(fn (): array => Job::kindOptions()),
                 Tables\Filters\SelectFilter::make('priority')
                     ->label('Priority')
                     ->options([
@@ -491,51 +488,6 @@ class JobResource extends Resource
                         'high' => 'High',
                         'urgent' => 'Urgent',
                     ]),
-                // Work with neither a crew nor a date. Named for what it matches,
-                // not "waiting list" — that is now the Waiting List *status*, which
-                // has its own view in the sidebar.
-                Tables\Filters\Filter::make('waiting_list')
-                    ->label('Unassigned + unscheduled')
-                    ->toggle()
-                    ->query(fn ($query) => $query->whereNull('crew_id')->whereNull('scheduled_date')),
-                Tables\Filters\Filter::make('unassigned')
-                    ->label('Unassigned (no crew)')
-                    ->toggle()
-                    ->query(fn ($query) => $query->whereNull('crew_id')),
-                Tables\Filters\Filter::make('unscheduled')
-                    ->label('Unscheduled (no date)')
-                    ->toggle()
-                    ->query(fn ($query) => $query->whereNull('scheduled_date')),
-                Tables\Filters\Filter::make('scheduled_date')
-                    ->schema([
-                        Forms\Components\DatePicker::make('on')->label('Scheduled on'),
-                        Forms\Components\DatePicker::make('from')->label('Scheduled from'),
-                        Forms\Components\DatePicker::make('until')->label('Scheduled until'),
-                    ])
-                    // "on" pins a single day; "from"/"until" are the range form. Setting
-                    // "on" makes the range fields redundant, so it wins outright.
-                    ->query(fn ($query, array $data) => filled($data['on'] ?? null)
-                        ? $query->whereDate('scheduled_date', $data['on'])
-                        : $query
-                            ->when($data['from'] ?? null, fn ($q, $d) => $q->whereDate('scheduled_date', '>=', $d))
-                            ->when($data['until'] ?? null, fn ($q, $d) => $q->whereDate('scheduled_date', '<=', $d)))
-                    ->indicateUsing(function (array $data): array {
-                        if (filled($data['on'] ?? null)) {
-                            return ['Scheduled on ' . \Illuminate\Support\Carbon::parse($data['on'])->toFormattedDateString()];
-                        }
-
-                        $indicators = [];
-
-                        if (filled($data['from'] ?? null)) {
-                            $indicators[] = 'Scheduled from ' . \Illuminate\Support\Carbon::parse($data['from'])->toFormattedDateString();
-                        }
-
-                        if (filled($data['until'] ?? null)) {
-                            $indicators[] = 'Scheduled until ' . \Illuminate\Support\Carbon::parse($data['until'])->toFormattedDateString();
-                        }
-
-                        return $indicators;
-                    }),
                 // Crew filter, matching the Dispatch board's crew dropdown: tick the
                 // crews you want on screen, untick the rest. Multi-select rather than a
                 // single choice so two crews can be compared side by side.
