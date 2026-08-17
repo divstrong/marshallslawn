@@ -55,6 +55,11 @@ class Settings extends Page
                         ->schema([
                             View::make('livewire.job-status-manager-embed'),
                         ]),
+                    Tab::make('Crew Types')
+                        ->icon('heroicon-o-user-group')
+                        ->schema([
+                            View::make('livewire.crew-type-manager-embed'),
+                        ]),
                     Tab::make('Notifications')
                         ->icon('heroicon-o-chat-bubble-left-right')
                         ->schema([

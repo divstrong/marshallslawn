@@ -4,9 +4,10 @@
  * any other role (or signing out) stops tracking.
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { LocationDisclosure } from '@/components/location-disclosure';
 import { useAuth } from '@/context/auth';
 import {
   getTrackingPermission,
@@ -43,6 +44,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [permission, setPermission] = useState<TrackingPermission>('undetermined');
   const [active, setActive] = useState(false);
   const [lastSync, setLastSync] = useState<LastLocationSync | null>(null);
+  const [disclosureVisible, setDisclosureVisible] = useState(false);
+  // Session-only: a foreman who dismisses the disclosure isn't nagged again
+  // until they ask for it from Profile → Location Sharing.
+  const declinedRef = useRef(false);
 
   // The background task writes to storage from outside React, so poll while a
   // tracked role is signed in to keep the Location Sharing card honest.
@@ -77,15 +82,12 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         await stopTracking();
         if (!cancelled) {
           setActive(false);
+          setDisclosureVisible(false);
         }
         return;
       }
 
-      let resolved = await getTrackingPermission();
-      // Foreman tracking is a job requirement — prompt on first sign-in.
-      if (resolved === 'undetermined') {
-        resolved = await requestTrackingPermission();
-      }
+      const resolved = await getTrackingPermission();
       if (cancelled) return;
       setPermission(resolved);
 
@@ -95,7 +97,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         } catch {
           // e.g. running in Expo Go, which lacks background location.
         }
+      } else if (resolved === 'undetermined' && !declinedRef.current) {
+        // Foreman tracking is a job requirement, so ask on first sign-in — but
+        // Google Play requires the disclosure to precede the OS prompt, so this
+        // opens the disclosure rather than requesting permission directly.
+        setDisclosureVisible(true);
       }
+
       if (!cancelled) {
         setActive(await isTrackingActive());
       }
@@ -106,7 +114,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     };
   }, [tracksThisRole]);
 
-  const enable = useCallback(async () => {
+  /** Prompt the OS and start tracking. Only ever called after the disclosure. */
+  const requestAndStart = useCallback(async () => {
     const result = await requestTrackingPermission();
     setPermission(result);
     if (result === 'granted') {
@@ -115,16 +124,47 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // Background location needs a development build, not Expo Go.
       }
-      setActive(await isTrackingActive());
     }
+    setActive(await isTrackingActive());
   }, []);
+
+  const acceptDisclosure = useCallback(async () => {
+    setDisclosureVisible(false);
+    await requestAndStart();
+  }, [requestAndStart]);
+
+  const declineDisclosure = useCallback(() => {
+    declinedRef.current = true;
+    setDisclosureVisible(false);
+  }, []);
+
+  const enable = useCallback(async () => {
+    // Re-show the disclosure whenever an OS prompt is still to come.
+    if ((await getTrackingPermission()) === 'undetermined') {
+      declinedRef.current = false;
+      setDisclosureVisible(true);
+      return;
+    }
+    await requestAndStart();
+  }, [requestAndStart]);
 
   const value = useMemo<LocationContextValue>(
     () => ({ tracksThisRole, supported, permission, active, lastSync, enable }),
     [tracksThisRole, supported, permission, active, lastSync, enable],
   );
 
-  return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
+  return (
+    <LocationContext.Provider value={value}>
+      {children}
+      {supported ? (
+        <LocationDisclosure
+          visible={disclosureVisible}
+          onAccept={acceptDisclosure}
+          onDecline={declineDisclosure}
+        />
+      ) : null}
+    </LocationContext.Provider>
+  );
 }
 
 export function useLocationTracking(): LocationContextValue {

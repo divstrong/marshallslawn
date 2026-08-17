@@ -26,12 +26,7 @@ class LookupController extends Controller
         $query = Customer::query();
 
         if (strlen($term) >= 2) {
-            $query->where(function ($w) use ($term): void {
-                $w->where('company_name', 'like', "%{$term}%")
-                    ->orWhere('first_name', 'like', "%{$term}%")
-                    ->orWhere('last_name', 'like', "%{$term}%")
-                    ->orWhere('email', 'like', "%{$term}%");
-            });
+            $query->searchName($term);
         }
 
         $customers = $query

@@ -20,8 +20,6 @@ use Filament\Tables\Table;
 use App\Filament\Concerns\ChecksResourceAccess;
 use Filament\Actions;
 
-use function Filament\Support\original_request;
-
 class JobResource extends Resource
 {
     use ChecksResourceAccess;
@@ -608,40 +606,4 @@ class JobResource extends Resource
         ];
     }
 
-    /**
-     * Jobs, plus the Waiting List as its own sidebar entry. Filament only
-     * registers a resource's index page by default, so the second item is added
-     * here rather than by the page class.
-     *
-     * @return array<\Filament\Navigation\NavigationItem>
-     */
-    public static function getNavigationItems(): array
-    {
-        return [
-            ...parent::getNavigationItems(),
-            \Filament\Navigation\NavigationItem::make('Waiting List')
-                ->group(static::getNavigationGroup())
-                ->icon('heroicon-o-queue-list')
-                // Same sort as Jobs so it sits directly beneath it.
-                ->sort(static::getNavigationSort())
-                ->badge(function (): ?string {
-                    $count = Job::where('status', 'waiting_list')->count();
-
-                    return $count ? (string) $count : null;
-                }, color: 'warning')
-                ->isActiveWhen(fn (): bool => original_request()->routeIs(static::getRouteBaseName() . '.waiting-list'))
-                ->visible(fn (): bool => static::canAccess())
-                ->url(fn (): string => static::getUrl('waiting-list')),
-        ];
-    }
-
-    /** Keep the main Jobs item from lighting up while the Waiting List is open. */
-    public static function getNavigationItemActiveRoutePattern(): string | array
-    {
-        return [
-            static::getRouteBaseName() . '.index',
-            static::getRouteBaseName() . '.create',
-            static::getRouteBaseName() . '.edit',
-        ];
-    }
 }

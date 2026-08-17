@@ -251,6 +251,18 @@ const en = {
     'Turn on location sharing so dispatch can see where your crew is during the workday.',
   'settings.enableLocation': 'Enable location sharing',
   'settings.openSettings': 'Open device settings',
+
+  // Background-location prominent disclosure (shown before the OS prompt —
+  // required by Google Play, see client/docs/play-review-notes.md)
+  'location.discloseTitle': 'Location sharing',
+  'location.discloseBody':
+    "Marshall's Lawn collects location data to show your crew’s position to the dispatch office and send the next job to the nearest crew, even when the app is closed or not in use.",
+  'location.discloseWho': 'Only while you are signed in as a Foreman or Spray Tech.',
+  'location.discloseWhen': 'Your position is sent to dispatch about once a minute while you work.',
+  'location.discloseStop': 'Sharing stops as soon as you sign out.',
+  'location.discloseAccept': 'Continue',
+  'location.discloseDecline': 'Not now',
+
   'settings.about': 'About',
   'settings.appVersion': 'App version',
   'settings.signOut': 'Sign out',
@@ -499,6 +511,17 @@ const es: Record<keyof typeof en, string> = {
     'Activa el compartir ubicación para que despacho sepa dónde está tu cuadrilla durante el día.',
   'settings.enableLocation': 'Activar compartir ubicación',
   'settings.openSettings': 'Abrir configuración del dispositivo',
+
+  'location.discloseTitle': 'Compartir ubicación',
+  'location.discloseBody':
+    "Marshall's Lawn recopila datos de ubicación para mostrar la posición de tu cuadrilla a la oficina de despacho y enviar el próximo trabajo a la cuadrilla más cercana, incluso cuando la app está cerrada o no está en uso.",
+  'location.discloseWho': 'Solo mientras tengas la sesión iniciada como Capataz o Técnico de Aspersión.',
+  'location.discloseWhen':
+    'Tu posición se envía a despacho aproximadamente una vez por minuto mientras trabajas.',
+  'location.discloseStop': 'El envío se detiene en cuanto cierras sesión.',
+  'location.discloseAccept': 'Continuar',
+  'location.discloseDecline': 'Ahora no',
+
   'settings.about': 'Acerca de',
   'settings.appVersion': 'Versión de la app',
   'settings.signOut': 'Cerrar sesión',

@@ -6,6 +6,7 @@ use App\Models\Concerns\HasTags;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -24,6 +25,58 @@ class Customer extends Authenticatable implements FilamentUser, HasName
     public function canAccessPanel(Panel $panel): bool
     {
         return $panel->getId() === 'portal' && $this->status === 'active';
+    }
+
+    /**
+     * Columns that hold a customer's name, searched token by token.
+     *
+     * @var list<string>
+     */
+    public const NAME_SEARCH_COLUMNS = ['first_name', 'last_name', 'company_name'];
+
+    /**
+     * Multi-token customer search.
+     *
+     * Every whitespace-separated token must match one of the name columns (AND
+     * across tokens, OR across columns). That is what makes "Laura M" find
+     * Laura Marshall: matching the whole term against each column separately —
+     * the previous behaviour — can never span first and last name, because no
+     * single column contains "Laura M".
+     *
+     * Email is matched against the *whole* term rather than per token. Matching
+     * it per token makes short tokens catastrophically loose: a stray "M" would
+     * otherwise match every address ending in ".com".
+     *
+     * Deliberately avoids CONCAT/CONCAT_WS so it behaves identically on MySQL
+     * and the sqlite database the test suite runs against.
+     */
+    public function scopeSearchName(Builder $query, ?string $term): Builder
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return $query;
+        }
+
+        $tokens = array_values(array_filter(preg_split('/\s+/', $term) ?: [], fn ($t): bool => $t !== ''));
+
+        if ($tokens === []) {
+            return $query;
+        }
+
+        return $query->where(function (Builder $outer) use ($tokens, $term): void {
+            $outer->where(function (Builder $q) use ($tokens): void {
+                foreach ($tokens as $token) {
+                    $like = '%' . $token . '%';
+
+                    $q->where(function (Builder $inner) use ($like): void {
+                        foreach (self::NAME_SEARCH_COLUMNS as $column) {
+                            $inner->orWhere($column, 'like', $like);
+                        }
+                    });
+                }
+            })->orWhere('email', 'like', '%' . $term . '%');
+        });
     }
 
     /** Display name shown in the portal's user menu (Customer has no `name` column). */

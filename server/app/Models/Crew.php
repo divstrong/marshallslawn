@@ -23,20 +23,34 @@ class Crew extends Model
         'foreman_id',
         'status',
         'division',
-        'categories',
+        'type',
         'notes',
     ];
 
     protected $casts = [
-        'categories' => 'array',
+        'type' => 'array',
     ];
 
-    public const CATEGORIES = [
-        'mowing' => 'Mowing',
-        'spray_techs' => 'Spray Techs',
-        'projects' => 'Projects',
-        'managers' => 'Managers',
-    ];
+    /**
+     * Crew type options, editable from Settings -> Crew Types.
+     *
+     * Replaces the old hardcoded CATEGORIES const. `type` stays a JSON array —
+     * a crew can handle more than one — so filters use whereJsonContains.
+     *
+     * @return array<string, string>
+     */
+    public static function typeOptions(): array
+    {
+        return CrewType::options();
+    }
+
+    /** Human labels for this crew's types, in the configured order. */
+    public function typeLabels(): array
+    {
+        $options = static::typeOptions();
+
+        return array_values(array_intersect_key($options, array_flip($this->type ?? [])));
+    }
 
     public function foreman(): BelongsTo
     {

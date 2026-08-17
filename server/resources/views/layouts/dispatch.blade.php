@@ -52,7 +52,10 @@
                      errand, and the board's date/crew filters shouldn't be lost to it.
                      Gated on the same permission as the Jobs resource it links to. --}}
                 @if (auth()->user()?->hasAccessTo('JobResource'))
-                    <a href="{{ route('filament.admin.resources.jobs.waiting-list') }}"
+                    {{-- The Jobs list pre-filtered to Waiting List, rather than a
+                         separate page showing the same rows. The list retitles itself
+                         to match the active status filter. --}}
+                    <a href="{{ route('filament.admin.resources.jobs.index', ['tableFilters' => ['status' => ['value' => 'waiting_list']]]) }}"
                        target="_blank"
                        rel="noopener"
                        title="Open the waiting list in a new tab"

@@ -19,7 +19,7 @@
     $selectedJob = $this->selectedUnroutedJob;
     $selectedForeman = $this->selectedForeman;
     $serviceIcons = $this->serviceIconsEnabled;
-    $serviceGroups = \App\Models\Service::GROUPS;
+    $crewTypeOptions = \App\Models\CrewType::options();
 @endphp
 
 <div>
@@ -591,27 +591,33 @@
                     @endif
                 </div>
 
-                {{-- Second row, fixed shape regardless of view: service-group filters
-                     (issue #15) on the left, status/crew filters on the right. Pinning
-                     them to their own row keeps the bar from reflowing when the top
-                     row's controls change (e.g. the Map-only GPS toggle). --}}
+                {{-- Second row, fixed shape regardless of view: crew-type filters on
+                     the left, status/crew filters on the right. Pinning them to their
+                     own row keeps the bar from reflowing when the top row's controls
+                     change (e.g. the Map-only GPS toggle).
+
+                     These narrow the board to crews of the chosen type. The options
+                     come from Settings -> Crew Types, in the order set there. --}}
                 <div class="d-row-wrap" style="margin-top: 8px;">
-                    <span class="d-label" style="align-self:center;">Services</span>
-                    @foreach (['spraying', 'mowing', 'mulching'] as $group)
-                        @php $isGroupActive = in_array($group, $this->serviceGroups, true); @endphp
+                    <span class="d-label" style="align-self:center;">Crews</span>
+                    @foreach ($crewTypeOptions as $typeKey => $typeLabel)
+                        @php $isTypeActive = in_array($typeKey, $this->crewTypes, true); @endphp
                         <button
                             type="button"
-                            wire:click="toggleServiceGroup('{{ $group }}')"
-                            class="d-chip {{ $isGroupActive ? 'is-active' : '' }}"
-                            @if ($isGroupActive) style="background: var(--d-accent); color: #fff; border-color: var(--d-accent);" @endif
-                        >{{ $serviceGroups[$group] }}</button>
+                            wire:click="toggleCrewType('{{ $typeKey }}')"
+                            class="d-chip {{ $isTypeActive ? 'is-active' : '' }}"
+                            @if ($isTypeActive) style="background: var(--d-accent); color: #fff; border-color: var(--d-accent);" @endif
+                        >{{ $typeLabel }}</button>
                     @endforeach
-                    @if (! empty($this->serviceGroups))
+                    @if (empty($crewTypeOptions))
+                        <span class="d-muted" style="font-size:12px;align-self:center;">No crew types yet — add them in Settings → Crew Types.</span>
+                    @endif
+                    @if (! empty($this->crewTypes))
                         {{-- The × matches the other "remove this selection" affordances,
-                             so it reads as dropping the filter, not hiding the jobs. --}}
-                        <button type="button" wire:click="$set('serviceGroups', [])" class="d-btn"
+                             so it reads as dropping the filter, not hiding the crews. --}}
+                        <button type="button" wire:click="$set('crewTypes', [])" class="d-btn"
                             style="height:28px;padding:0 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px;"
-                            title="Clear the service filter and show every service again">
+                            title="Clear the crew type filter and show every crew again">
                             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             Clear
                         </button>
@@ -652,25 +658,47 @@
                         </button>
                         {{-- Anchored right: the button now sits at the bar's right edge,
                              so a left-anchored panel would hang off the viewport. --}}
-                        <div x-show="open" x-cloak @click.outside="open = false" style="position:absolute;z-index:40;top:calc(100% + 4px);right:0;min-width:220px;background:var(--d-card-bg);border:1px solid var(--d-border);border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);padding:8px;">
-                            <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;">
+                        <div x-show="open" x-cloak @click.outside="open = false" x-data="{ q: '' }" style="position:absolute;z-index:40;top:calc(100% + 4px);right:0;min-width:240px;background:var(--d-card-bg);border:1px solid var(--d-border);border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);padding:8px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;gap:8px;">
                                 <span class="d-label">Crews</span>
-                                @if (count($activeCrewIds) < count($crewColors))
-                                    <button type="button" wire:click="showAllCrews" style="font-size:11px;color:var(--d-accent);background:none;border:none;padding:0;cursor:pointer;">Show all</button>
-                                @endif
+                                <span style="display:flex;gap:8px;">
+                                    {{-- Clear all unticks everything so picking two crews out of
+                                         many is two clicks, not a dozen. Show all is the inverse. --}}
+                                    @if (! empty($activeCrewIds))
+                                        <button type="button" wire:click="clearAllCrews" style="font-size:11px;color:var(--d-muted, #6b7280);background:none;border:none;padding:0;cursor:pointer;">Clear all</button>
+                                    @endif
+                                    @if (count($activeCrewIds) < count($crewColors))
+                                        <button type="button" wire:click="showAllCrews" style="font-size:11px;color:var(--d-accent);background:none;border:none;padding:0;cursor:pointer;">Show all</button>
+                                    @endif
+                                </span>
                             </div>
-                            @foreach ($crewColors as $cId => $c)
-                                <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-size:13px;border-radius:6px;">
-                                    <input
-                                        type="checkbox"
-                                        wire:click="toggleCrewVisibility({{ $cId }})"
-                                        @checked(in_array((int) $cId, $activeCrewIds, true))
-                                        style="width:16px;height:16px;accent-color:var(--d-accent);"
+                            {{-- Client-side filter: the crew list is already rendered, so
+                                 narrowing it shouldn't cost a server round-trip. --}}
+                            @if (count($crewColors) > 6)
+                                <input
+                                    type="text"
+                                    x-model="q"
+                                    placeholder="Search crews…"
+                                    style="width:100%;margin:4px 0 6px;padding:6px 8px;font-size:12px;border:1px solid var(--d-border);border-radius:6px;background:var(--d-card-bg);color:inherit;box-sizing:border-box;"
+                                >
+                            @endif
+                            <div style="max-height:280px;overflow-y:auto;">
+                                @foreach ($crewColors as $cId => $c)
+                                    <label
+                                        x-show="q === '' || @js(strtolower($c['name'])).includes(q.toLowerCase())"
+                                        style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-size:13px;border-radius:6px;"
                                     >
-                                    <span class="d-dot" style="background-color: {{ $c['color'] }}"></span>
-                                    {{ $c['name'] }}
-                                </label>
-                            @endforeach
+                                        <input
+                                            type="checkbox"
+                                            wire:click="toggleCrewVisibility({{ $cId }})"
+                                            @checked(in_array((int) $cId, $activeCrewIds, true))
+                                            style="width:16px;height:16px;accent-color:var(--d-accent);"
+                                        >
+                                        <span class="d-dot" style="background-color: {{ $c['color'] }}"></span>
+                                        {{ $c['name'] }}
+                                    </label>
+                                @endforeach
+                            </div>
                             @if (empty($crewColors))
                                 <div class="d-muted" style="padding:6px 8px;font-size:12px;">No crews yet.</div>
                             @endif
@@ -1380,13 +1408,14 @@
                         @endphp
                         <div>
                             <div class="d-label">Services</div>
-                            <select wire:change="addNewJobService($event.target.value)" @disabled(empty($njAvailableServices))
-                                style="{{ $njField }}padding:0 10px;">
-                                <option value="">{{ empty($njAvailableServices) ? (count($njChosenServices) ? 'All services added' : 'No active services') : 'Add a service…' }}</option>
-                                @foreach ($njAvailableServices as $id => $name)
-                                    <option value="{{ $id }}">{{ $name }}</option>
-                                @endforeach
-                            </select>
+                            <x-searchable-select
+                                :options="$njAvailableServices"
+                                :placeholder="'Add a service…'"
+                                :empty-label="count($njChosenServices) ? 'All services added' : 'No active services'"
+                                :disabled="empty($njAvailableServices)"
+                                on-select="$wire.addNewJobService(value)"
+                                :trigger-style="$njField . 'padding:0 10px;'"
+                            />
 
                             @if (count($newJobServices))
                                 {{-- Rows scroll past a few entries so a long scope can't push the
@@ -1438,13 +1467,18 @@
                             </div>
                             <div style="flex:1;">
                                 <div class="d-label">Crew</div>
-                                <select wire:model.live="newJob.crew_id"
-                                    style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a;">
-                                    <option value="">Unassigned</option>
-                                    @foreach ($this->crewColorMap() as $crew)
-                                        <option value="{{ $crew['id'] }}">{{ $crew['name'] }}</option>
-                                    @endforeach
-                                </select>
+                                @php
+                                    $njCrewOptions = ['' => 'Unassigned'] + collect($this->crewColorMap())
+                                        ->mapWithKeys(fn ($crew) => [(string) $crew['id'] => $crew['name']])
+                                        ->all();
+                                @endphp
+                                <x-searchable-select
+                                    :options="$njCrewOptions"
+                                    :value="(string) ($this->newJob['crew_id'] ?? '')"
+                                    placeholder="Unassigned"
+                                    on-select="$wire.set('newJob.crew_id', value === '' ? null : value)"
+                                    trigger-style="width:100%; height:38px; border:1px solid var(--d-border); border-radius:8px; padding:0 10px; font-size:13px; background:#fff; color:#0f172a; box-sizing:border-box;"
+                                />
                             </div>
                         </div>
 

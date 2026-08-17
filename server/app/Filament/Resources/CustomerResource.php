@@ -14,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions;
+use Illuminate\Database\Eloquent\Builder;
 
 class CustomerResource extends Resource
 {
@@ -187,7 +188,10 @@ class CustomerResource extends Resource
                     ->label('Customer')
                     ->formatStateUsing(fn ($state, $record) => $state ?: trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')))
                     ->description(fn ($record) => $record->company_name ? trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) : null)
-                    ->searchable(['company_name', 'first_name', 'last_name'])
+                    // Custom query rather than a column list: Filament matches the
+                    // whole term against each column separately, so "Laura M"
+                    // would never find Laura Marshall.
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->searchName($search))
                     ->sortable(['last_name']),
                 Tables\Columns\TextColumn::make('city')
                     ->searchable()

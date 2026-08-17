@@ -129,43 +129,73 @@ class ViewCustomer extends ViewRecord
                             View::make('filament.resources.customer.overview-properties'),
                         ]),
 
+                    // What's booked ahead — the question the office asks most, so it
+                    // sits in the top row rather than being compressed into a byline.
+                    Section::make('Upcoming')
+                        ->icon('heroicon-o-calendar-days')
+                        ->description(fn (): string => $this->upcomingByline())
+                        ->columnSpan(1)
+                        ->schema([
+                            View::make('filament.resources.customer.overview-upcoming'),
+                        ]),
+            ]),
+
+            // Third row: history beside the money summary, both short enough to
+            // share a line.
+            Grid::make(['default' => 1, 'lg' => 2])
+                ->columnSpanFull()
+                ->schema([
                     Section::make('Recently completed')
                         ->icon('heroicon-o-check-circle')
-                        ->description(fn (): string => $this->upcomingByline())
+                        ->description(fn (): string => $this->completedByline())
                         ->columnSpan(1)
                         ->schema([
                             View::make('filament.resources.customer.overview-completed'),
                         ]),
-            ]),
 
-            // Third row: Billing pairs with Notes on an even split — the money summary
-            // is short enough to sit beside free text without either feeling starved.
-            Grid::make(['default' => 1, 'lg' => 2])
-                ->columnSpanFull()
-                ->schema([
                     Section::make('Billing')
                         ->icon('heroicon-o-banknotes')
                         ->columnSpan(1)
                         ->schema([
                             View::make('filament.resources.customer.overview-billing'),
                         ]),
-
-                    Section::make('Notes')
-                        ->icon('heroicon-o-pencil-square')
-                        ->columnSpan(1)
-                        ->schema([
-                            TextEntry::make('notes')
-                                ->hiddenLabel()
-                                ->placeholder('No notes on this account.')
-                                ->columnSpanFull(),
-                        ]),
             ]),
+
+            // Notes run full width: free text reads badly in a narrow column.
+            Section::make('Notes')
+                ->icon('heroicon-o-pencil-square')
+                ->columnSpanFull()
+                ->collapsible()
+                ->schema([
+                    TextEntry::make('notes')
+                        ->hiddenLabel()
+                        ->placeholder('No notes on this account.')
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 
+    /** Completed-work summary: how many, and how recently. */
+    public function completedByline(): string
+    {
+        $snap = $this->snapshot();
+
+        if ($snap['completedCount'] === 0) {
+            return 'No completed jobs yet';
+        }
+
+        $byline = $snap['completedCount'] . ' completed';
+
+        if ($snap['lastCompletedAt']) {
+            $byline .= ' · last ' . \Carbon\Carbon::parse($snap['lastCompletedAt'])->format('M j, Y');
+        }
+
+        return $byline;
+    }
+
     /**
-     * The upcoming-work summary that replaced the standalone Upcoming card: a count,
-     * plus the next date so the most useful detail survives the compression.
+     * Header line for the Upcoming card: how much is booked, when the next visit
+     * lands, and how much work is still waiting on a date.
      */
     public function upcomingByline(): string
     {

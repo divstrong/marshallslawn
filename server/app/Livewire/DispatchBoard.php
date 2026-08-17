@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\ChatMessage;
 use App\Models\Crew;
+use App\Models\CrewType;
 use App\Models\Job;
 use App\Models\Route;
 use App\Models\RouteStop;
@@ -51,12 +52,16 @@ class DispatchBoard extends Component
     public ?string $statusFilter = null;
 
     /**
-     * Selected service-group filters (Spraying / Mowing / Mulching). Empty = show all.
+     * Selected crew-type filters (Mowing / Spraying / Mulching / ...). Empty =
+     * show all. These narrow the *crews* on the board rather than the jobs, so
+     * every view inherits the filter through activeCrewIds().
+     *
+     * Managed in Settings -> Crew Types.
      *
      * @var array<int, string>
      */
-    #[Url(as: 'services')]
-    public array $serviceGroups = [];
+    #[Url(as: 'types')]
+    public array $crewTypes = [];
 
     public ?int $selectedStopId = null;
 
@@ -212,6 +217,22 @@ class DispatchBoard extends Component
 
         if (! empty($this->crewIds)) {
             $ids = array_intersect($ids, array_map('intval', $this->crewIds));
+        }
+
+        // Crew-type quick filters. A crew carries an array of types, so it
+        // matches if it has *any* of the selected ones.
+        if (! empty($this->crewTypes)) {
+            $matching = Crew::query()
+                ->where(function ($q): void {
+                    foreach ($this->crewTypes as $type) {
+                        $q->orWhereJsonContains('type', $type);
+                    }
+                })
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->all();
+
+            $ids = array_intersect($ids, $matching);
         }
 
         return array_values($ids);
@@ -380,10 +401,6 @@ class DispatchBoard extends Component
             ];
         });
 
-        if (! empty($this->serviceGroups)) {
-            $rows = $rows->filter(fn ($s) => array_intersect($s['service_groups'], $this->serviceGroups) !== []);
-        }
-
         return $rows->values()->all();
     }
 
@@ -472,10 +489,6 @@ class DispatchBoard extends Component
                 'sort_order' => null,
             ];
         });
-
-        if (! empty($this->serviceGroups)) {
-            $rows = $rows->filter(fn ($j) => array_intersect($j['service_groups'], $this->serviceGroups) !== []);
-        }
 
         return $rows->values()->all();
     }
@@ -836,10 +849,6 @@ class DispatchBoard extends Component
         // already narrowed by the query above.
         $byDay = [];
         foreach ($stops as $stop) {
-            if (! empty($this->serviceGroups)
-                && array_intersect($this->stopServiceGroups($stop), $this->serviceGroups) === []) {
-                continue;
-            }
             if ($search !== '' && ! $this->stopMatchesSearch($stop, $search)) {
                 continue;
             }
@@ -1011,21 +1020,6 @@ class DispatchBoard extends Component
         $haystack = mb_strtolower(implode(' ', array_filter($parts)));
 
         return str_contains($haystack, $needle);
-    }
-
-    /** Distinct service groups attached to a stop (its own service + the job's services). */
-    private function stopServiceGroups(RouteStop $stop): array
-    {
-        $groups = [];
-        if ($stop->service?->service_group) {
-            $groups[$stop->service->service_group] = true;
-        }
-        foreach ($stop->job?->jobServices ?? [] as $js) {
-            if ($js->service?->service_group) {
-                $groups[$js->service->service_group] = true;
-            }
-        }
-        return array_keys($groups);
     }
 
     /**
@@ -1348,6 +1342,20 @@ class DispatchBoard extends Component
         $this->emitStopsUpdated();
     }
 
+    /**
+     * Untick every crew, so picking two out of fifteen is two clicks instead of
+     * thirteen. The board goes empty until at least one is ticked back on.
+     */
+    public function clearAllCrews(): void
+    {
+        $this->hiddenCrewIds = array_values(array_keys($this->crewColorMap()));
+        $this->crewIds = [];
+
+        unset($this->activeCrewIds, $this->stops, $this->crewDayCounts, $this->summary, $this->foremanPins);
+        $this->persistDispatchPrefs();
+        $this->emitStopsUpdated();
+    }
+
     /** Move the Month grid (and selected date) by whole months. */
     public function shiftMonth(int $months): void
     {
@@ -1416,19 +1424,19 @@ class DispatchBoard extends Component
         ])->save();
     }
 
-    public function toggleServiceGroup(string $group): void
+    public function toggleCrewType(string $type): void
     {
-        if (! array_key_exists($group, Service::GROUPS)) {
+        if (! array_key_exists($type, CrewType::options())) {
             return;
         }
 
-        if (in_array($group, $this->serviceGroups, true)) {
-            $this->serviceGroups = array_values(array_filter($this->serviceGroups, fn ($g) => $g !== $group));
+        if (in_array($type, $this->crewTypes, true)) {
+            $this->crewTypes = array_values(array_filter($this->crewTypes, fn ($t) => $t !== $type));
         } else {
-            $this->serviceGroups = [...$this->serviceGroups, $group];
+            $this->crewTypes = [...$this->crewTypes, $type];
         }
 
-        unset($this->stops, $this->crewDayCounts, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary);
+        unset($this->activeCrewIds, $this->stops, $this->crewDayCounts, $this->unroutedJobs, $this->selectedStop, $this->selectedUnroutedJob, $this->summary);
         $this->emitStopsUpdated();
     }
 
@@ -1705,12 +1713,7 @@ class DispatchBoard extends Component
         }
 
         return \App\Models\Customer::query()
-            ->where(function ($q) use ($search) {
-                $q->where('last_name', 'like', "%{$search}%")
-                    ->orWhere('first_name', 'like', "%{$search}%")
-                    ->orWhere('company_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
-            })
+            ->searchName($search)
             ->orderBy('last_name')
             ->limit(15)
             ->get()

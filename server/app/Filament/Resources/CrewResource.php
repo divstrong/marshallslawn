@@ -59,10 +59,10 @@ class CrewResource extends Resource
                                 ->label('Legacy ID')
                                 ->disabled()
                                 ->maxLength(255),
-                            Forms\Components\CheckboxList::make('categories')
-                                ->label('Crew categories')
-                                ->helperText('Choose one or more types this crew handles.')
-                                ->options(Crew::CATEGORIES)
+                            Forms\Components\CheckboxList::make('type')
+                                ->label('Crew type')
+                                ->helperText('Choose one or more types this crew handles. Manage the list in Settings → Crew Types.')
+                                ->options(fn (): array => Crew::typeOptions())
                                 ->columns(2)
                                 ->bulkToggleable()
                                 ->columnSpanFull(),
@@ -94,10 +94,10 @@ class CrewResource extends Resource
                     ->label('Foreman'),
                 Tables\Columns\TextColumn::make('status')
                     ->badge(),
-                Tables\Columns\TextColumn::make('categories')
-                    ->label('Categories')
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Type')
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => Crew::CATEGORIES[$state] ?? $state)
+                    ->formatStateUsing(fn (string $state): string => Crew::typeOptions()[$state] ?? $state)
                     ->color('gray'),
                 Tables\Columns\TextColumn::make('division')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -110,15 +110,15 @@ class CrewResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('categories')
-                    ->label('Category')
-                    ->options(Crew::CATEGORIES)
+                Tables\Filters\SelectFilter::make('type')
+                    ->label('Type')
+                    ->options(fn (): array => Crew::typeOptions())
                     ->query(function ($query, array $data) {
                         $value = $data['value'] ?? null;
                         if (! $value) {
                             return $query;
                         }
-                        return $query->whereJsonContains('categories', $value);
+                        return $query->whereJsonContains('type', $value);
                     }),
             ])
             ->defaultPaginationPageOption(50)

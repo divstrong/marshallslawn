@@ -1,0 +1,1 @@
+@livewire('crew-type-manager')

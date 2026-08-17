@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\JobResource;
-use App\Filament\Resources\JobResource\Pages\ListWaitingListJobs;
+use App\Filament\Resources\JobResource\Pages\ListJobs;
 use App\Models\Customer;
 use App\Models\Job;
 use App\Models\Property;
@@ -51,9 +51,12 @@ class JobDuplicateAndWaitingListTest extends TestCase
         $waiting = $this->makeJob(['title' => 'Parked work', 'status' => 'waiting_list']);
         $booked = $this->makeJob(['title' => 'Booked work', 'status' => 'scheduled']);
 
-        $this->get(JobResource::getUrl('waiting-list'))->assertOk();
+        // The standalone waiting-list page was retired in favour of the Jobs list
+        // filtered to the status; the old URL redirects there.
+        $this->get(JobResource::getUrl('waiting-list'))->assertRedirect();
 
-        Livewire::test(ListWaitingListJobs::class)
+        Livewire::test(ListJobs::class)
+            ->set('tableFilters.status.value', 'waiting_list')
             ->assertCanSeeTableRecords([$waiting])
             ->assertCanNotSeeTableRecords([$booked]);
     }

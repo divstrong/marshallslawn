@@ -81,10 +81,7 @@ class PaymentResource extends Resource
                     ->state(fn (Payment $record): string => self::customerName($record))
                     ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas(
                         'customer',
-                        fn (Builder $q) => $q
-                            ->where('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%")
-                            ->orWhere('company_name', 'like', "%{$search}%"),
+                        fn (Builder $q) => $q->searchName($search),
                     )),
                 Tables\Columns\TextColumn::make('amount')
                     ->money('usd')
