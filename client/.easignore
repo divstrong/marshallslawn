@@ -46,3 +46,12 @@ app-example
 # generated native folders
 /ios
 /android
+
+# The Laravel backend. EAS archives from the git root, so `server/` is pulled in
+# even though an iOS/Android build has no use for it. Excluding it also avoids
+# `server/public/storage` — a `php artisan storage:link` symlink that Windows
+# refuses to recreate in the build tarball without Developer Mode, failing the
+# upload with EPERM. Note .easignore REPLACES .gitignore, so paths ignored there
+# are not ignored here unless repeated.
+/server
+server/
