@@ -93,18 +93,64 @@ only runs "on the clock".
 
 ---
 
-## Screen recording checklist
+## Screen recording checklist (Guideline 2.1)
 
-Apple asked for a recording of persistent background location on a physical
-device. It must show, in one continuous take:
+Apple rejected build 1.0 (17) under **Guideline 2.1 — Information Needed**, asking
+for a demo video. This is an information request, not a code defect: nothing in
+the app needs to change.
 
-- [ ] Signing in and granting **Always Allow**
+Their requirements, verbatim in effect:
+
+- **A physical iOS device — a simulator recording is rejected.** Use TestFlight
+  to install the exact build under review, then iOS's own screen recorder
+  (Control Centre → Record).
+- Show **location features including background mode when the app is minimised**.
+- **Clearly document all relevant app features, services, and user permission
+  requests** — note "all", not just location.
+
+**This video cannot be shared with Google Play.** Google rejects iOS footage and
+Apple rejects simulator footage, so the two stores need separate recordings. See
+`play-review-notes.md` for the Android one.
+
+### Shot list
+
+Permission prompts (Apple asked for every one, not only location):
+
+- [ ] Sign in as the demo Foreman (see the demo account above)
+- [ ] **Location** — "While Using the App", then the follow-up **"Change to Always
+      Allow"** prompt, accepted on camera
+- [ ] **Notifications** — the push permission prompt
+- [ ] **Camera** — open a job, add a job-site photo
+- [ ] **Photos** — attach an existing image from the library
+
+Background location, the part Apple specifically called out:
+
 - [ ] Profile → Location Sharing showing the first "Last sent to dispatch" line
-- [ ] Backgrounding the app / locking the screen, with the **blue location
-      indicator** visible in the status bar
-- [ ] Moving far enough to trigger at least one update (≥40 m, ≥60 s)
-- [ ] Returning to the app and showing that the "Last sent to dispatch"
-      timestamp and coordinates have changed while the app was backgrounded
+- [ ] **Minimise the app / lock the screen**, with the **blue location indicator**
+      visible in the status bar the whole time
+- [ ] Move far enough to trigger an update (≥40 m, ≥60 s — see
+      `client/src/lib/location.ts`)
+- [ ] Reopen and show the "Last sent to dispatch" timestamp and coordinates have
+      changed while the app was backgrounded
 
-Attach the recording to the App Review reply *and* link it in the Notes field
-for future submissions, as Apple requested.
+Also worth filming so "all relevant app features" is genuinely covered: Schedule,
+Jobs, Time clock in/out, Quotes, and Chat.
+
+### Submitting it
+
+1. Host somewhere Apple can open without signing in (YouTube unlisted, or a
+   Google Drive link set to "Anyone with the link"). Verify it in a private
+   window while signed out.
+2. Paste the link into **App Store Connect → App Review Information → Notes**.
+3. **Reply to the rejection message** in App Store Connect — the Notes field
+   alone does not reopen the review.
+
+Apple stated that an app reviewable only by demo video needs an **updated video
+on every submission**. If nothing has changed, the Notes field must explicitly
+confirm the existing video is still valid for all storefronts. Record the URL
+here so future submissions can reuse or re-confirm it:
+
+    Video URL: (fill in)
+
+Before submitting, re-check that `APP_REVIEW_EMAIL` / `APP_REVIEW_CODE` are set
+on production, or the reviewer cannot sign in at all.

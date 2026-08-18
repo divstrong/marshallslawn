@@ -26,6 +26,7 @@ const en = {
   'common.remove': 'Remove',
   'common.navigate': 'Navigate',
   'common.cameraNeeded': 'Camera access is needed to take a photo.',
+  'common.libraryNeeded': 'Photo library access is needed to attach a photo or video.',
 
   // Tabs
   'nav.schedule': 'Schedule',
@@ -285,6 +286,7 @@ const es: Record<keyof typeof en, string> = {
   'common.remove': 'Eliminar',
   'common.navigate': 'Navegar',
   'common.cameraNeeded': 'Se necesita acceso a la cámara para tomar una foto.',
+  'common.libraryNeeded': 'Se necesita acceso a la galería para adjuntar una foto o video.',
 
   // Tabs
   'nav.schedule': 'Horario',

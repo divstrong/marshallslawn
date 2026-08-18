@@ -70,7 +70,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Marshall's Lawn needs access to your photos so you can attach job site pictures.",
-          "cameraPermission": "Marshall's Lawn needs camera access so you can take job site photos."
+          "cameraPermission": "Marshall's Lawn needs camera access so you can take job site photos.",
+          "microphonePermission": "Marshall's Lawn needs microphone access so job site videos you record in Chat include sound."
         }
       ],
       "expo-video",

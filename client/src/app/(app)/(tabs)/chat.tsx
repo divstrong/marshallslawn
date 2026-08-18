@@ -102,6 +102,14 @@ export default function ChatScreen() {
       try {
         let result: ImagePicker.ImagePickerResult;
         if (mode === 'library') {
+          // Images alone need no permission on iOS, but this menu also offers
+          // videos, and picking one with `allowsEditing` off does — so ask
+          // before opening the picker rather than failing after the choice.
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!permission.granted) {
+            Alert.alert(t('chat.title'), t('common.libraryNeeded'));
+            return;
+          }
           result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images', 'videos'],
             quality: 0.6,
