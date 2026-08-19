@@ -1,23 +1,44 @@
-# Files EAS Build should NOT upload. Mirrors .gitignore, and crucially excludes
-# ALL .env files so local dev URLs (e.g. EXPO_PUBLIC_API_URL=http://10.0.2.2…)
-# can never be baked into a cloud build. Release builds fall back to
-# PRODUCTION_API_URL in src/constants/config.ts.
+# Files EAS Build should NOT upload.
+#
+# IMPORTANT: .easignore REPLACES .gitignore entirely — anything ignored there is
+# uploaded unless repeated here. That is why this file re-lists build output and
+# dependency folders that .gitignore already covers.
+#
+# Patterns are matched against the ARCHIVE root, which is the git repository
+# root (marshallslawn/), not this directory. Anchored patterns like `/android`
+# therefore miss `client/android`. Everything below is written to match at any
+# depth so it works regardless.
 
-# env files — never ship these in a build
+# --- env files: never ship these in a build -----------------------------------
+# Local dev URLs (e.g. EXPO_PUBLIC_API_URL=http://10.0.2.2…) must never be baked
+# into a cloud build. Release builds fall back to PRODUCTION_API_URL in
+# src/constants/config.ts.
 .env
 .env.*
 .env*.local
 
-# dependencies
+# --- dependencies (reinstalled on the build worker) ---------------------------
 node_modules/
+vendor/
 
-# Expo
+# --- generated native projects (EAS runs prebuild itself) ---------------------
+android/
+ios/
+
+# --- the Laravel backend: nothing in it is used by a mobile build -------------
+server/
+
+# --- version control ----------------------------------------------------------
+.git/
+
+# --- Expo / bundler output ----------------------------------------------------
 .expo/
 dist/
 web-build/
 expo-env.d.ts
+.metro-health-check*
 
-# Native
+# --- native build artifacts / signing -----------------------------------------
 .kotlin/
 *.orig.*
 *.jks
@@ -25,33 +46,17 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+*.keystore
+*.apk
+*.aab
+*.ipa
 
-# Metro
-.metro-health-check*
-
-# debug
+# --- misc ---------------------------------------------------------------------
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-
-# macOS
 .DS_Store
 *.pem
-
-# typescript
 *.tsbuildinfo
-
 app-example
-
-# generated native folders
-/ios
-/android
-
-# The Laravel backend. EAS archives from the git root, so `server/` is pulled in
-# even though an iOS/Android build has no use for it. Excluding it also avoids
-# `server/public/storage` — a `php artisan storage:link` symlink that Windows
-# refuses to recreate in the build tarball without Developer Mode, failing the
-# upload with EPERM. Note .easignore REPLACES .gitignore, so paths ignored there
-# are not ignored here unless repeated.
-/server
-server/
+coverage/
