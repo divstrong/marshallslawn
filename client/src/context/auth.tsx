@@ -12,6 +12,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import { PUSH_TOKEN_STORAGE_KEY, TOKEN_STORAGE_KEY } from '@/constants/config';
 import { api, setAuthToken } from '@/lib/api';
+import { clearMonitoringUser, setMonitoringUser, trace } from '@/lib/monitoring';
 import { getItem, removeItem, setItem } from '@/lib/storage';
 import type { Employee, Role } from '@/lib/types';
 
@@ -38,6 +39,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthToken(token);
     await setItem(TOKEN_STORAGE_KEY, token);
     setEmployee(nextEmployee);
+    // Tag every later crash report with who hit it — usually the fastest
+    // route to a repro, since a field bug tends to be one device or one role.
+    setMonitoringUser(nextEmployee);
     setStatus('authenticated');
   }, []);
 
@@ -45,6 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthToken(null);
     await removeItem(TOKEN_STORAGE_KEY);
     setEmployee(null);
+    // A shared tablet must not label the next person's crashes as this one's.
+    clearMonitoringUser();
     setStatus('unauthenticated');
   }, []);
 
@@ -66,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const me = await api.me();
         if (active) {
           setEmployee(me);
+          setMonitoringUser(me);
           setStatus('authenticated');
         }
       } catch {
@@ -83,12 +90,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const requestCode = useCallback(async (email: string) => {
+    // A breadcrumb, not a log line: it rides along on whatever crash comes
+    // next, which is how we learn a crash happened *at* this step.
+    trace('auth.request_code');
     const { expires_in_minutes } = await api.requestLoginCode(email);
     return expires_in_minutes;
   }, []);
 
   const signInWithCode = useCallback(
     async (email: string, code: string) => {
+      trace('auth.verify_code');
       const { token, employee: nextEmployee } = await api.verifyLoginCode(email, code);
       await applySession(token, nextEmployee);
     },

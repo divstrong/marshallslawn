@@ -82,9 +82,17 @@
         }
       ],
       [
+        "@sentry/react-native",
+        {
+          "url": "https://sentry.io/"
+        }
+      ],
+      [
         "./plugins/with-background-modes",
         {
-          "modes": ["location"]
+          "modes": [
+            "location"
+          ]
         }
       ]
     ],

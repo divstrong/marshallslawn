@@ -60,8 +60,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     const read = async () => {
       const value = await getLastLocationSync();
+      // Tracking can begin a moment after we ask for it — on Android the
+      // start waits for the app to reach the foreground — so re-read it here
+      // rather than trusting the value from when we first asked.
+      const running = await isTrackingActive();
       if (!cancelled) {
         setLastSync(value);
+        setActive(running);
       }
     };
 

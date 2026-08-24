@@ -5,6 +5,7 @@
  */
 
 import { API_BASE_URL } from '@/constants/config';
+import { trace } from '@/lib/monitoring';
 import type {
   ChatMessage,
   Customer,
@@ -97,6 +98,9 @@ async function request<T>(
     if (__DEV__) {
       console.log(`[Marshalls Lawn] ${method} ${url} — fetch failed:`, e);
     }
+    // Attach the failure to the next crash report. A request that times out
+    // on cellular but never on office Wi-Fi is invisible without this.
+    trace('api.unreachable', { method, path, host, timedOut: timedOut.value });
     const reason = timedOut.value
       ? `Timed out reaching ${host} (15s).`
       : `Couldn't reach the server (${host}). Check your connection.`;

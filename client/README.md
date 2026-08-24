@@ -50,7 +50,15 @@ npx expo start
 > (it adds `extra.eas.projectId` to `app.json`); until then the app runs
 > fine but device push tokens won't register.
 
-### Pointing the app at the API
+### Crash reporting
+
+Sentry catches native Android crashes, fatal JS errors, and ANRs from the
+crew's own devices — the ones Play Console never shows us, because a
+sideloaded EAS `preview` APK reports nothing to Android vitals. It stays
+off until `EXPO_PUBLIC_SENTRY_DSN` is set at build time. Setup and how to
+read a report: [`docs/crash-reporting.md`](docs/crash-reporting.md).
+
+## Pointing the app at the API
 
 `src/constants/config.ts` defaults to the **live API**
 (`https://app.marshallslawninc.com/api`), so release builds and on-device

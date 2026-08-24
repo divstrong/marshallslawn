@@ -6,16 +6,34 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_ENV": "development",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://bd129caf2f39053dff9a853f35d35362@o4511961004507136.ingest.us.sentry.io/4511961005686784",
+        "SENTRY_ORG": "divstrong-productions-llc",
+        "SENTRY_PROJECT": "android"
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ENV": "preview",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://bd129caf2f39053dff9a853f35d35362@o4511961004507136.ingest.us.sentry.io/4511961005686784",
+        "SENTRY_ORG": "divstrong-productions-llc",
+        "SENTRY_PROJECT": "android"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_ENV": "production",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://bd129caf2f39053dff9a853f35d35362@o4511961004507136.ingest.us.sentry.io/4511961005686784",
+        "SENTRY_ORG": "divstrong-productions-llc",
+        "SENTRY_PROJECT": "android"
+      }
     }
   },
   "submit": {
