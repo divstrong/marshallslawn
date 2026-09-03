@@ -287,6 +287,14 @@
             font-size: 11px; font-weight: 500; text-transform: uppercase;
             letter-spacing: 0.05em; color: var(--d-muted);
         }
+        /* Crew-filter rows. Layout lives in a class, not inline: Alpine's
+           x-show strips the inline `display` when it shows an element, which
+           left these labels inline and the list reading like a word cloud. */
+        .dispatch-page .d-crew-row {
+            display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+            cursor: pointer; font-size: 13px; border-radius: 6px;
+        }
+        .dispatch-page .d-crew-row:hover { background: var(--d-hover); }
         .dispatch-page .d-field { margin-top: 12px; }
         .dispatch-page .d-field-val { color: var(--d-text); margin-top: 2px; }
         .dispatch-page .d-link { color: var(--d-accent); text-decoration: none; }
@@ -686,7 +694,7 @@
                                 @foreach ($crewColors as $cId => $c)
                                     <label
                                         x-show="q === '' || @js(strtolower($c['name'])).includes(q.toLowerCase())"
-                                        style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;font-size:13px;border-radius:6px;"
+                                        class="d-crew-row"
                                     >
                                         <input
                                             type="checkbox"
