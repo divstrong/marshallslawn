@@ -1,4 +1,6 @@
 *.log
+*.sql
+*.sql.gz
 .DS_Store
 .env
 .env.backup
@@ -22,3 +24,4 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+ca-certificate.crt
