@@ -1,15 +1,20 @@
 /**
  * Drives foreman GPS tracking. When a foreman is signed in and has
  * granted location permission, background updates run automatically;
- * any other role (or signing out) stops tracking.
+ * any other role (or signing out) stops tracking. A foreman can also pause
+ * sharing from Profile → Location Sharing without revoking the OS
+ * permission; the pause persists across launches until they turn it back on
+ * or sign out.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { LocationDisclosure } from '@/components/location-disclosure';
+import { LAST_LOCATION_SYNC_KEY, LOCATION_PAUSED_KEY } from '@/constants/config';
 import { useAuth } from '@/context/auth';
 import {
+  canTrack,
   getTrackingPermission,
   isTrackingActive,
   requestTrackingPermission,
@@ -18,6 +23,7 @@ import {
   type TrackingPermission,
 } from '@/lib/location';
 import { getLastLocationSync, type LastLocationSync } from '@/lib/location-task';
+import { getItem, removeItem, setItem } from '@/lib/storage';
 
 interface LocationContextValue {
   /** True when the signed-in role is tracked (foreman). */
@@ -26,10 +32,18 @@ interface LocationContextValue {
   supported: boolean;
   permission: TrackingPermission;
   active: boolean;
+  /** True when the employee turned sharing off in-app (permission may still be granted). */
+  paused: boolean;
   /** The last batch this device delivered to dispatch, if any. */
   lastSync: LastLocationSync | null;
-  /** Prompt for permission and start tracking. */
+  /** Prompt for permission (if needed), clear any pause, and start tracking. */
   enable: () => Promise<void>;
+  /** Stop tracking and remember the choice so it doesn't restart on next launch. */
+  disable: () => Promise<void>;
+}
+
+async function isPaused(): Promise<boolean> {
+  return (await getItem(LOCATION_PAUSED_KEY)) === '1';
 }
 
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
@@ -43,6 +57,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
   const [permission, setPermission] = useState<TrackingPermission>('undetermined');
   const [active, setActive] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [lastSync, setLastSync] = useState<LastLocationSync | null>(null);
   const [disclosureVisible, setDisclosureVisible] = useState(false);
   // Session-only: a foreman who dismisses the disclosure isn't nagged again
@@ -85,18 +100,26 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       if (!tracksThisRole) {
         await stopTracking();
+        // The pause belongs to the person who set it; the next foreman to
+        // sign in on this phone should get the default (tracking on) — and
+        // should not see the previous foreman's last reported position.
+        await Promise.all([removeItem(LOCATION_PAUSED_KEY), removeItem(LAST_LOCATION_SYNC_KEY)]);
         if (!cancelled) {
           setActive(false);
+          setPaused(false);
           setDisclosureVisible(false);
         }
         return;
       }
 
-      const resolved = await getTrackingPermission();
+      const [resolved, pausedByUser] = await Promise.all([getTrackingPermission(), isPaused()]);
       if (cancelled) return;
       setPermission(resolved);
+      setPaused(pausedByUser);
 
-      if (resolved === 'granted') {
+      if (pausedByUser) {
+        // Honour the in-app "off" even though the OS permission still allows it.
+      } else if (canTrack(resolved)) {
         try {
           await startTracking();
         } catch {
@@ -123,7 +146,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const requestAndStart = useCallback(async () => {
     const result = await requestTrackingPermission();
     setPermission(result);
-    if (result === 'granted') {
+    // "While Using" is enough to run; the Settings card nudges toward "Always".
+    if (canTrack(result)) {
       try {
         await startTracking();
       } catch {
@@ -144,6 +168,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const enable = useCallback(async () => {
+    await removeItem(LOCATION_PAUSED_KEY);
+    setPaused(false);
     // Re-show the disclosure whenever an OS prompt is still to come.
     if ((await getTrackingPermission()) === 'undetermined') {
       declinedRef.current = false;
@@ -153,9 +179,17 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     await requestAndStart();
   }, [requestAndStart]);
 
+  const disable = useCallback(async () => {
+    // Persist first so a crash or kill mid-stop still leaves it off on relaunch.
+    await setItem(LOCATION_PAUSED_KEY, '1');
+    setPaused(true);
+    await stopTracking();
+    setActive(await isTrackingActive());
+  }, []);
+
   const value = useMemo<LocationContextValue>(
-    () => ({ tracksThisRole, supported, permission, active, lastSync, enable }),
-    [tracksThisRole, supported, permission, active, lastSync, enable],
+    () => ({ tracksThisRole, supported, permission, active, paused, lastSync, enable, disable }),
+    [tracksThisRole, supported, permission, active, paused, lastSync, enable, disable],
   );
 
   return (

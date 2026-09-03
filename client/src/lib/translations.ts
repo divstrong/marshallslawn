@@ -250,7 +250,16 @@ const en = {
     'Location permission is turned off. Turn it on in device settings so dispatch can see your crew.',
   'settings.locPrompt':
     'Turn on location sharing so dispatch can see where your crew is during the workday.',
+  'settings.locPaused':
+    'You turned off location sharing on this phone. Dispatch can’t see your crew until you turn it back on.',
+  'settings.locWhenInUseIos':
+    'Location is set to “While Using the App”. Dispatch will lose your crew if the app is closed or your phone restarts. For reliable tracking, open device settings and set Location to “Always”.',
+  'settings.locWhenInUseAndroid':
+    'Location is set to “Only while using the app”. Dispatch may lose your crew if the app is closed or your phone restarts. For reliable tracking, open device settings and set Location to “Allow all the time”.',
   'settings.enableLocation': 'Enable location sharing',
+  'settings.disableLocation': 'Turn off location sharing',
+  'settings.disableLocationConfirm':
+    'Dispatch will stop receiving your crew’s location until you turn sharing back on. You can re-enable it here at any time.',
   'settings.openSettings': 'Open device settings',
 
   // Background-location prominent disclosure (shown before the OS prompt —
@@ -511,7 +520,16 @@ const es: Record<keyof typeof en, string> = {
     'El permiso de ubicación está desactivado. Actívalo en la configuración del dispositivo para que despacho pueda ver a tu cuadrilla.',
   'settings.locPrompt':
     'Activa el compartir ubicación para que despacho sepa dónde está tu cuadrilla durante el día.',
+  'settings.locPaused':
+    'Desactivaste el compartir ubicación en este teléfono. Despacho no podrá ver a tu cuadrilla hasta que lo vuelvas a activar.',
+  'settings.locWhenInUseIos':
+    'La ubicación está en “Al usar la app”. Despacho perderá a tu cuadrilla si la app se cierra o el teléfono se reinicia. Para un rastreo confiable, abre la configuración del dispositivo y cambia Ubicación a “Siempre”.',
+  'settings.locWhenInUseAndroid':
+    'La ubicación está en “Solo mientras se usa la app”. Despacho puede perder a tu cuadrilla si la app se cierra o el teléfono se reinicia. Para un rastreo confiable, abre la configuración del dispositivo y cambia Ubicación a “Permitir todo el tiempo”.',
   'settings.enableLocation': 'Activar compartir ubicación',
+  'settings.disableLocation': 'Desactivar compartir ubicación',
+  'settings.disableLocationConfirm':
+    'Despacho dejará de recibir la ubicación de tu cuadrilla hasta que vuelvas a activarlo. Puedes reactivarlo aquí en cualquier momento.',
   'settings.openSettings': 'Abrir configuración del dispositivo',
 
   'location.discloseTitle': 'Compartir ubicación',

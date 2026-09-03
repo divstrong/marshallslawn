@@ -6,15 +6,49 @@
 import * as Location from 'expo-location';
 import { AppState, Platform } from 'react-native';
 
+import { LOCATION_ALWAYS_ASKED_KEY } from '@/constants/config';
 import { LOCATION_TASK } from '@/lib/location-task';
 import { trace } from '@/lib/monitoring';
+import { getItem, setItem } from '@/lib/storage';
 
-export type TrackingPermission = 'granted' | 'denied' | 'undetermined';
+/**
+ * `granted` is "Always" — the full feature. `whenInUse` is the degraded grant:
+ * tracking runs, but the OS won't relaunch the app after it's killed or the
+ * phone restarts, so dispatch can lose the crew until the app is reopened.
+ */
+export type TrackingPermission = 'granted' | 'whenInUse' | 'denied' | 'undetermined';
+
+/** True when tracking can run at all, fully or degraded. */
+export function canTrack(permission: TrackingPermission): boolean {
+  return permission === 'granted' || permission === 'whenInUse';
+}
 
 const isWeb = Platform.OS === 'web';
 
 /** An outstanding `AppState` listener waiting to start tracking, if any. */
 let pendingStart: { remove: () => void } | null = null;
+
+/**
+ * Classify the background half of the permission once foreground is granted.
+ * Both platforms report a "While Using"-only grant as background *not
+ * granted*, and the OS status alone can't say whether that's because the
+ * "Always" prompt was declined or never shown — hence the persisted
+ * asked-flag, see `LOCATION_ALWAYS_ASKED_KEY`.
+ */
+async function classifyBackground(background: {
+  granted: boolean;
+  status: Location.PermissionStatus;
+  canAskAgain: boolean;
+}): Promise<TrackingPermission> {
+  if (background.granted) {
+    return 'granted';
+  }
+  const asked = (await getItem(LOCATION_ALWAYS_ASKED_KEY)) === '1';
+  if (asked || (background.status === 'denied' && !background.canAskAgain)) {
+    return 'whenInUse';
+  }
+  return 'undetermined';
+}
 
 /** Current permission state without prompting. */
 export async function getTrackingPermission(): Promise<TrackingPermission> {
@@ -27,11 +61,7 @@ export async function getTrackingPermission(): Promise<TrackingPermission> {
       ? 'denied'
       : 'undetermined';
   }
-  const background = await Location.getBackgroundPermissionsAsync();
-  if (background.granted) {
-    return 'granted';
-  }
-  return background.status === 'denied' && !background.canAskAgain ? 'denied' : 'undetermined';
+  return classifyBackground(await Location.getBackgroundPermissionsAsync());
 }
 
 /** Prompt for foreground then background ("Always") permission. */
@@ -44,10 +74,9 @@ export async function requestTrackingPermission(): Promise<TrackingPermission> {
     return foreground.canAskAgain ? 'undetermined' : 'denied';
   }
   const background = await Location.requestBackgroundPermissionsAsync();
-  if (background.granted) {
-    return 'granted';
-  }
-  return background.canAskAgain ? 'undetermined' : 'denied';
+  // Recorded regardless of the answer: the OS won't offer this prompt again.
+  await setItem(LOCATION_ALWAYS_ASKED_KEY, '1');
+  return classifyBackground(background);
 }
 
 export async function isTrackingActive(): Promise<boolean> {
@@ -62,7 +91,12 @@ export async function isTrackingActive(): Promise<boolean> {
 }
 
 /**
- * Begin background location updates (idempotent).
+ * Begin background location updates (idempotent). Works on either a full
+ * "Always" grant or a "While Using" one: iOS keeps delivering updates in the
+ * background for a session started while the app was on screen, and on
+ * Android the foreground service below is what carries a while-in-use grant
+ * into the background (expo-location only insists on the background
+ * permission when no foreground service is configured).
  *
  * On Android the start is deferred until the app is actually in the
  * foreground. Android 12 forbids starting a foreground service from the

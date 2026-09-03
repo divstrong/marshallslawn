@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,6 +43,8 @@ export default function SettingsScreen() {
   const contentWidth = useContentWidth(isExpanded ? 1000 : MaxContentWidth);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutVisible, setSignOutVisible] = useState(false);
+  const [disableLocationVisible, setDisableLocationVisible] = useState(false);
+  const [disablingLocation, setDisablingLocation] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
 
   if (!employee) {
@@ -134,9 +137,21 @@ export default function SettingsScreen() {
     ? t('settings.locActive')
     : !tracking.supported
       ? t('settings.locWeb')
-      : tracking.permission === 'denied'
-        ? t('settings.locDenied')
-        : t('settings.locPrompt');
+      : tracking.paused
+        ? t('settings.locPaused')
+        : tracking.permission === 'denied'
+          ? t('settings.locDenied')
+          : t('settings.locPrompt');
+
+  const handleDisableLocation = async () => {
+    setDisablingLocation(true);
+    try {
+      await tracking.disable();
+    } finally {
+      setDisablingLocation(false);
+      setDisableLocationVisible(false);
+    }
+  };
 
   /* Identity and how to reach this person. */
   const identity = (
@@ -241,7 +256,13 @@ export default function SettingsScreen() {
               <View
                 style={[
                   styles.locationDot,
-                  { backgroundColor: tracking.active ? AppColors.success : AppColors.warning },
+                  {
+                    // Amber while degraded: on, but only "While Using".
+                    backgroundColor:
+                      tracking.active && tracking.permission === 'granted'
+                        ? AppColors.success
+                        : AppColors.warning,
+                  },
                 ]}
               />
               <Text style={styles.locationState}>
@@ -266,8 +287,44 @@ export default function SettingsScreen() {
               </View>
             ) : null}
 
+            {/* Degraded grant: tracking runs, but the OS won't relaunch the
+                app after a kill or reboot. Nudge toward "Always" rather than
+                refusing to work — Apple expects the lesser grant to function. */}
+            {tracking.active && tracking.permission === 'whenInUse' ? (
+              <>
+                <View style={styles.locationWarning}>
+                  <Icon name="warning-outline" size={16} color={AppColors.warning} />
+                  <Text style={styles.locationWarningText}>
+                    {t(
+                      Platform.OS === 'ios'
+                        ? 'settings.locWhenInUseIos'
+                        : 'settings.locWhenInUseAndroid',
+                    )}
+                  </Text>
+                </View>
+                <Button
+                  label={t('settings.openSettings')}
+                  variant="secondary"
+                  icon="settings-outline"
+                  onPress={() => Linking.openSettings()}
+                />
+              </>
+            ) : null}
+
+            {/* The in-app off switch: stops tracking without the employee
+                having to revoke the OS permission, and stays off across
+                launches until they re-enable here. */}
+            {tracking.supported && tracking.active ? (
+              <Button
+                label={t('settings.disableLocation')}
+                variant="secondary"
+                icon="location-outline"
+                onPress={() => setDisableLocationVisible(true)}
+              />
+            ) : null}
+
             {tracking.supported && !tracking.active ? (
-              tracking.permission === 'denied' ? (
+              tracking.permission === 'denied' && !tracking.paused ? (
                 <Button
                   label={t('settings.openSettings')}
                   variant="secondary"
@@ -338,6 +395,19 @@ export default function SettingsScreen() {
         loading={signingOut}
         onConfirm={handleSignOut}
         onCancel={() => setSignOutVisible(false)}
+      />
+
+      <ConfirmModal
+        visible={disableLocationVisible}
+        title={t('settings.disableLocation')}
+        message={t('settings.disableLocationConfirm')}
+        confirmLabel={t('settings.locOff')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="danger"
+        confirmIcon="location-outline"
+        loading={disablingLocation}
+        onConfirm={handleDisableLocation}
+        onCancel={() => setDisableLocationVisible(false)}
       />
     </View>
   );
@@ -523,6 +593,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: AppColors.textMuted,
     lineHeight: 19,
+  },
+  locationWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radius.md,
+    backgroundColor: AppColors.warningSoft,
+  },
+  locationWarningText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#a16207',
   },
   locationProof: {
     flexDirection: 'row',

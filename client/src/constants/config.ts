@@ -42,4 +42,22 @@ export const LANGUAGE_STORAGE_KEY = 'marshalls.language';
  */
 export const LAST_LOCATION_SYNC_KEY = 'marshalls.location.lastSync';
 
+/**
+ * Storage key set while a tracked employee has turned location sharing off
+ * from inside the app. Without it, tracking would silently restart on the
+ * next launch because the OS permission is still "Always" — App Review and
+ * Play policy both expect an in-app way to stop that doesn't require
+ * revoking the device permission. Cleared on sign-out.
+ */
+export const LOCATION_PAUSED_KEY = 'marshalls.location.paused';
+
+/**
+ * Storage key set once this install has asked the OS for "Always" location.
+ * Neither platform will show that prompt twice (iOS: once per install;
+ * Android 11+: it's a settings page), and expo-location only remembers that
+ * it asked for the lifetime of the process — so this is how a "While Using"
+ * grant is told apart from "not asked yet" across launches.
+ */
+export const LOCATION_ALWAYS_ASKED_KEY = 'marshalls.location.alwaysAsked';
+
 export const APP_VERSION = '1.0.0-beta';
