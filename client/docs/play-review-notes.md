@@ -3,6 +3,12 @@
 Companion to `app-review-notes.md` (which covers Apple). Google's process is
 different: it is a **form plus a mandatory video**, not a written justification.
 
+**Everything on this page is Android-only.** Since build 1.0 (23) iOS does not
+collect location in the background at all — Apple rejected that under guideline
+2.5.4 — so the justification below, the foreground service, and
+`ACCESS_BACKGROUND_LOCATION` describe the Android build alone. Do not reuse this
+wording in an Apple submission.
+
 ---
 
 ## The two errors in the console

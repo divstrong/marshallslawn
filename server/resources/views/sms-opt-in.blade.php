@@ -102,9 +102,7 @@
                         reminders, job updates, and invoice notifications — from Marshall's Lawn &amp; Landscape at the
                         mobile number provided. Consent is not a condition of any purchase or service. Message frequency
                         varies. Message and data rates may apply. Reply STOP to unsubscribe, HELP for help. See our
-                        <a href="https://marshallslawninc.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>
-                        and
-                        <a href="https://marshallslawninc.com/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a>.
+                        <a href="https://marshallslawninc.com/privacy-policy/" target="_blank" rel="noopener">Privacy Policy &amp; SMS Terms</a>.
                     </label>
                 </div>
                 @error('consent') <div class="err">{{ $message }}</div> @enderror

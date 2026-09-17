@@ -48,23 +48,29 @@ Twilio Brand registration.
 - Phone numbers: **Yes**
 - Direct lending or loan arrangement: **No**
 - Age-gated content: **No**
-- Privacy policy: https://marshallslawninc.com/privacy-policy
-- Terms of service: https://marshallslawninc.com/terms
+- Privacy policy: https://marshallslawninc.com/privacy-policy/
+- Terms of service: https://marshallslawninc.com/privacy-policy/ (same page — it must carry
+  both the SMS privacy clause and the "Text Messaging (SMS) Terms" section; there is no
+  separate terms page on the site)
 
 ## How do end-users consent to receive messages?
-> Consent is collected directly from each customer through our public, unauthenticated web form
-> at https://app.marshallslawninc.com/sms-opt-in. The customer enters their first name, last
-> name, and mobile number, then may affirmatively tick a consent checkbox that is NOT pre-checked
-> and is entirely OPTIONAL — leaving it unchecked simply enrolls no one, and no text is ever sent.
-> The checkbox reads: "(Optional) I agree to receive text notifications about my own lawn &
-> landscaping service — appointment reminders, job updates, and invoice notifications — from
-> Marshall's Lawn & Landscape at the mobile number provided. Consent is not a condition of any
-> purchase or service. Message frequency varies. Message and data rates may apply. Reply STOP to
-> unsubscribe, HELP for help." Each customer submits their own number and ticks their own box; no
-> one is ever opted in on their behalf. Consent to receive SMS is optional and is never a
-> condition of service — customers are served in full by phone and email whether or not they opt
-> in. After submitting the form with the box checked, the customer is sent a one-time
-> confirmation text and must reply YES before any further messages are sent (double opt-in).
+Opt-in method: **Web Form** only. The YES reply confirms a web sign-up; it is not a keyword
+campaign. Staff never opt anyone in — adding a customer in the admin sends no SMS (see
+`CreateCustomer`).
+
+> End users opt in on our public web form at https://app.marshallslawninc.com/sms-opt-in. The
+> customer enters their first name, last name and mobile number. Below the fields is an optional
+> consent checkbox that is not pre-checked. It reads: "(Optional) I agree to receive text
+> notifications about my own lawn & landscaping service — appointment reminders, job updates, and
+> invoice notifications — from Marshall's Lawn & Landscape at the mobile number provided. Consent
+> is not a condition of any purchase or service. Message frequency varies. Message and data rates
+> may apply. Reply STOP to unsubscribe, HELP for help. See our Privacy Policy & SMS Terms." The
+> label links to https://marshallslawninc.com/privacy-policy/, which contains our privacy policy
+> and SMS terms. If the box is left unchecked, no number is enrolled and no messages are sent. When
+> the box is checked, we send one confirmation text: "Marshall's Lawn & Landscape: Hi {first name},
+> reply YES to receive text updates about your lawn & landscaping service. Msg frequency varies.
+> Msg & data rates may apply. Reply HELP for help, STOP to cancel." No other messages are sent
+> until the customer replies YES. Customers enter their own numbers; staff never opt anyone in.
 
 ## Opt-in message (double opt-in request)
 Sent by `Customer::sendSmsOptInRequest()`. Must match the registered text:

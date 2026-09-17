@@ -58,10 +58,10 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Marshall's Lawn shares your crew's location with the dispatch office continuously while you are signed in, including when the app is in the background or your screen is locked, so dispatch can track crews live on the map and send the next job to the nearest crew.",
-          "locationAlwaysPermission": "Marshall's Lawn shares your crew's location with the dispatch office continuously while you are signed in, including when the app is in the background or your screen is locked, so dispatch can track crews live on the map and send the next job to the nearest crew.",
-          "locationWhenInUsePermission": "Marshall's Lawn shares your crew's location with the dispatch office so the office can see where your crew is working and route the next job to you.",
-          "isIosBackgroundLocationEnabled": true,
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "locationWhenInUsePermission": "Marshall's Lawn shares your crew's location with the dispatch office while the app is open, so the office can see where your crew is working and route the next job to you.",
+          "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
         }
@@ -90,9 +90,7 @@
       [
         "./plugins/with-background-modes",
         {
-          "modes": [
-            "location"
-          ]
+          "modes": []
         }
       ]
     ],

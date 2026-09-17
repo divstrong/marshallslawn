@@ -243,8 +243,10 @@ const en = {
   'settings.locOff': 'Off',
   'settings.locActive':
     'Your crew’s location is sent to the dispatch office continuously — including while the app is in the background or your phone is locked — so the office can follow your route live and send the next job to the closest crew.',
+  'settings.locActiveIos':
+    'Your crew’s location is sent to the dispatch office while this app is open, so the office can see where your crew is working and send the next job to the closest crew. Nothing is sent once you leave the app.',
   'settings.locLastReport': 'Last sent to dispatch at {time} · {coords}',
-  'settings.locAwaitingFirst': 'Waiting for the first background location report…',
+  'settings.locAwaitingFirst': 'Waiting for the first location report…',
   'settings.locWeb': "Location tracking runs on the Marshall's Lawn mobile app (iOS / Android).",
   'settings.locDenied':
     'Location permission is turned off. Turn it on in device settings so dispatch can see your crew.',
@@ -252,8 +254,6 @@ const en = {
     'Turn on location sharing so dispatch can see where your crew is during the workday.',
   'settings.locPaused':
     'You turned off location sharing on this phone. Dispatch can’t see your crew until you turn it back on.',
-  'settings.locWhenInUseIos':
-    'Location is set to “While Using the App”. Dispatch will lose your crew if the app is closed or your phone restarts. For reliable tracking, open device settings and set Location to “Always”.',
   'settings.locWhenInUseAndroid':
     'Location is set to “Only while using the app”. Dispatch may lose your crew if the app is closed or your phone restarts. For reliable tracking, open device settings and set Location to “Allow all the time”.',
   'settings.enableLocation': 'Enable location sharing',
@@ -267,8 +267,12 @@ const en = {
   'location.discloseTitle': 'Location sharing',
   'location.discloseBody':
     "Marshall's Lawn collects location data to show your crew’s position to the dispatch office and send the next job to the nearest crew, even when the app is closed or not in use.",
+  'location.discloseBodyIos':
+    "Marshall's Lawn collects location data to show your crew’s position to the dispatch office and send the next job to the nearest crew.",
   'location.discloseWho': 'Only while you are signed in as a Foreman or Spray Tech.',
   'location.discloseWhen': 'Your position is sent to dispatch about once a minute while you work.',
+  'location.discloseWhenIos':
+    'Your position is sent to dispatch about once a minute while this app is open, and not at all once you leave it.',
   'location.discloseStop': 'Sharing stops as soon as you sign out.',
   'location.discloseAccept': 'Continue',
   'location.discloseDecline': 'Not now',
@@ -513,8 +517,10 @@ const es: Record<keyof typeof en, string> = {
   'settings.locOff': 'Desactivado',
   'settings.locActive':
     'La ubicación de tu cuadrilla se envía a la oficina de despacho de forma continua — incluso con la app en segundo plano o el teléfono bloqueado — para que la oficina siga tu ruta en vivo y envíe el próximo trabajo a la cuadrilla más cercana.',
+  'settings.locActiveIos':
+    'La ubicación de tu cuadrilla se envía a la oficina de despacho mientras esta app está abierta, para que la oficina sepa dónde trabaja tu cuadrilla y envíe el próximo trabajo a la más cercana. No se envía nada cuando sales de la app.',
   'settings.locLastReport': 'Último envío a despacho a las {time} · {coords}',
-  'settings.locAwaitingFirst': 'Esperando el primer reporte de ubicación en segundo plano…',
+  'settings.locAwaitingFirst': 'Esperando el primer reporte de ubicación…',
   'settings.locWeb': "El rastreo de ubicación funciona en la app móvil de Marshall's Lawn (iOS / Android).",
   'settings.locDenied':
     'El permiso de ubicación está desactivado. Actívalo en la configuración del dispositivo para que despacho pueda ver a tu cuadrilla.',
@@ -522,8 +528,6 @@ const es: Record<keyof typeof en, string> = {
     'Activa el compartir ubicación para que despacho sepa dónde está tu cuadrilla durante el día.',
   'settings.locPaused':
     'Desactivaste el compartir ubicación en este teléfono. Despacho no podrá ver a tu cuadrilla hasta que lo vuelvas a activar.',
-  'settings.locWhenInUseIos':
-    'La ubicación está en “Al usar la app”. Despacho perderá a tu cuadrilla si la app se cierra o el teléfono se reinicia. Para un rastreo confiable, abre la configuración del dispositivo y cambia Ubicación a “Siempre”.',
   'settings.locWhenInUseAndroid':
     'La ubicación está en “Solo mientras se usa la app”. Despacho puede perder a tu cuadrilla si la app se cierra o el teléfono se reinicia. Para un rastreo confiable, abre la configuración del dispositivo y cambia Ubicación a “Permitir todo el tiempo”.',
   'settings.enableLocation': 'Activar compartir ubicación',
@@ -535,9 +539,13 @@ const es: Record<keyof typeof en, string> = {
   'location.discloseTitle': 'Compartir ubicación',
   'location.discloseBody':
     "Marshall's Lawn recopila datos de ubicación para mostrar la posición de tu cuadrilla a la oficina de despacho y enviar el próximo trabajo a la cuadrilla más cercana, incluso cuando la app está cerrada o no está en uso.",
+  'location.discloseBodyIos':
+    "Marshall's Lawn recopila datos de ubicación para mostrar la posición de tu cuadrilla a la oficina de despacho y enviar el próximo trabajo a la cuadrilla más cercana.",
   'location.discloseWho': 'Solo mientras tengas la sesión iniciada como Capataz o Técnico de Aspersión.',
   'location.discloseWhen':
     'Tu posición se envía a despacho aproximadamente una vez por minuto mientras trabajas.',
+  'location.discloseWhenIos':
+    'Tu posición se envía a despacho aproximadamente una vez por minuto mientras esta app está abierta, y no se envía cuando sales de ella.',
   'location.discloseStop': 'El envío se detiene en cuanto cierras sesión.',
   'location.discloseAccept': 'Continuar',
   'location.discloseDecline': 'Ahora no',

@@ -1,10 +1,12 @@
 /**
- * Drives foreman GPS tracking. When a foreman is signed in and has
- * granted location permission, background updates run automatically;
- * any other role (or signing out) stops tracking. A foreman can also pause
- * sharing from Profile → Location Sharing without revoking the OS
- * permission; the pause persists across launches until they turn it back on
- * or sign out.
+ * Drives foreman GPS tracking. When a foreman is signed in and has granted
+ * location permission, position reporting starts automatically; any other role
+ * (or signing out) stops it. A foreman can also pause sharing from Profile →
+ * Location Sharing without revoking the OS permission; the pause persists
+ * across launches until they turn it back on or sign out.
+ *
+ * How far the reporting reaches is a per-platform matter settled in
+ * `lib/location.ts` — background on Android, foreground-only on iOS.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -22,7 +24,7 @@ import {
   stopTracking,
   type TrackingPermission,
 } from '@/lib/location';
-import { getLastLocationSync, type LastLocationSync } from '@/lib/location-task';
+import { getLastLocationSync, type LastLocationSync } from '@/lib/location-report';
 import { getItem, removeItem, setItem } from '@/lib/storage';
 
 interface LocationContextValue {
@@ -64,8 +66,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   // until they ask for it from Profile → Location Sharing.
   const declinedRef = useRef(false);
 
-  // The background task writes to storage from outside React, so poll while a
-  // tracked role is signed in to keep the Location Sharing card honest.
+  // Reports are delivered from outside React — a headless task on Android, a
+  // watcher callback on iOS — so poll while a tracked role is signed in to
+  // keep the Location Sharing card honest.
   useEffect(() => {
     if (!tracksThisRole) {
       setLastSync(null);

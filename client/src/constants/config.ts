@@ -35,10 +35,10 @@ export const PUSH_TOKEN_STORAGE_KEY = 'marshalls.push.token';
 export const LANGUAGE_STORAGE_KEY = 'marshalls.language';
 
 /**
- * Storage key for when the background location task last reached dispatch.
- * Written from outside React (the task runs headless), read back by the
- * Location Sharing card so crews — and App Review — can see that background
- * reporting is genuinely running.
+ * Storage key for when a location report last reached dispatch. Written from
+ * outside React — a headless task on Android, a watcher callback on iOS — and
+ * read back by the Location Sharing card so crews, and App Review, can see
+ * that reporting is genuinely running.
  */
 export const LAST_LOCATION_SYNC_KEY = 'marshalls.location.lastSync';
 
@@ -53,10 +53,11 @@ export const LOCATION_PAUSED_KEY = 'marshalls.location.paused';
 
 /**
  * Storage key set once this install has asked the OS for "Always" location.
- * Neither platform will show that prompt twice (iOS: once per install;
- * Android 11+: it's a settings page), and expo-location only remembers that
- * it asked for the lifetime of the process — so this is how a "While Using"
- * grant is told apart from "not asked yet" across launches.
+ * Android-only: iOS stopped asking for "Always" in build 1.0 (23), see
+ * `lib/location.ts`. Android 11+ serves that prompt as a settings page rather
+ * than a dialog, and expo-location only remembers that it asked for the
+ * lifetime of the process — so this is how a "While Using" grant is told
+ * apart from "not asked yet" across launches.
  */
 export const LOCATION_ALWAYS_ASKED_KEY = 'marshalls.location.alwaysAsked';
 

@@ -28,7 +28,7 @@ APP_REVIEW_CODE=123456
 ```
 
 The employee record is created automatically on first sign-in, as a **Foreman**
-(the role that has background location) joined to the crew with the most
+(the role whose location is shared with dispatch) joined to the crew with the most
 upcoming jobs, so Jobs and Schedule are populated rather than empty. Override
 the crew with `APP_REVIEW_CREW_ID` if a specific one shows the app better.
 
@@ -42,56 +42,79 @@ anyone can use to reach real customer names, addresses, and phone numbers.
 
 ## Guideline 2.5.4 — background location
 
-### Why the app declares the `location` background mode
+### What Apple rejected, and what changed
 
-Marshall's Lawn is a dispatch tool for landscaping crews. The office runs a live
-Dispatch map showing where every crew currently is, and assigns the next job to
-the nearest crew. That requires the crew's phone to report position while the app
-is backgrounded and the screen is locked — a foreman is driving a truck or running
-a mower, not holding the phone with the app open.
+Build **1.0 (22)** was rejected on 7 September 2026:
 
-Concretely:
+> The app declares support for location in the UIBackgroundModes key in your
+> Info.plist file but we are unable to locate any features besides employee
+> tracking that require persistent location.
 
-- A signed-in **Foreman** or **Spray Tech** reports position continuously via
-  `startLocationUpdatesAsync` — roughly every 60 seconds or every 40 metres.
-- Each batch is POSTed to `/api/locations` and stored as a breadcrumb trail.
-- The office's Dispatch board renders each crew's latest position and marks it
-  "live" only if it arrived within the last **15 minutes**. Without background
-  updates, a crew goes stale within 15 minutes of the phone locking and the
-  board stops being usable for dispatching.
-- `showsBackgroundLocationIndicator` is enabled, so iOS shows the blue location
-  indicator the whole time tracking runs.
+That reading was correct. Crew tracking for the Dispatch map was the only use of
+the `location` background mode, and Apple does not accept employee tracking as a
+reason for it on the public App Store. Arguing the case again would fail, so the
+app no longer declares the mode on iOS.
 
-Significant-change and region monitoring were considered and are not sufficient:
-both report only on large displacements, which cannot show a crew's position on
-a route with the freshness the dispatch board needs.
+**iOS now reports position only while the app is on screen:**
 
-### What changed in this build
+- `UIBackgroundModes` is **removed entirely** from the iOS Info.plist —
+  `plugins/with-background-modes.js` is configured with `"modes": []` and
+  deletes the key. `isIosBackgroundLocationEnabled` is `false`, so
+  `expo-location` no longer re-adds it.
+- The app **no longer requests "Always"** on iOS.
+  `NSLocationAlwaysUsageDescription` and
+  `NSLocationAlwaysAndWhenInUseUsageDescription` are deleted from the plist too
+  (`locationAlwaysPermission: false` in `app.json`); the only location purpose
+  string left is `NSLocationWhenInUseUsageDescription`.
+- `startLocationUpdatesAsync` / TaskManager are **not used on iOS**. iOS runs a
+  `watchPositionAsync` watcher that lives only as long as the app is in the
+  foreground, buffers positions, and POSTs a batch to `/api/locations` at most
+  once a minute — plus one final report as the app leaves the foreground, so
+  dispatch has the freshest possible fix. See `src/lib/location.ts`.
+- The Dispatch board already degrades correctly: a crew whose last report is
+  older than 15 minutes shows an amber pin reading **"Last known position ·
+  last seen 20 minutes ago"** instead of "Live GPS". No server change was
+  needed.
 
-`UIBackgroundModes` previously contained `fetch` as well as `location`. The
-`fetch` entry was added automatically by `expo-task-manager` simply by being
-installed; the app never registered a background fetch task. It has been removed,
-so the app now declares only `location`, which it genuinely uses. See
-`client/plugins/with-background-modes.js`.
+Android is unchanged and still reports in the background — that is permitted by
+Google Play with the prominent disclosure described in `play-review-notes.md`.
+The two platforms deliberately differ; this is not an oversight.
 
-The location permission strings were also rewritten to describe the actual
-behaviour (continuous background reporting to dispatch) rather than implying it
-only runs "on the clock".
+### User-facing copy was corrected to match
 
-### How to see the feature
+Nothing in the app now claims iOS collects location in the background:
+
+- **Profile → Location Sharing** shows, on iOS: "Your crew's location is sent to
+  the dispatch office while this app is open… Nothing is sent once you leave the
+  app." (`settings.locActiveIos`)
+- The pre-prompt **disclosure sheet** drops the "even when the app is closed or
+  not in use" sentence on iOS (`location.discloseBodyIos`).
+- The "set Location to Always" nudge is Android-only now; iOS can't reach it.
+
+### What to say when replying to the rejection
+
+Paste this into the reply in App Store Connect:
+
+> Thank you for the review. You are right that employee tracking was the only
+> feature using persistent location, and we agree that is not an appropriate use
+> of the location background mode.
+>
+> This build removes the `location` background mode from `UIBackgroundModes`
+> entirely. The app no longer requests "Always" location authorization — the only
+> location purpose string remaining is `NSLocationWhenInUseUsageDescription` —
+> and it no longer starts background location updates on iOS. Location is now
+> read only while the app is in the foreground, and the app collects no location
+> at all once it leaves the screen.
+
+### How to verify in the build
 
 1. Sign in as `test@apple.com` with code `123456` (Foreman).
-2. Accept the location prompt, choosing **Always Allow**.
-3. Go to the **Profile** tab → **Location Sharing**.
-   The card shows a live status plus the timestamp and coordinates of the most
-   recent report actually delivered to dispatch.
-4. Background the app or lock the screen and walk/drive a short distance.
-   The blue location indicator stays visible.
-5. Reopen the app and return to **Profile → Location Sharing**. The
-   "Last sent to dispatch" line has advanced, which only happens from a report
-   delivered while the app was backgrounded.
-
----
+2. The permission prompt offers **"While Using the App"** only — there is no
+   follow-up "Change to Always Allow" prompt.
+3. Go to **Profile → Location Sharing**. The card reports sharing while the app
+   is open, and "Last sent to dispatch" advances while the app is on screen.
+4. Background the app or lock the screen. **No blue location indicator appears**,
+   and "Last sent to dispatch" does not advance while the app is away.
 
 ## Screen recording checklist (Guideline 2.1)
 
@@ -123,15 +146,19 @@ Permission prompts (Apple asked for every one, not only location):
 - [ ] **Camera** — open a job, add a job-site photo
 - [ ] **Photos** — attach an existing image from the library
 
-Background location, the part Apple specifically called out:
+Location, the part Apple specifically called out. Since 1.0 (23) the point of
+this footage is the opposite of what it used to be — it shows that iOS location
+is **foreground-only**:
 
+- [ ] The location prompt offering **"While Using the App"**, with **no**
+      follow-up "Always Allow" prompt
 - [ ] Profile → Location Sharing showing the first "Last sent to dispatch" line
-- [ ] **Minimise the app / lock the screen**, with the **blue location indicator**
-      visible in the status bar the whole time
-- [ ] Move far enough to trigger an update (≥40 m, ≥60 s — see
+- [ ] Move far enough with the app open to advance it (≥40 m, ≥60 s — see
       `client/src/lib/location.ts`)
-- [ ] Reopen and show the "Last sent to dispatch" timestamp and coordinates have
-      changed while the app was backgrounded
+- [ ] **Minimise the app / lock the screen** and show that **no blue location
+      indicator** appears
+- [ ] Reopen and show "Last sent to dispatch" did not advance while the app was
+      away
 
 Also worth filming so "all relevant app features" is genuinely covered: Schedule,
 Jobs, Time clock in/out, Quotes, and Chat.

@@ -5,7 +5,7 @@ Livewire views and gives each role a tailored experience:
 
 | Role          | Lands on  | Tabs                                    | Notes |
 |---------------|-----------|-----------------------------------------|-------|
-| **Foreman**   | Schedule  | Schedule · Jobs · Time · Chat · Profile | Today's crew route in order; start/stop the job clock per stop. Background GPS + chat with the office. |
+| **Foreman**   | Schedule  | Schedule · Jobs · Time · Chat · Profile | Today's crew route in order; start/stop the job clock per stop. GPS shared with dispatch (background on Android, foreground-only on iOS) + chat with the office. |
 | **Field**     | Jobs      | Jobs · Time · Profile                   | Assigned jobs + day time clock. |
 | **Estimator** | Quotes    | Quotes · Jobs · Profile                 | Create / manage quotes; sees all jobs (read-only). No time clock. |
 
@@ -42,7 +42,7 @@ npm install
 npx expo start
 ```
 
-> **Background GPS**, camera capture, and **push notifications** need a
+> **GPS reporting**, camera capture, and **push notifications** need a
 > **development build** — run `npx expo run:ios` / `npx expo run:android`
 > or build with EAS. They do not run in Expo Go; everything else does.
 >

@@ -134,7 +134,8 @@ export default function SettingsScreen() {
   };
 
   const locationText = tracking.active
-    ? t('settings.locActive')
+    ? // iOS reports only while the app is open — see `lib/location.ts`.
+      t(Platform.OS === 'ios' ? 'settings.locActiveIos' : 'settings.locActive')
     : !tracking.supported
       ? t('settings.locWeb')
       : tracking.paused
@@ -287,19 +288,16 @@ export default function SettingsScreen() {
               </View>
             ) : null}
 
-            {/* Degraded grant: tracking runs, but the OS won't relaunch the
-                app after a kill or reboot. Nudge toward "Always" rather than
-                refusing to work — Apple expects the lesser grant to function. */}
+            {/* Degraded Android grant: tracking runs, but the OS won't
+                relaunch the app after a kill or reboot. Nudge toward "Allow
+                all the time" rather than refusing to work. iOS never lands
+                here — it asks only for "While Using" now. */}
             {tracking.active && tracking.permission === 'whenInUse' ? (
               <>
                 <View style={styles.locationWarning}>
                   <Icon name="warning-outline" size={16} color={AppColors.warning} />
                   <Text style={styles.locationWarningText}>
-                    {t(
-                      Platform.OS === 'ios'
-                        ? 'settings.locWhenInUseIos'
-                        : 'settings.locWhenInUseAndroid',
-                    )}
+                    {t('settings.locWhenInUseAndroid')}
                   </Text>
                 </View>
                 <Button
