@@ -39,9 +39,15 @@ Twilio Brand registration.
 > they opt in. Message frequency varies. Reply STOP to unsubscribe, HELP for help.
 
 ## Sample messages
-1. > Marshall's Lawn & Landscape: Hi Jane, your Weekly Mow is scheduled for Mon, Jul 13. Reply STOP to opt out, HELP for help.
-2. > Marshall's Lawn & Landscape: has completed your Spring Cleanup. Thank you for your business! Reply STOP to opt out.
-3. > Marshall's Lawn & Landscape: has issued invoice INV-00042 for $250.00. View it here: https://app.marshallslawninc.com/invoice/abc123. Reply STOP to opt out.
+> Rendered from the seeded `sms_templates` bodies (see the `create_sms_templates_table`
+> migration) — NOT hand-written. Square brackets mark variable content, per Twilio's
+> instruction on the Campaign Registration form. If the office edits a body in
+> Settings → Notifications, update these samples to match.
+
+1. > Hi [Jane], this is Marshall's Lawn & Landscape. Your [Weekly Mow] is scheduled for [Mon, Jul 13]. Reply STOP to opt out, HELP for help.
+2. > Hi [Jane], Marshall's Lawn & Landscape has completed your [Spring Cleanup]. Thank you for your business! Reply STOP to opt out.
+3. > Hi [Jane], Marshall's Lawn & Landscape has issued invoice [INV-00042] for [$250.00]. View it here: https://app.marshallslawninc.com/invoice/[abc123]. Reply STOP to opt out.
+4. > Hi [Jane], this is Marshall's Lawn & Landscape. Your [Weekly Mow] scheduled for [Mon, Jul 13] has been [rescheduled]. We'll be in touch. Reply STOP to opt out.
 
 ## Message contents
 - Embedded links: **Yes** (invoice links may be included)
