@@ -51,6 +51,12 @@
         @endforelse
     </div>
 
+    @if ($undelivered)
+        <div style="margin-top:10px; padding:9px 12px; border-radius:8px; background:#fffbeb; border:1px solid #fde68a; color:#92400e; font-size:12px;">
+            {{ $undelivered }}
+        </div>
+    @endif
+
     <form wire:submit="send" class="ccc-composer">
         <input class="ccc-input" wire:model="body" placeholder="Message {{ $header['name'] ?? 'customer' }}…" autocomplete="off">
         <button type="submit" class="ccc-btn">Send</button>

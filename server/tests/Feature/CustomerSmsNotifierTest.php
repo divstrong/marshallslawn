@@ -14,12 +14,12 @@ use Tests\TestCase;
 /** Records sends instead of calling Twilio. */
 class RecordingTwilioService extends TwilioService
 {
-    /** @var array<int, array{to: string, body: string, context: ?string}> */
+    /** @var array<int, array{to: string, body: string, context: ?string, customer_id: ?int}> */
     public array $sent = [];
 
-    public function sendSms(string $to, string $body, ?string $context = null): ?string
+    public function sendSms(string $to, string $body, ?string $context = null, ?int $customerId = null): ?string
     {
-        $this->sent[] = ['to' => $to, 'body' => $body, 'context' => $context];
+        $this->sent[] = ['to' => $to, 'body' => $body, 'context' => $context, 'customer_id' => $customerId];
 
         return 'SM_fake';
     }

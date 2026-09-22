@@ -17,6 +17,23 @@
         .stm-switch.on .stm-knob { left:18px; }
         .stm-tokens { font-size:11px; color:#6b7280; margin-top:8px; line-height:1.7; }
         .stm-tokens code { background:#f3f4f6; padding:1px 5px; border-radius:4px; font-family:ui-monospace, monospace; }
+        .stm-preview { margin-top:10px; padding:10px 12px; border-radius:8px; background:#f9fafb; border:1px solid #e5e7eb; }
+        .stm-preview-label { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#9ca3af; margin-bottom:4px; }
+        .stm-preview-body { font-size:13px; color:#111827; white-space:pre-wrap; word-break:break-word; }
+        .stm-count { font-size:11px; color:#6b7280; margin-top:6px; }
+        .stm-count.warn { color:#b45309; font-weight:600; }
+        .stm-test { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px dashed #e5e7eb; }
+        .stm-test-input { flex:1; min-width:170px; padding:7px 10px; font-size:13px; border:1px solid #d1d5db; border-radius:8px; color:#111827; background:#fff; }
+        .stm-test-btn { font-size:13px; font-weight:600; padding:7px 14px; border-radius:8px; border:1px solid #d1d5db; background:#fff; color:#374151; cursor:pointer; }
+        .stm-test-btn:disabled { opacity:.5; cursor:not-allowed; }
+        .stm-test-result { font-size:12px; width:100%; }
+        .stm-test-result.ok { color:#065f46; }
+        .stm-test-result.bad { color:#b91c1c; }
+        .dark .stm-preview { background:#111827; border-color:#374151; }
+        .dark .stm-preview-body { color:#f9fafb; }
+        .dark .stm-test-input { background:#111827; color:#f9fafb; border-color:#374151; }
+        .dark .stm-test-btn { background:#1f2937; color:#e5e7eb; border-color:#374151; }
+        .dark .stm-test { border-top-color:#374151; }
         .dark .stm-note { background:#111827; border-color:#374151; color:#d1d5db; }
         .dark .stm-card { background:#1f2937; border-color:#374151; }
         .dark .stm-title { color:#f9fafb; }
@@ -36,6 +53,20 @@
             toggles to control which events send.
         </div>
     @endif
+
+    @unless ($this->twilioConfigured)
+        <div class="stm-note warn">
+            Twilio credentials are missing on this server, so test sends are unavailable. Set
+            <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code> and a sending number
+            (<code>TWILIO_MESSAGING_SERVICE_SID</code> or <code>TWILIO_FROM_NUMBER</code>).
+        </div>
+    @else
+        <div class="stm-note">
+            <strong>Test sends go out even when the channel above is off</strong>, so you can verify the Twilio setup
+            before arming customer messages. A test uses sample data and goes only to the number you type — never to a
+            customer. Every send is recorded under Administration → Message Log.
+        </div>
+    @endunless
 
     @foreach ($this->templates as $template)
         <div class="stm-card" wire:key="sms-tpl-{{ $template->id }}">
@@ -57,6 +88,49 @@
                 <span style="font-size:12px; color:#9ca3af;" wire:loading.remove wire:target="save({{ $template->id }})">Edit the message, then save.</span>
                 <span style="font-size:12px; color:#9ca3af;" wire:loading wire:target="save({{ $template->id }})">Saving…</span>
                 <button type="button" class="stm-save" wire:click="save({{ $template->id }})">Save message</button>
+            </div>
+
+            @php($preview = $this->previewFor($template->id))
+            <div class="stm-preview">
+                <div class="stm-preview-label">Preview with sample data</div>
+                <div class="stm-preview-body">{{ $preview['body'] }}</div>
+                <div class="stm-count {{ $preview['segments'] > 1 ? 'warn' : '' }}">
+                    {{ $preview['chars'] }} characters ·
+                    {{ $preview['segments'] }} {{ Str::plural('segment', $preview['segments']) }} ·
+                    {{ $preview['encoding'] }}
+                    @if ($preview['encoding'] === 'UCS-2')
+                        — a non-standard character (curly quote or emoji) is cutting the segment size to 70.
+                    @elseif ($preview['segments'] > 1)
+                        — billed as {{ $preview['segments'] }} messages.
+                    @endif
+                </div>
+            </div>
+
+            <div class="stm-test">
+                <input
+                    type="tel"
+                    class="stm-test-input"
+                    placeholder="Send a test to… (804) 555-1234"
+                    wire:model="testNumbers.{{ $template->id }}"
+                    @disabled(! $this->twilioConfigured)
+                >
+                <button
+                    type="button"
+                    class="stm-test-btn"
+                    wire:click="sendTest({{ $template->id }})"
+                    wire:loading.attr="disabled"
+                    wire:target="sendTest({{ $template->id }})"
+                    @disabled(! $this->twilioConfigured)
+                >
+                    <span wire:loading.remove wire:target="sendTest({{ $template->id }})">Send test</span>
+                    <span wire:loading wire:target="sendTest({{ $template->id }})">Sending…</span>
+                </button>
+
+                @if (isset($testResults[$template->id]))
+                    <div class="stm-test-result {{ $testResults[$template->id]['ok'] ? 'ok' : 'bad' }}">
+                        {{ $testResults[$template->id]['message'] }}
+                    </div>
+                @endif
             </div>
         </div>
     @endforeach

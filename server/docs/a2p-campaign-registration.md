@@ -9,6 +9,16 @@ App message sources:
 - Opt-in confirmation / opt-out / HELP replies: `App\Http\Controllers\TwilioWebhookController::handleConsentKeyword()`
 - Public opt-in form: `App\Http\Controllers\SmsOptInController` + `resources/views/sms-opt-in.blade.php` → https://app.marshallslawninc.com/sms-opt-in
 - Transactional notifications: `App\Services\CustomerSmsNotifier` (bodies editable in Settings → Notifications; seeded in the `sms_templates` table)
+- Office replies to an inbound text: `App\Livewire\CustomerChatPanel` (context `chat_reply`)
+
+Admin surfaces:
+- **Settings → Notifications** — edit each body, toggle it on/off, preview it rendered
+  with the sample data above, see the character/segment count, and send a test to a staff
+  phone. Test sends ignore the channel kill-switch on purpose, so the Twilio setup can be
+  proven before customer messaging is armed; they still require credentials.
+- **Administration → Message Log** — every outbound attempt, including ones that never
+  reached Twilio, with the delivery status the status webhook reports back. Filter to
+  "Problems only" to see failures, undelivered, and skipped sends.
 
 ---
 
@@ -109,6 +119,17 @@ recognized keywords:
 - Opt-out: STOP, STOPALL, UNSUBSCRIBE, CANCEL, END, QUIT, OPTOUT, REVOKE
 - Opt-in: YES, START, JOIN, UNSTOP, CONFIRM, AGREE
 - Help: HELP, INFO
+
+## Go-live checklist (campaign approved)
+- [ ] Run `php artisan migrate` on production — the `sms_logs` table backs the Message Log.
+- [ ] Confirm `Setting::get('company_name')` on production returns exactly
+      `Marshall's Lawn & Landscape`. It is the `{company}` placeholder in every body and
+      the brand prefix on every message, so a variation here silently puts live traffic
+      out of sync with the registered samples.
+- [ ] Send a test of each of the four templates to a staff phone from Settings → Notifications.
+- [ ] Set `TWILIO_NOTIFICATIONS_ENABLED=true`, then activate the templates the office wants.
+- [ ] Watch Administration → Message Log for the first real sends; "Problems only" surfaces
+      carrier rejections (error 30007 = carrier filtered, 21610 = recipient opted out).
 
 ## Pre-submission checklist
 - [ ] Twilio Brand registered (legal name, EIN, address, website).

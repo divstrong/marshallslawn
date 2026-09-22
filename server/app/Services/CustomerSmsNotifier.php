@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Customer;
+use App\Models\CustomerMessage;
 use App\Models\Invoice;
 use App\Models\Job;
 use App\Models\Setting;
@@ -64,7 +65,7 @@ class CustomerSmsNotifier
             return;
         }
 
-        $this->twilio->sendSms($customer->phone, $body, 'invoice_issued');
+        $this->deliver($customer, $body, 'invoice_issued');
     }
 
     /**
@@ -92,7 +93,29 @@ class CustomerSmsNotifier
             return;
         }
 
-        $this->twilio->sendSms($customer->phone, $body, $key);
+        $this->deliver($customer, $body, $key);
+    }
+
+    /**
+     * Hand the rendered body to Twilio, then mirror what was actually sent into
+     * the office <-> customer thread. Staff can then see a notification next to
+     * the conversation it belongs to, the way a sent email sits in a mail client.
+     * Only a send Twilio accepted is mirrored — a skipped or failed one belongs
+     * in the SMS log, not in a thread that implies the customer saw it.
+     */
+    private function deliver(Customer $customer, string $body, string $key): void
+    {
+        $sid = $this->twilio->sendSms($customer->phone, $body, $key, $customer->id);
+
+        if ($sid === null) {
+            return;
+        }
+
+        CustomerMessage::create([
+            'customer_id' => $customer->id,
+            'sender' => CustomerMessage::SENDER_OFFICE,
+            'body' => $body,
+        ]);
     }
 
     private function firstName(Customer $customer): string

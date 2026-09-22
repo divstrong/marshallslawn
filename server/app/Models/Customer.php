@@ -213,6 +213,7 @@ class Customer extends Authenticatable implements FilamentUser, HasName
             "{$company}: Hi {$first}, reply YES to receive text updates about your lawn & landscaping service. "
                 . 'Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to cancel.',
             'opt_in_request',
+            $this->id,
         );
 
         $this->forceFill(['sms_opt_in_sent_at' => now()])->saveQuietly();

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\SmsLog;
 use Illuminate\Support\Facades\Log;
 use Twilio\Exceptions\TwilioException;
 use Twilio\Rest\Client;
@@ -10,6 +11,10 @@ use Twilio\Rest\Client;
  * Thin wrapper over the Twilio REST client. Every send is best-effort: if
  * credentials are absent or the API call fails, it logs and returns null rather
  * than throwing, so an opportunistic SMS never breaks the flow that triggered it.
+ *
+ * Every attempt also writes an SmsLog row — including the ones that never reach
+ * Twilio — so a missing text is diagnosable from the admin panel instead of the
+ * application log. The status webhook later walks that row to its final state.
  */
 class TwilioService
 {
@@ -34,13 +39,18 @@ class TwilioService
     /**
      * Send an SMS. Returns the message SID on success, or null when SMS is
      * disabled (no creds) or the send fails.
+     *
+     * @param  string|null  $context  Template key or purpose, recorded on the log row.
+     * @param  int|null  $customerId  Ties the log row to a customer when there is one.
      */
-    public function sendSms(string $to, string $body, ?string $context = null): ?string
+    public function sendSms(string $to, string $body, ?string $context = null, ?int $customerId = null): ?string
     {
+        $raw = $to;
         $to = $this->normalizeNumber($to);
 
         if (! $to) {
             Log::warning('twilio.sms.skipped', ['reason' => 'invalid_number', 'context' => $context]);
+            $this->record($customerId, $context, $raw, $body, SmsLog::STATUS_SKIPPED, 'invalid_number');
 
             return null;
         }
@@ -51,6 +61,7 @@ class TwilioService
                 'to' => $to,
                 'context' => $context,
             ]);
+            $this->record($customerId, $context, $to, $body, SmsLog::STATUS_SKIPPED, 'not_configured');
 
             return null;
         }
@@ -62,6 +73,7 @@ class TwilioService
             $params['from'] = $this->fromNumber;
         } else {
             Log::warning('twilio.sms.skipped', ['reason' => 'no_from_number', 'context' => $context]);
+            $this->record($customerId, $context, $to, $body, SmsLog::STATUS_SKIPPED, 'no_from_number');
 
             return null;
         }
@@ -76,6 +88,16 @@ class TwilioService
                 'status' => $message->status,
             ]);
 
+            $this->record(
+                $customerId,
+                $context,
+                $to,
+                $body,
+                $message->status ?: SmsLog::STATUS_QUEUED,
+                null,
+                $message->sid,
+            );
+
             return $message->sid;
         } catch (TwilioException $e) {
             Log::error('twilio.sms.failed', [
@@ -83,6 +105,18 @@ class TwilioService
                 'context' => $context,
                 'error' => $e->getMessage(),
             ]);
+
+            $this->record(
+                $customerId,
+                $context,
+                $to,
+                $body,
+                SmsLog::STATUS_FAILED,
+                'api_error',
+                null,
+                (string) $e->getCode(),
+                $e->getMessage(),
+            );
 
             return null;
         }
@@ -96,9 +130,10 @@ class TwilioService
 
     /**
      * Best-effort normalization to E.164 (assumes US when no leading +). Returns
-     * null for unusable input.
+     * null for unusable input. Public so callers can validate a number before
+     * offering to send to it.
      */
-    private function normalizeNumber(?string $raw): ?string
+    public function normalizeNumber(?string $raw): ?string
     {
         if (! $raw) {
             return null;
@@ -120,5 +155,38 @@ class TwilioService
         }
 
         return '+1' . $digits;
+    }
+
+    /**
+     * Write the audit row. Never lets a logging failure break a send that already
+     * succeeded — the message is out the door either way.
+     */
+    private function record(
+        ?int $customerId,
+        ?string $context,
+        string $to,
+        string $body,
+        string $status,
+        ?string $reason = null,
+        ?string $sid = null,
+        ?string $errorCode = null,
+        ?string $errorMessage = null,
+    ): void {
+        try {
+            SmsLog::create([
+                'customer_id' => $customerId,
+                'template_key' => $context,
+                'to_number' => mb_substr($to, 0, 32),
+                'body' => $body,
+                'message_sid' => $sid,
+                'status' => $status,
+                'reason' => $reason,
+                'error_code' => $errorCode,
+                'error_message' => $errorMessage,
+                'delivered_at' => $status === SmsLog::STATUS_DELIVERED ? now() : null,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('twilio.sms.log_failed', ['error' => $e->getMessage(), 'context' => $context]);
+        }
     }
 }

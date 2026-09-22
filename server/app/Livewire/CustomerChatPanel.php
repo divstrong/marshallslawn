@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Customer;
 use App\Models\CustomerMessage;
+use App\Services\TwilioService;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -18,6 +19,9 @@ class CustomerChatPanel extends Component
     public int $customerId;
 
     public string $body = '';
+
+    /** Set when the last reply was saved to the thread but not delivered by SMS. */
+    public ?string $undelivered = null;
 
     public function mount(int $customerId): void
     {
@@ -99,9 +103,55 @@ class CustomerChatPanel extends Component
             'body' => $body,
         ]);
 
+        // Recording the reply is not the same as delivering it. Hand it to Twilio
+        // too, and tell the sender plainly when it could not go out — a thread that
+        // silently swallows replies is worse than no thread at all.
+        $this->deliver($body);
+
         $this->body = '';
         unset($this->messages);
         $this->dispatch('customer-chat:updated');
+    }
+
+    /**
+     * Text the reply to the customer. A customer who has texted STOP is never
+     * messaged again, whatever the office types — that is a carrier-level rule,
+     * not a preference.
+     */
+    private function deliver(string $body): void
+    {
+        $customer = Customer::find($this->customerId);
+        if (! $customer) {
+            return;
+        }
+
+        if ($customer->sms_consent_status === Customer::SMS_OPTED_OUT) {
+            $this->undelivered = 'This customer has opted out of text messages. Your reply was saved to the thread but not sent.';
+
+            return;
+        }
+
+        if (blank($customer->phone)) {
+            $this->undelivered = 'No mobile number on file. Your reply was saved to the thread but not sent.';
+
+            return;
+        }
+
+        $twilio = app(TwilioService::class);
+
+        if (! $twilio->isConfigured() || ! config('twilio.notifications.enabled')) {
+            $this->undelivered = 'Text messaging is turned off. Your reply was saved to the thread but not sent.';
+
+            return;
+        }
+
+        if ($twilio->sendSms($customer->phone, $body, 'chat_reply', $customer->id) === null) {
+            $this->undelivered = 'The text could not be sent. Your reply was saved to the thread — check Message Log for the reason.';
+
+            return;
+        }
+
+        $this->undelivered = null;
     }
 
     private function initials(Customer $customer): string

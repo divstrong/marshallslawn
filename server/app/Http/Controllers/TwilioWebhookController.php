@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\Setting;
+use App\Models\SmsLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -73,14 +74,27 @@ class TwilioWebhookController extends Controller
         }
 
         $status = (string) $request->input('MessageStatus', '');
+        $sid = (string) $request->input('MessageSid', '');
+        $errorCode = $request->input('ErrorCode');
         $level = in_array($status, ['failed', 'undelivered'], true) ? 'warning' : 'info';
 
         Log::log($level, 'twilio.webhook.status', [
-            'sid' => (string) $request->input('MessageSid', ''),
+            'sid' => $sid,
             'status' => $status,
-            'error_code' => $request->input('ErrorCode'),
+            'error_code' => $errorCode,
             'to' => $request->input('To'),
         ]);
+
+        // Walk the audit row to its final state. Twilio retries and can deliver
+        // callbacks out of order, so a row already marked delivered is left alone
+        // rather than being dragged backwards by a late 'sent'.
+        if ($sid !== '' && $status !== '') {
+            $log = SmsLog::where('message_sid', $sid)->first();
+
+            if ($log && $log->status !== SmsLog::STATUS_DELIVERED) {
+                $log->applyTwilioStatus($status, $errorCode ? (string) $errorCode : null);
+            }
+        }
 
         return response('', 204);
     }

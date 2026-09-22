@@ -43,6 +43,64 @@ class SmsTemplate extends Model
     ];
 
     /**
+     * Stand-in values for previewing and test-sending a template. They match the
+     * sample messages registered with the A2P campaign (see
+     * docs/a2p-campaign-registration.md), so what an admin previews is what a
+     * carrier reviewer was shown.
+     *
+     * @return array<string, string>
+     */
+    public static function sampleVars(): array
+    {
+        return [
+            'name' => 'Jane',
+            'company' => Setting::get('company_name', "Marshall's Lawn & Landscape"),
+            'service' => 'Weekly Mow',
+            'date' => 'Mon, Jul 13',
+            'status' => 'rescheduled',
+            'invoice_number' => 'INV-00042',
+            'amount' => '$250.00',
+            'link' => url('/invoice/abc123'),
+        ];
+    }
+
+    /**
+     * Character count and billable segment count for a body. Carriers bill per
+     * segment, and one stray non-ASCII character — a curly quote pasted out of
+     * Word, an emoji — drops the segment size from 160 to 70 and doubles the bill
+     * without changing how the message looks. Surfacing that is the point.
+     *
+     * Deliberately conservative: any non-ASCII is treated as UCS-2, so a few
+     * characters GSM-7 could actually carry (£, €, accents) are counted as if they
+     * could not. Over-estimating a segment count is a harmless warning;
+     * under-estimating it is a surprise on the invoice.
+     *
+     * @return array{chars: int, segments: int, encoding: string}
+     */
+    public static function segmentInfo(string $text): array
+    {
+        $chars = mb_strlen($text);
+        $isGsm = (bool) preg_match('/^[\x0A\x0D\x20-\x7E]*$/', $text);
+
+        if ($isGsm) {
+            // These are single characters but cost two septets each in GSM-7.
+            $units = strlen($text) + preg_match_all('/[\^{}\\\[~\]|]/', $text);
+            $single = 160;
+            $multi = 153;
+        } else {
+            $units = $chars;
+            $single = 70;
+            $multi = 67;
+        }
+
+        $segments = $units === 0
+            ? 0
+            : ($units <= $single ? 1 : (int) ceil($units / $multi));
+
+        return ['chars' => $chars, 'segments' => $segments, 'encoding' => $isGsm ? 'GSM-7' : 'UCS-2'];
+    }
+
+    /**
      * Substitute {placeholders} from a vars map (keys without braces).
      *
      * @param  array<string, string|null>  $vars
