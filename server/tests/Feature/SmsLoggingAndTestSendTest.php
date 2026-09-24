@@ -6,6 +6,7 @@ use App\Filament\Resources\SmsLogResource\Pages\ListSmsLogs;
 use App\Livewire\CustomerChatPanel;
 use App\Livewire\SmsTemplateManager;
 use App\Models\Customer;
+use App\Models\CustomerMessage;
 use App\Models\Role;
 use App\Models\SmsLog;
 use App\Models\SmsTemplate;
@@ -284,6 +285,93 @@ class SmsLoggingAndTestSendTest extends TestCase
             ->filterTable('problems')
             ->assertCanSeeTableRecords(SmsLog::where('status', SmsLog::STATUS_UNDELIVERED)->get())
             ->assertCanNotSeeTableRecords(SmsLog::where('status', SmsLog::STATUS_DELIVERED)->get());
+    }
+
+    // ------------------------------------------------------------ manual send
+
+    private function asAdmin(): void
+    {
+        $role = Role::firstOrCreate(['name' => 'admin'], ['label' => 'Admin', 'is_admin' => true]);
+        $this->actingAs(User::factory()->create(['role_id' => $role->id]));
+    }
+
+    public function test_the_office_can_send_an_ad_hoc_text_and_the_plus_one_is_added(): void
+    {
+        config()->set('twilio.notifications.enabled', true);
+        $this->asAdmin();
+
+        $fake = new FakeConfiguredTwilio();
+        $this->app->instance(TwilioService::class, $fake);
+
+        Livewire::test(ListSmsLogs::class)
+            ->callAction('sendSms', [
+                'phone' => '(804) 555-7777',
+                'body' => 'Running about an hour behind today.',
+            ])
+            ->assertHasNoActionErrors();
+
+        $this->assertCount(1, $fake->sent);
+        $this->assertSame('+18045557777', $fake->sent[0]['to']);
+        $this->assertSame('manual', $fake->sent[0]['context']);
+        $this->assertNull($fake->sent[0]['customer_id']);
+    }
+
+    public function test_an_ad_hoc_text_to_a_known_customer_is_attached_and_mirrored(): void
+    {
+        config()->set('twilio.notifications.enabled', true);
+        $this->asAdmin();
+
+        $fake = new FakeConfiguredTwilio();
+        $this->app->instance(TwilioService::class, $fake);
+
+        $customer = $this->customer();
+
+        Livewire::test(ListSmsLogs::class)
+            ->callAction('sendSms', [
+                'phone' => '804-555-1212',
+                'body' => 'Crew is on the way.',
+            ]);
+
+        $this->assertSame($customer->id, $fake->sent[0]['customer_id']);
+        $this->assertDatabaseHas('customer_messages', [
+            'customer_id' => $customer->id,
+            'sender' => CustomerMessage::SENDER_OFFICE,
+            'body' => 'Crew is on the way.',
+        ]);
+    }
+
+    public function test_an_ad_hoc_text_to_an_opted_out_customer_is_blocked(): void
+    {
+        config()->set('twilio.notifications.enabled', true);
+        $this->asAdmin();
+
+        $fake = new FakeConfiguredTwilio();
+        $this->app->instance(TwilioService::class, $fake);
+
+        $this->customer(Customer::SMS_OPTED_OUT);
+
+        Livewire::test(ListSmsLogs::class)
+            ->callAction('sendSms', [
+                'phone' => '8045551212',
+                'body' => 'Crew is on the way.',
+            ]);
+
+        $this->assertCount(0, $fake->sent);
+    }
+
+    public function test_an_ad_hoc_text_rejects_a_number_that_is_not_ten_digits(): void
+    {
+        config()->set('twilio.notifications.enabled', true);
+        $this->asAdmin();
+
+        $fake = new FakeConfiguredTwilio();
+        $this->app->instance(TwilioService::class, $fake);
+
+        Livewire::test(ListSmsLogs::class)
+            ->callAction('sendSms', ['phone' => '55512', 'body' => 'Hello'])
+            ->assertHasActionErrors(['phone']);
+
+        $this->assertCount(0, $fake->sent);
     }
 
     // -------------------------------------------------------------- segmenting

@@ -172,21 +172,7 @@ class TwilioWebhookController extends Controller
 
     private function findCustomerByPhone(string $from): ?Customer
     {
-        $digits = substr(preg_replace('/\D/', '', $from), -10);
-        if (strlen($digits) !== 10) {
-            return null;
-        }
-
-        $lastFour = substr($digits, -4);
-
-        return Customer::query()
-            ->where('phone', 'like', '%' . $lastFour . '%')
-            ->get()
-            ->first(function (Customer $c) use ($digits) {
-                $candidate = substr(preg_replace('/\D/', '', (string) $c->phone), -10);
-
-                return $candidate === $digits;
-            });
+        return Customer::findByPhone($from);
     }
 
     private function emptyTwiml(): Response

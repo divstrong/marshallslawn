@@ -10,7 +10,7 @@ class Marketing extends Page
 
     protected static string | \UnitEnum | null $navigationGroup = 'Communication';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected string $view = 'filament.pages.marketing';
 }

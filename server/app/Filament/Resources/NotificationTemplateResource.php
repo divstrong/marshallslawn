@@ -21,9 +21,9 @@ class NotificationTemplateResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-bell-alert';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Administration';
+    protected static string | \UnitEnum | null $navigationGroup = 'Communication';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $navigationLabel = 'Push Notifications';
 

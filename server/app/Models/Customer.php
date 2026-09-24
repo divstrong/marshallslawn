@@ -166,6 +166,28 @@ class Customer extends Authenticatable implements FilamentUser, HasName
         ];
     }
 
+    /**
+     * Find a customer by phone number in any format — E.164, formatted, or bare
+     * digits. Matching is on the last 10 digits, because the same number is stored
+     * half a dozen ways across the table and arrives from Twilio as +1XXXXXXXXXX.
+     *
+     * The LIKE narrows the candidate set on the last four digits (an index-friendly
+     * prefilter); the closure then does the exact comparison, so two numbers sharing
+     * a suffix never match each other.
+     */
+    public static function findByPhone(?string $phone): ?self
+    {
+        $digits = substr(preg_replace('/\D/', '', (string) $phone), -10);
+        if (strlen($digits) !== 10) {
+            return null;
+        }
+
+        return static::query()
+            ->where('phone', 'like', '%' . substr($digits, -4) . '%')
+            ->get()
+            ->first(fn (self $c) => substr(preg_replace('/\D/', '', (string) $c->phone), -10) === $digits);
+    }
+
     /** True only when the customer has confirmed opt-in and has a phone to text. */
     public function canReceiveSms(): bool
     {
