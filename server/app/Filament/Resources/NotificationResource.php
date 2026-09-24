@@ -26,6 +26,18 @@ class NotificationResource extends Resource
 
     protected static ?string $navigationLabel = 'Notifications';
 
+    /**
+     * Hidden from the menu: this is unwired scaffolding — nothing in the app ever
+     * writes to `app_notifications`, so the table is always empty. It also offers
+     * an "SMS" channel, which now reads as a second, competing place to manage
+     * customer texts; those live in Settings → Notifications, and the delivery
+     * history lives in Administration → Message Log.
+     *
+     * The resource and its routes stay registered, so reviving it is a one-line
+     * change if a generic notification composer is ever actually built.
+     */
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([

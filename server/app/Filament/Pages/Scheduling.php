@@ -30,7 +30,7 @@ class Scheduling extends Page
 
     protected static string | \UnitEnum | null $navigationGroup = 'Operations';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     /**
      * Hidden from the menu: the Dispatch board covers this ground. The page and its

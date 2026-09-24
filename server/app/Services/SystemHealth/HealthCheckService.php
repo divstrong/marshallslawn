@@ -65,6 +65,55 @@ class HealthCheckService
                 true,
                 'Driver: ' . config('mail.default'),
             ]),
+            $this->runCheck('Config Source', function () {
+                // Which .env the web process actually loaded, and whether a cached
+                // config file is shadowing it. Editing .env while a cached config
+                // exists changes nothing, and that is invisible from the CLI —
+                // which is why this reports from inside the request.
+                $cached = app()->configurationIsCached();
+                $envFile = app()->environmentFilePath();
+                $exists = is_file($envFile) ? 'present' : 'MISSING';
+
+                return [
+                    ! $cached,
+                    $cached
+                        ? "Config is CACHED — .env edits are ignored until 'php artisan config:clear'. Cache: " . app()->getCachedConfigPath()
+                        : "Reading {$envFile} ({$exists})",
+                ];
+            }),
+            $this->runCheck('Twilio SMS', function () {
+                $sid = (string) config('twilio.account_sid');
+                $token = (string) config('twilio.auth_token');
+                $service = (string) config('twilio.messaging_service_sid');
+                $from = (string) config('twilio.from_number');
+                $enabled = (bool) config('twilio.notifications.enabled');
+
+                $missing = [];
+                if ($sid === '') {
+                    $missing[] = 'TWILIO_ACCOUNT_SID';
+                }
+                if ($token === '') {
+                    $missing[] = 'TWILIO_AUTH_TOKEN';
+                }
+                if ($service === '' && $from === '') {
+                    $missing[] = 'TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM_NUMBER';
+                }
+
+                if ($missing !== []) {
+                    return [false, 'Missing: ' . implode(', ', $missing)];
+                }
+
+                // Only ever show the last 4 — this panel is on screen in a shared office.
+                $sender = $service !== ''
+                    ? 'Messaging Service …' . substr($service, -4)
+                    : 'From ' . $from;
+
+                return [
+                    true,
+                    'SID …' . substr($sid, -4) . ', ' . $sender
+                        . ', channel ' . ($enabled ? 'ON' : 'off'),
+                ];
+            }),
         ];
     }
 

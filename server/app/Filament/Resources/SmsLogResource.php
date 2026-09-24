@@ -22,7 +22,7 @@ class SmsLogResource extends Resource
 
     protected static ?string $model = SmsLog::class;
 
-    protected static ?string $navigationLabel = 'Message Log';
+    protected static ?string $navigationLabel = 'SMS Messages';
 
     protected static ?string $modelLabel = 'text message';
 
@@ -30,9 +30,9 @@ class SmsLogResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-paper-airplane';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Administration';
+    protected static string | \UnitEnum | null $navigationGroup = 'Communication';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 2;
 
     /** Nothing here is authored by hand — rows are written by the send pipeline. */
     public static function canCreate(): bool
